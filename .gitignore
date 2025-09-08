@@ -1,13 +1,9 @@
 *.pdf
 *.png
 *.asv
-datasets/caus_X.mat
-datasets/X.mat
-datasets/X2.mat
-
+*.csv
 *.mat
 *.mat
-datasets/bouts.csv
 *.pdf
 *.eps
 *.png
