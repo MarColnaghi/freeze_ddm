@@ -1,0 +1,9 @@
+function model = model_exp0()
+
+model.lambda = struct('params', {1}, ...
+    'inputs', {''}, ...
+    'fn', @(p, y) p(1), ...
+    'bounds', {[0,  0.5,  9,  10]});
+
+
+end
