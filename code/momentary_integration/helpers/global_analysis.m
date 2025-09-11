@@ -1,4 +1,4 @@
-function analyse_run(run_code, model, varargin)
+function global_analysis(run_code, model, varargin)
 
 opt = inputParser;
 addParameter(opt, 'export', false);
@@ -48,8 +48,7 @@ for idx_run = run_code
     end
 end
 
-for idx_run = 1:6
-
+for idx_run = 1:5
     run_str = sprintf('run%02d', idx_run);
     cd(fullfile('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/momentary_integration', 'freezes', model, run_str))
     

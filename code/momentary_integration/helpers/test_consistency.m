@@ -31,8 +31,9 @@ for idx_run = run_code
 
     load('rt.mat')
     list = dir(fullfile(run_path, sprintf('*%s/lls_final.mat', gen_model)));
-
+    
     for idx_file = 1:length(list)
+        fullfile(list(idx_file).folder, list(idx_file).name)
         lls = importdata(fullfile(list(idx_file).folder, list(idx_file).name));
         gen_data = list(idx_file).folder(end-1:end);
 

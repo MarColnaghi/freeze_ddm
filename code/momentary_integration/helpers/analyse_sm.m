@@ -9,6 +9,7 @@ function analyse_sm(run_code, model, varargin)
     addParameter(p, 'selection', 500);
     addParameter(p, 'gen_model', '');  % Plot all trials if true
     addParameter(p, 'all', false);  % Plot all trials if true
+    addParameter(p, 'align_to', 'offset');  % 'offset' (old behavior) or 'onset'
 
    
     parse(p, varargin{:});
@@ -18,6 +19,7 @@ function analyse_sm(run_code, model, varargin)
     selection = p.Results.selection;
     plot_all = p.Results.all;
     gen_model = p.Results.gen_model;
+    align_to = p.Results.align_to;
 
     col = cmapper();  % Your custom colormap function
     
@@ -69,49 +71,51 @@ function analyse_sm(run_code, model, varargin)
             trace_len = length(motion_cache(1));
 
             if plot_all
-                % Store all trials
-                all_mat = nan(height(y_sorted), trace_len);
                 for i = 1:height(y_sorted)
-                    trace = get_cropped_signal(motion_cache, y_sorted, i, trace_len, model_results.(gen_data).estimates_mean);
+                    trace = get_cropped_signal(motion_cache, y_sorted, i, trace_len, model_results.(gen_data).estimates_mean, align_to);
                     all_mat(i, :) = trace;
                 end
             else
-                % Top and bottom trial selection
-                num_trials = selection;
-                top_mat = nan(num_trials, trace_len);
-                bottom_mat = nan(num_trials, trace_len);
-
-                for i = 1:num_trials
-                    trace = get_cropped_signal(motion_cache, y_sorted, i, trace_len, model_results.(gen_data).estimates_mean);
+                for i = 1:selection
+                    trace = get_cropped_signal(motion_cache, y_sorted, i, trace_len, model_results.(gen_data).estimates_mean, align_to);
                     bottom_mat(i, :) = trace;
                 end
-
-                for i = height(y_sorted) - num_trials + 1 : height(y_sorted)
-                    trace = get_cropped_signal(motion_cache, y_sorted, i, trace_len, model_results.(gen_data).estimates_mean);
-                    top_mat(i - height(y_sorted) + num_trials, :) = trace;
+                for i = height(y_sorted) - selection + 1 : height(y_sorted)
+                    trace = get_cropped_signal(motion_cache, y_sorted, i, trace_len, model_results.(gen_data).estimates_mean, align_to);
+                    top_mat(i - height(y_sorted) + selection, :) = trace;
                 end
             end
 
-            %% Plot
-            fh = figure('color','w','Position',[100, 100, 600, 400]);
-            hold on;
+            % ----- X axis depends on alignment -----
+            if strcmpi(align_to,'onset')
+                x = 0:trace_len-1;                  % frames since onset
+                xlabel('Time from onset (frames)');
+            else
+                x = -trace_len+1:0;                  % old behavior: time to unfreeze
+                xlabel('Time to unfreeze (frames)');
+            end
 
+            % ----- Plot -----
+            fh = figure('color','w','Position',[100, 100, 600, 400]); hold on;
             if plot_all
                 for idx_trials = 1:height(lls)
-                    plot(- trace_len + 1:1:0, all_mat(idx_trials,:), 'Color', colmap(idx_trials,:),'LineWidth', 0.25);
+                    plot(x, all_mat(idx_trials,:), 'Color', colmap(idx_trials,:),'LineWidth', 0.25);
                 end
             else
-                plot(-trace_len + 1:1:0, bottom_mat, 'Color', [hex2rgb(col.stationary_sm) 0.05], 'LineWidth', 0.5);
-                plot(-trace_len + 1:1:0, median(bottom_mat, 'omitnan'), 'Color', col.stationary_sm, 'LineWidth', 2);
-                plot(-trace_len + 1:1:0, top_mat, 'Color', [hex2rgb(col.timevarying_sm) 0.05], 'LineWidth', 0.5);
-                plot(-trace_len + 1:1:0, median(top_mat, 'omitnan'), 'Color', col.timevarying_sm, 'LineWidth', 2);
+                plot(x, bottom_mat, 'Color', [hex2rgb(col.stationary_sm) 0.05], 'LineWidth', 0.5);
+                plot(x, median(bottom_mat, 'omitnan'), 'Color', col.stationary_sm, 'LineWidth', 2);
+                plot(x, top_mat, 'Color', [hex2rgb(col.timevarying_sm) 0.05], 'LineWidth', 0.5);
+                plot(x, median(top_mat, 'omitnan'), 'Color', col.timevarying_sm, 'LineWidth', 2);
             end
 
-            xlabel('Time to unfreeze (frames)');
             ylabel('Motion Signal (relative)');
             apply_generic(gca);
 
-            xlim([-600 0]);
+            if strcmpi(align_to,'onset')
+                xlim([0 600]);   % adjust as you like
+            else
+                xlim([-600 0]);
+            end
             ylim([-3 3]);
 
             if export
@@ -125,17 +129,35 @@ function analyse_sm(run_code, model, varargin)
 end
 
 %% Helper function
-function cropped = get_cropped_signal(motion_cache, y, idx, trace_len, estimates_mean)
+function cropped = get_cropped_signal(motion_cache, y, idx, trace_len, estimates_mean, align_to)
+    if nargin < 6 || isempty(align_to); align_to = 'offset'; end
+
     signal = motion_cache(y.fly(idx));
     cropped = nan(1, trace_len);
+
     onset = y.onsets(idx);
     duration_frames = round(y.durations_s(idx) * 60 - estimates_mean.tndt_intercept * 60);
+    if duration_frames < 1; return; end
 
     end_idx = onset + duration_frames - 1;
-    if onset < 1 || end_idx > length(signal)
-        return;
+    if onset < 1 || end_idx > numel(signal)
+        return; % out-of-bounds, keep NaNs
     end
 
-    cropped(end - duration_frames + 1:end) = signal(onset:end_idx);
-    cropped = cropped - cropped(end);  % Align endpoint to 0
+    seg = signal(onset:end_idx);
+
+    if strcmpi(align_to,'onset')
+        % Place segment at the BEGINNING of the buffer
+        n = min(numel(seg), trace_len);
+        cropped(1:n) = seg(1:n);
+        % Zero at onset (first valid sample)
+        if ~isnan(cropped(1)); cropped = cropped - cropped(1); end
+    else
+        % Old behavior: place segment at the END of the buffer
+        n = min(numel(seg), trace_len);
+        cropped(end-n+1:end) = seg(end-n+1:end);
+        % Zero at the endpoint (last valid sample)
+        if ~isnan(cropped(end)); cropped = cropped - cropped(end); end
+    end
 end
+
