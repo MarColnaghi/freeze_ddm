@@ -1,4 +1,4 @@
-function [early_sm, late_sm, com, slopes, slopes_smoothed, com_norm, trend_score, diff_start_end] = partition_variable_freezes(mcell, varargin)
+function [early_sm, late_sm, com, slopes, slopes_smoothed, com_norm, trend_score, diff_start_end, Variance] = partition_variable_freezes(mcell, varargin)
 
 % INPUT:
 %   mcell - 1 x N cell array, each cell contains a vector of motion values (length varies)
@@ -29,6 +29,7 @@ function [early_sm, late_sm, com, slopes, slopes_smoothed, com_norm, trend_score
     slopes_smoothed = nan(1, N);
     trend_score = nan(1, N);
     diff_start_end = nan(1, N);
+    Variance = nan(1, N);
 
     for i = 1:N
         m = mcell{i}(1:end);
@@ -57,6 +58,8 @@ function [early_sm, late_sm, com, slopes, slopes_smoothed, com_norm, trend_score
 
         steps = diff(smoothed(:));
         trend_score(i) = sum(steps > 0) / length(steps);
+
+        Variance(i) = var(smoothed);
     end
 
     % Define partitions

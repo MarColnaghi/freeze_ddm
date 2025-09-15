@@ -27,7 +27,7 @@ bouts_proc = bouts_proc(bouts_proc.durations_s < 10.5, :);
 %%
 
 
-for idx_fly = 50:80 %height(bouts_proc)
+for idx_fly = 1
 figure
 
     sm = motion_cache((idx_fly));
@@ -60,11 +60,11 @@ for idx_bout = 1:20%height(bouts_proc)
     sm = zscore(sm);
     sm_bout = sm(bouts_proc.onsets(idx_bout):bouts_proc.onsets(idx_bout) + bouts_proc.durations(idx_bout));
 
-    %if max(sm_bout(1:10)) > 5
-    figure
-    hold on
-    plot(sm, 'b')
-    % end
+    if max(sm_bout(1:10)) > 2
+        figure
+        hold on
+        plot(sm_bout, 'b')
+    end
 
     ylim([0 10])
 end
@@ -83,15 +83,3 @@ for n_mov = 0:4
 
 end
 
-%% 
-figure 
-tiledlayout(4,5,"TileSpacing","compact", "Padding", "compact")
-hold on
-
-for idx_loom = 1:20
-    nexttile
-    for idx_fly = 1:983
-        sm = motion_cache(bouts_proc.fly(idx_fly));e
-        sm_bout = sm(bouts_proc.onsets(idx_bout):bouts_proc.onsets(idx_bout) + bouts_proc.durations(idx_bout));
-    end
-end
