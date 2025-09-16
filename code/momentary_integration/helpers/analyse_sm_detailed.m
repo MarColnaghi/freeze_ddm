@@ -89,7 +89,7 @@ function [early_sm, late_sm, com, slopes, Signal_Slope, Center_of_Mass, Trend_Sc
                 tl = tiledlayout(1, 3, 'TileSpacing', 'loose', 'Padding', 'loose');
                 nexttile
                 %imagesc(eval(metrics{idx_metrics}), limits{idx_metrics})
-                scatter(1:height(y_sorted), eval(metrics{idx_metrics}), 5, 'k', 'filled')
+                scatter(1:height(y_sorted), eval(metrics{idx_metrics}), 5, y_sorted.durations_s, 'filled')
                 apply_generic(gca, 20)
                 xlim([-50 height(y_sorted) + 50])
                 ylim(limits{idx_metrics})

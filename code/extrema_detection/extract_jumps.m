@@ -15,69 +15,81 @@ gen_data = 'fr';
 % Load important files
 paths = path_generator('folder', fullfile('/fitting_freezes/le', model, select_run));
 load(fullfile(paths.results, 'surrogate.mat'))
-bouts_proc = surrogate;
+load('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/momentary_integration/surrogate/dddm2/run13/sims_tv/y.mat')
 
 % Load the motion ts
 sim_params.motion_cache_path = fullfile(paths.dataset, 'motion_cache.mat');
 load(sim_params.motion_cache_path)
 
-% 
-% 
-% %%
-% 
-% 
-% for idx_fly = 1
-% figure
-% 
-%     sm = motion_cache((idx_fly));
-%     [pks, ind] = findpeaks(sm, "MinPeakHeight", 2);
-% 
-%     plot(sm)
-%     scatter(ind, pks)
-%     ylim([0 10])
-%     
-%     bouts_fly = bouts_proc(bouts_proc.fly == idx_fly, :);
-% 
-%     for idx_bout = 1:height(bouts_fly)
-%         sm_bout = sm(bouts_fly.onsets(idx_bout):bouts_fly.onsets(idx_bout) + bouts_fly.durations(idx_bout));
-%         if any(ind >= bouts_fly.onsets(idx_bout) & ind < bouts_fly.onsets(idx_bout) + bouts_fly.durations(idx_bout))
-%             figure
-%             hold on
-%             plot(bouts_fly.onsets(idx_bout):bouts_fly.onsets(idx_bout) + bouts_fly.durations(idx_bout), sm_bout, 'b')
-%             scatter(ind(ind >= bouts_fly.onsets(idx_bout) & ind < bouts_fly.onsets(idx_bout) + bouts_fly.durations(idx_bout)), pks(ind >= bouts_fly.onsets(idx_bout) & ind < bouts_fly.onsets(idx_bout) + bouts_fly.durations(idx_bout)))
-% 
-%         end
-%     end
-% 
-% end
-% 
-% %%
+d = 240;
+n_selected_comparisons = 50;
+y = y(y.durations_s > d/60 & y.durations_s <= 10.5, :);
+sm_cell = extract_sm_cellarray(y, motion_cache);
+col = cbrewer2('Spectral', n_selected_comparisons);
 
-bouts_proc = bouts_proc(bouts_proc.durations > 60,:);
-d = 60;
+for idx_bout = 10:40
 
-for idx_bout = 1 % height(bouts_proc)
-
-    sm = motion_cache(bouts_proc.fly(idx_bout));
-    sm_bout = sm(bouts_proc.onsets(idx_bout):bouts_proc.onsets(idx_bout) + bouts_proc.durations(idx_bout));
+    sm = motion_cache(y.fly(idx_bout));
+    sm_bout = sm(y.onsets(idx_bout):y.onsets(idx_bout) + round(y.durations_s(idx_bout) .* 60));
     offset = length(sm_bout); onset = offset - d;
     v1 = sm_bout(onset:offset);
+    similarity_value = nan(1, height(y));
+    similarity_sort = nan(1, height(y));
 
-    sm_cell = extract_sm_cellarray(bouts_proc, motion_cache);
+    for idx_comparison = 1:height(y)
+        extracted_sm = sm_cell{idx_comparison};
 
-    for idx_comparison = 1:height(bouts_proc)
-        sm_idx = sm_cell{idx_comparison};
-        v2 = sm_idx(onset:offset);
+        if length(extracted_sm) < d
+            similarity_value(idx_comparison) = nan;
+            similarity_sort(idx_comparison) = nan;
+            disp('hello')
+        else
 
-        similarity(idx_comparison) = norm(v1 - v2);
+            similarity_framebframe = nan(1, length(extracted_sm) - d);
+
+            for idx_frame = 1:length(extracted_sm) - d
+                v2 = extracted_sm(idx_frame:idx_frame + d);
+                similarity_framebframe(idx_frame) = norm(v1 - v2);
+            end
+
+            [closest_similarity, best_frame] = min(similarity_framebframe);
+            similarity_value(idx_comparison) = closest_similarity;
+            similarity_sort(idx_comparison) = best_frame;
+
+        end
 
     end
 
+    [sorted_similarity_magnitude, sorted_similarity_idx] = sort(similarity_value);
+    best_similarities = sorted_similarity_idx(1:n_selected_comparisons);
+
     figure
+    tiledlayout(2,1)
+    nexttile
     hold on
-    histogram(similarity, 0:0.25:50)
+
+    for idx_tops = 1:length(best_similarities)
+        extracted_sm = sm_cell{best_similarities(idx_tops)};
+        %v2 = extracted_sm(similarity_sort(best_similarities(idx_tops)):similarity_sort(best_similarities(idx_tops)) + d);
+        %plot(1:length(v2), v2, 'Color', col(idx_tops, :))
+        init = similarity_sort(best_similarities(idx_tops));
+        v2 = extracted_sm(similarity_sort(best_similarities(idx_tops)):similarity_sort(best_similarities(idx_tops)) + d);
+        plot(-init + 1: - init + length(extracted_sm), extracted_sm, 'Color', col(idx_tops, :))
+
+        initial_bump(idx_bout, idx_tops) = sum(extracted_sm(1:similarity_sort(best_similarities(idx_tops))));
+    end
+
+    plot(1:length(v1), v1, 'k--', 'LineWidth', 2)
+    nexttile
+    scatter(initial_bump(idx_bout, :), y.durations_s(best_similarities,:), 60, col, 'filled')
 
 end
+
+%%
+figure
+hold on
+histogram(similarity_value, 0:0.1:50)
+
 
 
 
@@ -86,12 +98,12 @@ end
 figure 
 hold on
 for n_mov = 0:4 
-    bouts_proc = surrogate(surrogate.moving_flies == n_mov, :);
+    y = surrogate(surrogate.moving_flies == n_mov, :);
     i = 0;
-    for idx_bout = 1:height(bouts_proc)
+    for idx_bout = 1:height(y)
         i = i + 1;
-        sm = motion_cache(bouts_proc.fly(idx_bout));
-        sm_bout(i, :) = sm(bouts_proc.onsets(idx_bout):bouts_proc.onsets(idx_bout) + bouts_proc.durations(idx_bout));
+        sm = motion_cache(y.fly(idx_bout));
+        sm_bout(i, :) = sm(y.onsets(idx_bout):y.onsets(idx_bout) + y.durations(idx_bout));
     end
     plot(mean(sm_bout))
 
