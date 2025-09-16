@@ -1,4 +1,4 @@
-function [rt, traj, t] = drift_diff_new(varargin)
+function [rt, traj, t, det_cum, sto_cum] = drift_diff_new(varargin)
 %DRIFT_DIFF_DYN Simulate a bounded DDM with optional time-varying drift.
 %
 %   [rt, traj, t] = DRIFT_DIFF_DYN('mu', val, 'mu_t', vec, ...)
@@ -52,9 +52,12 @@ function [rt, traj, t] = drift_diff_new(varargin)
 
     while true
         dW = randn(n_t, 1);
-        dx = mu_t * params.dt + params.sigma * sqrt(params.dt) .* dW;
+        det_part = mu_t * params.dt ;
+        sto_part = params.sigma * sqrt(params.dt) .* dW;
+        dx = det_part + sto_part;
         dx(1) = dx(1) + params.z;
-
+        det_cum = params.z + cumsum(det_part);
+        sto_cum = cumsum(sto_part);
         traj = cumsum(dx);
         rt = NaN;
 
@@ -63,6 +66,9 @@ function [rt, traj, t] = drift_diff_new(varargin)
         if ~isempty(cross_idx)
             rt = t(cross_idx) + params.ndt;
             traj((cross_idx+1):end) = NaN;
+            det_cum((cross_idx+1):end) = NaN;
+            sto_cum((cross_idx+1):end) = NaN;
+
         end
 
         if ~params.truncate || (~isnan(rt) && rt > 0.5 && rt <= 10.7)

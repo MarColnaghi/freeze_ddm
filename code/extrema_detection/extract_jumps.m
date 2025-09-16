@@ -21,7 +21,6 @@ bouts_proc = surrogate;
 sim_params.motion_cache_path = fullfile(paths.dataset, 'motion_cache.mat');
 load(sim_params.motion_cache_path)
 
-bouts_proc = bouts_proc(bouts_proc.durations_s < 10.5, :);
 % 
 % 
 % %%
@@ -54,41 +53,34 @@ bouts_proc = bouts_proc(bouts_proc.durations_s < 10.5, :);
 % 
 % %%
 
-for idx_bout = 1:100%height(bouts_proc)
+bouts_proc = bouts_proc(bouts_proc.durations > 60,:);
+d = 60;
+
+for idx_bout = 1 % height(bouts_proc)
 
     sm = motion_cache(bouts_proc.fly(idx_bout));
     sm_bout = sm(bouts_proc.onsets(idx_bout):bouts_proc.onsets(idx_bout) + bouts_proc.durations(idx_bout));
+    offset = length(sm_bout); onset = offset - d;
+    v1 = sm_bout(onset:offset);
 
-    if max(sm_bout(1:10)) > 2
-        idx_bout
-        figure
-        hold on
-        plot(sm_bout, 'b')
-        ylim([-1 6])
-        xlim([0 100])
+    sm_cell = extract_sm_cellarray(bouts_proc, motion_cache);
 
-        compr_sm = sm_bout(11:end);
-        sm_cell = extract_sm_cellarray(bouts_proc, motion_cache);
+    for idx_comparison = 1:height(bouts_proc)
+        sm_idx = sm_cell{idx_comparison};
+        v2 = sm_idx(onset:offset);
 
-        for idx_comparison = 1:height(bouts_proc)
-            sm_idx = sm_cell{idx_comparison};
-            len = min(length(sm_idx), length(compr_sm));
-            v1 = sm_idx(end - len + 1:end);        v2 = compr_sm(end - len + 1:end);
-
-            sim(idx_comparison) = sqrt(sum((v1 - v2).^2));
-                        sim_w(idx_comparison) = norm(v1 - v2);
-
-        end
-       
-       figure 
-       hold on
-       histogram(sim, 0:0.25:50)
-       histogram(sim_w, 0:0.25:50)
+        similarity(idx_comparison) = norm(v1 - v2);
 
     end
 
+    figure
+    hold on
+    histogram(similarity, 0:0.25:50)
 
 end
+
+
+
 
 %%
 figure 

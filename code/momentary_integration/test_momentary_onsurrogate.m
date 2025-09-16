@@ -1,6 +1,6 @@
 clear all;
 
-for idx_seed = 16:17
+for idx_seed = 15
     
     exporting = true;
     col = cmapper();
@@ -66,8 +66,10 @@ for idx_seed = 16:17
     sm_avg = nan(sim_params.n_trials, 1);
     sm_raw = cell(sim_params.n_trials, 1);
     timelock_sm = cell(sim_params.n_trials, 1);
-    all_traj = cell(sim_params.n_trials, 1);
-
+    all_traj_tv = cell(sim_params.n_trials, 1);
+    all_traj_st = cell(sim_params.n_trials, 1);
+    all_traj_tv_det = cell(sim_params.n_trials, 1);
+    all_traj_tv_sto = cell(sim_params.n_trials, 1);
     % Extract Social Motion TimeSeries
     chunk_len = length(sim_params.time_vector);
 
@@ -99,7 +101,7 @@ for idx_seed = 16:17
         tndt_s = ncomp_vars.tndt(idx_trials);
 
         % Time-varying DDM
-        [rt_tv(idx_trials), traj_tv] = drift_diff_new('mu_t', mu_t, 'theta', theta_s, ...
+        [rt_tv(idx_trials), traj_tv, t, traj_tv_det, traj_tv_sto] = drift_diff_new('mu_t', mu_t, 'theta', theta_s, ...
             'z', sim_params.z, 'dt', sim_params.dt, 'T', sim_params.T, 'ndt', tndt_s);
 
         % Stationary DDM based on average SM until response
@@ -119,7 +121,10 @@ for idx_seed = 16:17
         % Store results
         timelock_sm{idx_trials} = sm_chunk(1:min(chunk_len, steps_tv));
 
-        all_traj{idx_trials} = traj_tv;
+        all_traj_tv{idx_trials} = traj_tv;
+        all_traj_tv_sto{idx_trials} = traj_tv_sto;
+        all_traj_tv_det{idx_trials} = traj_tv_det;
+        all_traj_st{idx_trials} = traj_st;
 
         mu_ig = theta_s ./ mu_avg;
         lambda_ig = theta_s .^ 2;
@@ -252,6 +257,8 @@ for idx_seed = 16:17
 
         save('lls_final.mat', 'lls_output')
         save('y.mat', 'y')
+        save(sprintf('all_traj_%s.mat', gen_data), sprintf('all_traj_%s', gen_data))
+
     end
 
     
