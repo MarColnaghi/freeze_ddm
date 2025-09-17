@@ -15,22 +15,23 @@ gen_data = 'fr';
 % Load important files
 paths = path_generator('folder', fullfile('/fitting_freezes/le', model, select_run));
 load(fullfile(paths.results, 'surrogate.mat'))
-load('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/momentary_integration/surrogate/dddm2/run13/sims_tv/y.mat')
+load('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/momentary_integration/surrogate/dddm2/run15/sims_tv/y.mat')
 
 % Load the motion ts
 sim_params.motion_cache_path = fullfile(paths.dataset, 'motion_cache.mat');
 load(sim_params.motion_cache_path)
 
 d = 240;
-n_selected_comparisons = 50;
+n_selected_comparisons = 100;
 y = y(y.durations_s > d/60 & y.durations_s <= 10.5, :);
 sm_cell = extract_sm_cellarray(y, motion_cache);
 col = cbrewer2('Spectral', n_selected_comparisons);
 
-for idx_bout = 10:40
+for idx_bout = 650:700
 
     sm = motion_cache(y.fly(idx_bout));
     sm_bout = sm(y.onsets(idx_bout):y.onsets(idx_bout) + round(y.durations_s(idx_bout) .* 60));
+    
     offset = length(sm_bout); onset = offset - d;
     v1 = sm_bout(onset:offset);
     similarity_value = nan(1, height(y));
@@ -63,25 +64,68 @@ for idx_bout = 10:40
     [sorted_similarity_magnitude, sorted_similarity_idx] = sort(similarity_value);
     best_similarities = sorted_similarity_idx(1:n_selected_comparisons);
 
-    figure
-    tiledlayout(2,1)
-    nexttile
+    fh = figure('color','w','Position',[100, 100, 1600, 800]);
+    tiledlayout(2, 3, 'TileSpacing', 'loose', 'Padding', 'loose')
+    nexttile(1)
     hold on
+    histogram(similarity_value, 'EdgeColor', 'none' )
+    xline(prctile(similarity_value, 10), 'r--')
+    ylabel('Count')
+    ylabel('Social Motion')
+
+    apply_generic(gca, 20)
+    nexttile(2, [1 2])
+    hold on
+
 
     for idx_tops = 1:length(best_similarities)
         extracted_sm = sm_cell{best_similarities(idx_tops)};
-        %v2 = extracted_sm(similarity_sort(best_similarities(idx_tops)):similarity_sort(best_similarities(idx_tops)) + d);
-        %plot(1:length(v2), v2, 'Color', col(idx_tops, :))
+
+
         init = similarity_sort(best_similarities(idx_tops));
         v2 = extracted_sm(similarity_sort(best_similarities(idx_tops)):similarity_sort(best_similarities(idx_tops)) + d);
-        plot(-init + 1: - init + length(extracted_sm), extracted_sm, 'Color', col(idx_tops, :))
-
         initial_bump(idx_bout, idx_tops) = sum(extracted_sm(1:similarity_sort(best_similarities(idx_tops))));
+        ending_duration(idx_bout, idx_tops) = length(extracted_sm(similarity_sort(best_similarities(idx_tops)):end)) - d - 1;
+
+        %plot(-init + 1: - init + length(extracted_sm), extracted_sm, 'Color', col(idx_tops, :))
+
     end
 
-    plot(1:length(v1), v1, 'k--', 'LineWidth', 2)
+    [init_bump_sorted, init_bump_idx] = sort(initial_bump(idx_bout, :), 'descend');
+
+    i = 0;
+    for idx_tops = init_bump_idx
+        i = i + 1;
+        extracted_sm = sm_cell{best_similarities(idx_tops)};
+        init = similarity_sort(best_similarities(idx_tops));
+        v2 = extracted_sm(similarity_sort(best_similarities(idx_tops)):similarity_sort(best_similarities(idx_tops)) + d);
+        plot(-init + 1: - init + length(extracted_sm), extracted_sm, 'Color', col(i, :))
+    end
+
+    plot(1:length(v1), v1, 'k--', 'LineWidth', 3)
+    xlabel('Time (frames)')
+    ylabel('Social Motion')
+    apply_generic(gca, 20)
+
     nexttile
-    scatter(initial_bump(idx_bout, :), y.durations_s(best_similarities,:), 60, col, 'filled')
+    scatter(init_bump_sorted, y.durations_s(best_similarities(init_bump_idx),:), 60, col, 'filled')
+    
+    clim([0 200])
+    xlabel('Magnitude Initial Social Motion')
+    ylabel('Total Freeze Duration (s)')
+    yline(y.durations_s(idx_bout), 'k--', 'LineWidth', 2)
+    xline(initial_bump(idx_bout, 1), 'k--', 'LineWidth', 2)
+    apply_generic(gca,20)
+
+    nexttile
+    scatter(init_bump_sorted,  ending_duration(idx_bout, init_bump_idx), 60, col, 'filled')
+    
+    clim([0 200])
+    xlabel('Magnitude Initial Social Motion')
+    ylabel('Duration Post-Template (s)')
+    yline(ending_duration(idx_bout, 1), 'k--', 'LineWidth', 2)
+    xline(initial_bump(idx_bout, 1) , 'k--', 'LineWidth', 2)
+    apply_generic(gca,20)
 
 end
 
