@@ -15,7 +15,7 @@ gen_data = 'fr';
 % Load important files
 paths = path_generator('folder', fullfile('/fitting_freezes/le', model, select_run));
 load(fullfile(paths.results, 'surrogate.mat'))
-load('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/momentary_integration/surrogate/dddm2/run15/sims_tv/y.mat')
+load('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/momentary_integration/surrogate/dddm2/run13/sims_tv/y.mat')
 
 % Load the motion ts
 sim_params.motion_cache_path = fullfile(paths.dataset, 'motion_cache.mat');
@@ -116,16 +116,20 @@ for idx_bout = 650:700
     yline(y.durations_s(idx_bout), 'k--', 'LineWidth', 2)
     xline(initial_bump(idx_bout, 1), 'k--', 'LineWidth', 2)
     apply_generic(gca,20)
+    xlim([-2 202])
+    ylim([-0.5 11.5])
 
     nexttile
-    scatter(init_bump_sorted,  ending_duration(idx_bout, init_bump_idx), 60, col, 'filled')
+    scatter(init_bump_sorted,  ending_duration(idx_bout, init_bump_idx) ./60, 60, col, 'filled')
     
     clim([0 200])
     xlabel('Magnitude Initial Social Motion')
     ylabel('Duration Post-Template (s)')
-    yline(ending_duration(idx_bout, 1), 'k--', 'LineWidth', 2)
+    yline(ending_duration(idx_bout, 1) ./60, 'k--', 'LineWidth', 2)
     xline(initial_bump(idx_bout, 1) , 'k--', 'LineWidth', 2)
     apply_generic(gca,20)
+    ylim([-0.5 11.5])
+    xlim([-2 202])
 
 end
 
