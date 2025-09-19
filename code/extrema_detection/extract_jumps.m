@@ -12,14 +12,15 @@ gen_data = 'fr';
 % Load important files
 paths = path_generator('folder', fullfile('/fitting_freezes/le', model, select_run));
 load(fullfile(paths.results, 'surrogate.mat'))
-load('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/momentary_integration/surrogate/dddm2/run11/sims_tv/y.mat')
+%load('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/momentary_integration/surrogate/dddm2/run11/sims_tv/y.mat')
+y = surrogate;
 
 % Load the motion ts
 sim_params.motion_cache_path = fullfile(paths.dataset, 'motion_cache.mat');
 load(sim_params.motion_cache_path)
 
 % Parameters
-d = 180; percentage_2b_exp = 1/3; extra_frames = round(percentage_2b_exp * d);
+d = 60; percentage_2b_exp = 1/2; extra_frames = round(percentage_2b_exp * d);
 n_selected_comparisons = 120;
 y = y(y.durations_s > d/60 & y.durations_s <= 10.5, :);
 sm_cell = extract_sm_cellarray(y, motion_cache);
@@ -84,15 +85,14 @@ for idx_bout = 1:height(y)
 end
 
 
-%%
-figure
+fh = figure('color','w','Position',[100, 100, 600, 250]);
 histogram(corr_array, -1:0.025:1)
 apply_generic(gca)
 
 %%
 [best_corr, best_corr_idx] = sort(corr_array);
 
-for idx_bout = [best_corr_idx(1:20)]'
+for idx_bout = [best_corr_idx(end-20:end)]'
 
     sm = motion_cache(y.fly(idx_bout));
     sm_bout = sm(y.onsets(idx_bout):y.onsets(idx_bout) + round(y.durations_s(idx_bout) .* 60));
