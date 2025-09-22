@@ -9,7 +9,7 @@ select_run = 'run03';
 gen_data = 'fr';
 
 % Specify Paths
-paths = path_generator('folder', fullfile('/fitting_freezes/le', model, select_run));
+paths = path_generator('folder', fullfile('/extrema_detection', model));
 
 % Load the motion ts
 sim_params.motion_cache_path = fullfile(paths.dataset, 'motion_cache.mat');
@@ -29,10 +29,13 @@ col = cbrewer2('Spectral', n_selected_comparisons);
 fh = figure('color','w','Position',[100, 100, 600, 250]);
 hold on
 
-for idx_surrogate_run = 14
-    
+for idx_surrogate_run = 13:16
+
     clear y
     load(sprintf('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/momentary_integration/surrogate/dddm2/run%d/sims_tv/y.mat', idx_surrogate_run))
+    folder_name = fullfile(paths.fig, sprintf('run%d', idx_surrogate_run), sprintf('d_%d-2bexp_%.2f-ncomp_%d', d, 1 - percentage_2b_exp, n_selected_comparisons));
+    mkdir(folder_name);
+    paths.fig = folder_name;
 
     % Select only freezes with specific durations
     y = y(y.durations_s > d/60 & y.durations_s <= 10.5, :);
@@ -115,10 +118,21 @@ for idx_surrogate_run = 14
         corr_array_surr(idx_bout) = corr_bout(1,2);
     end
     
-    histogram(corr_array_surr, -1:0.025:1, 'Normalization', 'pdf')
+    figure(fh)
+    histogram(corr_array_surr, -1:0.025:1, 'Normalization', 'pdf', 'EdgeColor', 'none')
 
+    fh_imgsc = figure('color','w','Position',[100, 100, 300, 700]);
+    imagesc(ending_duration_sorted, [0 6 * 60])
+    xlabel({'Comparisons','(Sorted by Inital Bump)'}); xticks([1 n_selected_comparisons])
+    ylabel('Freezes'); yticks([])
+    cbh = colorbar('Location', 'northoutside', 'LineWidth', 2, 'FontSize', 18); 
+    cbh.Label.String = 'Post-Template Duration(frames)';
+
+    apply_generic(gca, 20)
+    exporter(fh_imgsc, paths, 'imagesc_rt.pdf')
 end
 
+figure(fh)
 apply_generic(gca)
 
 
