@@ -41,8 +41,10 @@ fh = figure('color', 'w', 'Position', [100, 100, 600, 250]);
 hold on
 
 i = 0;
+surrogate_runs = num2cell(surrogate_runs, 1);
+surrogate_runs{end + 1} = 'emp';
 
-for idx_surrogate_run = {surrogate_runs, 'emp'}
+for idx_surrogate_run = surrogate_runs
 
     %fprintf('running surrogate run #%d out of #%d \n', idx_surrogate_run, surrogate_runs(end))
     idx_surrogate_loop = idx_surrogate_run{1};
@@ -142,7 +144,9 @@ for idx_surrogate_run = {surrogate_runs, 'emp'}
         corr_array_surr(idx_bout) = corr_bout(1,2);
     end
 
+
     figure(fh)
+
     if i == 1
         histogram(corr_array_surr, -1:0.025:1, 'Normalization', 'pdf', 'DisplayStyle', 'stairs', 'DisplayName', 'surrogate', 'LineWidth', 2)
     else
@@ -283,6 +287,7 @@ for idx_surrogate_run = {surrogate_runs, 'emp'}
     xlim([-5 305])
 
     exporter(fh_ind_bouts, paths_loop, sprintf('bout_%d.pdf', idx_bout))
+   
     end
 end
 
@@ -292,9 +297,13 @@ ylabel('density')
 legend('Box', 'off', 'FontSize', 18);
 xlim([-1 1])
 apply_generic(gca, 20)
-exporter(fh_ind_bouts, paths, 'correlation.pdf')
+
+paths = path_generator('folder', fullfile('/extrema_detection', model));
+exporter(fh, paths, 'correlation.pdf')
 
 end
+
+
 
 % 
 % if idx_bout == 2
@@ -325,4 +334,5 @@ cbh.Label.String = 'Post-Template Duration(frames)';
 
 apply_generic(gca, 20)
 exporter(fh_imgsc, paths, 'imagesc_rt.pdf')
+
 end
