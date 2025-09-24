@@ -34,6 +34,7 @@ function [rt, traj, t, det_cum, sto_cum] = extrema_detection_new(varargin)
 
     parse(p, varargin{:});
     params = p.Results;
+    rng(params.seed);
 
     % Time vector
     t = 0:params.dt:params.T;
@@ -64,8 +65,6 @@ function [rt, traj, t, det_cum, sto_cum] = extrema_detection_new(varargin)
         if ~isempty(cross_idx)
             rt = t(cross_idx) + params.ndt;
             traj((cross_idx+1):end) = NaN;
-            det_cum((cross_idx+1):end) = NaN;
-            sto_cum((cross_idx+1):end) = NaN;
 
         end
 

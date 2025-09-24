@@ -62,7 +62,7 @@ ncomp_vars = evaluate_model(model, x, y);
 gt_table = array2table(gt, 'VariableNames', lbl);
 
 % Specify the seed
-rng(2);
+rng(1);
 
 % General simulation parameters
 sim_params.n_trials = height(bouts_proc);

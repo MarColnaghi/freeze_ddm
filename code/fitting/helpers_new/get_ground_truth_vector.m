@@ -2,7 +2,7 @@ function [xtrue, lbl, mask] = get_ground_truth_vector(model)
 
     components = fieldnames(model);
     xtrue_parts = cell(1, numel(components));
-    base_names = {'sm', 'fs', 'ln', 'ls', 'intercept', 'smp'};
+    base_names = {'sm', 'smp', 'fs', 'ln', 'ls', 'intercept'};
 
     for i = 1:numel(components)
         comp = model.(components{i});

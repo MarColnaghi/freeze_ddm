@@ -11,6 +11,6 @@ bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'win
 
 figure
 hold on
-histogram(bouts_proc.durations_s, 'BinEdges', 1/120:1/60:3)
+histogram(bouts_proc.durations_s, 'BinEdges', 1/120:1/60:10)
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'bsl', 'window', 'all');
-histogram(bouts_proc.durations_s, 'BinEdges', 1/120:1/60:3)
+histogram(bouts_proc.durations_s, 'BinEdges', 1/120:1/60:10)

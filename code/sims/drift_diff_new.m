@@ -32,9 +32,12 @@ function [rt, traj, t, det_cum, sto_cum] = drift_diff_new(varargin)
     addParameter(p, 'truncate', false, @(x) islogical(x));
     addParameter(p, 'seed', 0);
 
+    
     parse(p, varargin{:});
     params = p.Results;
 
+    rng(params.seed);
+    
     % Time vector
     t = 0:params.dt:params.T;
     n_t = numel(t);
