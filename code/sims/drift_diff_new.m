@@ -30,13 +30,15 @@ function [rt, traj, t, det_cum, sto_cum] = drift_diff_new(varargin)
     addParameter(p, 'T',        10,   @(x) validateattributes(x, {'numeric'}, {'scalar', 'positive'}));
     addParameter(p, 'ndt',      0.3,  @(x) validateattributes(x, {'numeric'}, {'scalar', 'nonnegative'}));
     addParameter(p, 'truncate', false, @(x) islogical(x));
-    addParameter(p, 'seed', 0);
+    addParameter(p, 'seed', []);
 
     
     parse(p, varargin{:});
     params = p.Results;
 
-    rng(params.seed);
+    if ~isempty(params.seed)
+        rng(params.seed);
+    end
     
     % Time vector
     t = 0:params.dt:params.T;

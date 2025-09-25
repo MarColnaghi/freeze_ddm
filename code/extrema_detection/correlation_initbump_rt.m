@@ -53,7 +53,9 @@ for idx_surrogate_run = surrogate_runs
 
     if ~ischar(idx_surrogate_loop)
 
-        y_surrogate = importdata(sprintf('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/momentary_integration/surrogate/%s/run%d/sims_tv/y.mat', model, idx_surrogate_loop));
+        %y_surrogate = importdata(sprintf('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/momentary_integration/surrogate/%s/run%d/sims_tv/y.mat', model, idx_surrogate_loop));
+        y_surrogate = importdata('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/extrema_detection/ac_vs_ed/run05/sims_ed/y.mat');
+
         folder_name = fullfile(sprintf('d_%d-2bexp_%d-ncomp_%d', d, frames_2b_exp, n_selected_comparisons), sprintf('run%d', idx_surrogate_loop));
 
     else
@@ -68,7 +70,7 @@ for idx_surrogate_run = surrogate_runs
     mkdir(paths_loop.fig)
 
     % Select only freezes with specific durations
-    y_surrogate = y_surrogate(y_surrogate.durations_s > d/60 & y_surrogate.durations_s < points.censoring, :);
+    y_surrogate = y_surrogate(y_surrogate.durations_s > d/60 & y_surrogate.durations_s < 30, :);
 
     flies = y_surrogate.fly;
     allfr_onsets = y_surrogate.onsets;
