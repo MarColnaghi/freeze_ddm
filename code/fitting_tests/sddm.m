@@ -12,11 +12,12 @@ bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'win
 % Only save useful variables in the table
 y = table;
 y.sm = bouts_proc.avg_sm_freeze_norm;
-y.sm = bouts_proc.avg_sm_freeze_norm;
+y.smp = bouts_proc.avg_sm_freeze_norm;
 y.fs = bouts_proc.avg_fs_1s_norm;
 y.ln = bouts_proc.nloom_norm;
 y.ls = bouts_proc.sloom_norm;
 y.intercept = ones(height(y),1);   % N‑by‑1 column of ones
+y.fly = bouts_proc.fly;
 predictors = y.Properties.VariableNames;
 
 ncomp_vars = table();
@@ -29,7 +30,7 @@ model.mu = struct( ...
     struct('name', 'sm'), ...
     struct('name', 'intercept') ...
     }}, ...
-    'mask', [1 0 0 0 1], ...
+    'mask', [1 0 0 0 0 1], ...
     'ground_truth', [0.9 0.2], ...
     'link', link_linear ...
     );
@@ -41,7 +42,7 @@ model.theta = struct( ...
     struct('name', 'ls'), ...
     struct('name', 'intercept') ...
     }}, ...
-    'mask', [0 1 0 1 1], ...
+    'mask', [0 0 1 0 1 1], ...
     'ground_truth', [0.4 0.4 1.2], ...
     'link', link_linear ...
     );
@@ -51,22 +52,23 @@ model.tndt = struct( ...
     'predictors', {{ ...
     struct('name', 'intercept') ...
     }}, ...
-    'mask', [0 0 0 0 1], ...
-    'ground_truth', 0.25, ...
+    'mask', [0 0 0 0 0 1], ...
+    'ground_truth', 0.0, ...
     'link', link_linear ...
     );
 
-x = [0.9 0.2 0.4 0.4 0.2 0.25];
-ncomp_vars = evaluate_model(model, x, y);
 [gt, lbl] = get_ground_truth_vector(model);
+x = gt(~isnan(gt));
+ncomp_vars = evaluate_model(model, x, y);
 gt_table = array2table(gt, 'VariableNames', lbl);
 
 % Specify the seed
-rng(1);
+sim_params.rng = 10;
+rng(sim_params.rng);
 
 % General simulation parameters
 sim_params.n_trials = height(bouts_proc);
-sim_params.dt = 1/600;
+sim_params.dt = 1/60;
 sim_params.T = 60;
 sim_params.time_vector = 0:sim_params.dt:sim_params.T;
 sim_params.z = 0;
@@ -99,7 +101,6 @@ for idx_trials = 1:sim_params.n_trials
     [rt.st(idx_trials), traj_st] = drift_diff_new('mu', mu_s, 'theta', theta_s, ...
         'z', sim_params.z, 'dt', sim_params.dt, 'T', sim_params.T, 'ndt', tndt_s);
 
-
     mu_ig = theta_s ./ mu_s;
     lambda_ig = theta_s .^ 2;
 
@@ -120,12 +121,12 @@ tiledlayout(2, 1, 'TileSpacing', 'compact', 'Padding', 'loose')
 
 nexttile
 hold on
-histogram(rt.st, 1/120:1/60:sim_params.T, 'EdgeColor', 'none', 'Normalization', 'pdf')
-histogram(rt.ig, 1/120:1/60:sim_params.T, 'EdgeColor', 'none', 'Normalization', 'pdf')
+histogram(rt.st, 1/120:1/60 * 10:sim_params.T, 'EdgeColor', 'none', 'Normalization', 'pdf')
+histogram(rt.ig, 1/120:1/60 * 10:sim_params.T, 'EdgeColor', 'none', 'Normalization', 'pdf')
 
 apply_generic(gca)
 xlabel('Duration (s)'); ylabel('pdf')
-xlim([0 2])
+xlim([0 20])
 ylim([0 1])
 
 nexttile
@@ -140,13 +141,13 @@ points.censoring = sim_params.T;
 points.truncation = 0.4;
 
 %  Now we added our vector column to the bouts table.
-bouts_proc.durations_s = rt.st;
+y.durations_s = rt.st;
 
-model_results = run_fitting_newer(bouts_proc, points, 'sddm1', paths, 'export', true, 'extra', [], 'ground_truth', gt_table);
+model_results = run_fitting_newer(y, points, 'sddm1', paths, 'export', true, 'extra', [], 'ground_truth', gt_table);
 plot_fit('results', model_results)
 plot_estimates('results', model_results)
 
-model_results = run_fitting_newer(bouts_proc, points, 'sddm2', paths, 'export', true, 'extra', [], 'ground_truth', gt_table);
+model_results = run_fitting_newer(y, points, 'sddm2', paths, 'export', true, 'extra', [], 'ground_truth', gt_table);
 plot_fit('results', model_results)
 plot_estimates('results', model_results)
 

@@ -1,5 +1,8 @@
 % This code shows how a stationary drift ddm works.
 
+close all
+clearvars
+clc
 threshold_imm = 3; threshold_mob = 3; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
 
 exporting = true;
@@ -67,7 +70,7 @@ fh = figure('color','w', 'Position', [100 100 1000 250]);
 hold on
 x_plot = (bout_tbl.onsets - 60: bout_tbl.onsets + bout_tbl.durations + 60) - bout_tbl.onsets;
 plot(x_plot, sm_aroundfreeze, 'k-', 'LineWidth', 2)
-plot(x_plot(60:end-60), sm_aroundfreeze(60:end-60), 'Color', [hex2rgb(col.timevarying_sm), 0.4], 'LineWidth', 3 )
+plot(x_plot(60:end-60), sm_aroundfreeze(60:end-60), 'Color', 'w', 'LineWidth', 3 )
 plot(x_plot(60:end-60), repmat(mean(sm_aroundfreeze(60:end-60)), length(x_plot(60:end-60)), 1), 'Color', col.stationary_sm, 'LineWidth', 3)
 ax = gca;
 ax.XAxis.Visible = 'off';

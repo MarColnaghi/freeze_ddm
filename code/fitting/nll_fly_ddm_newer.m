@@ -27,11 +27,11 @@ if strcmp(plot_flag, 'p')
     for idx_bout = 1:height(bouts)
 
         tbl.sm = bouts.sm(idx_bout)*ones(height(tbl),1);
+        tbl.smp = bouts.smp(idx_bout)*ones(height(tbl),1);
         tbl.fs = bouts.fs(idx_bout)*ones(height(tbl),1);
         tbl.ln = bouts.ln(idx_bout)*ones(height(tbl),1);
         tbl.ls = bouts.ls(idx_bout)*ones(height(tbl),1);
         tbl.intercept = bouts.intercept(idx_bout)*ones(height(tbl),1);
-        tbl.smp = bouts.smp(idx_bout)*ones(height(tbl),1);
 
         g = comp_loglikelihood(params, tbl, points, model_func, iid, tok, extra);
         %[~, G] = comp_loglikelihood(params, tbl, points, model_func, iid, tok, extra);
@@ -72,11 +72,11 @@ bif = bouts_individual_fly;
 ts = bif.durations_s;
 y = table;
 y.sm = bif.sm;
+y.smp = bif.smp;
 y.fs = bif.fs;
 y.ln = bif.ln;
 y.ls = bif.ls;
 y.intercept = bif.intercept;
-y.smp = bif.smp;
 
 model = model_func();
 out = evaluate_model(model, x, y);

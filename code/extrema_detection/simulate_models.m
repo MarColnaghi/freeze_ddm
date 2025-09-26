@@ -49,7 +49,7 @@ model.theta = struct( ...
     struct('name', 'intercept') ...
     }}, ...
     'mask', [0 0 1 0 1 1], ...
-    'ground_truth', [1 1 2], ...
+    'ground_truth', [1 1 1], ...
     'link', link_linear ...
     );
 
@@ -72,10 +72,10 @@ rng(1);
 % General simulation parameters
 sim_params.n_trials = height(bouts_proc);
 sim_params.dt = 1/60;
-sim_params.T = 30;
-sim_params.time_vector = 0:sim_params.dt:sim_params.T;
+sim_params.T = 10.5;
+sim_params.time_vector = sim_params.dt:sim_params.dt:sim_params.T;
 sim_params.z = 0;
-sim_params.theta_factor = 140;
+sim_params.theta_factor = 10;
 sim_params.gt_table = gt_table;
 
 % Simulation settings
@@ -110,13 +110,23 @@ for idx_trials = 1:height(bouts_proc)
     tndt_s = ncomp_vars.tndt(idx_trials);
 
     % Simulate RT from full DDM
-    [rt_ac(idx_trials), traj_st] = drift_diff_new('mu_t', mu_tv, 'theta', theta_s, ...
+    [rt_ac(idx_trials), traj_ac] = drift_diff_new('mu_t', mu_tv, 'theta', theta_s, ...
         'z', sim_params.z, 'dt', sim_params.dt, 'T', sim_params.T, 'ndt', tndt_s, 'seed', idx_trials, 'sigma', 1);
 
     [rt_ed(idx_trials), traj_ed] = extrema_detection_new('mu_t', mu_tv .* sim_params.theta_factor, 'theta', theta_s, ...
         'z', sim_params.z, 'dt', sim_params.dt, 'T', sim_params.T, 'ndt', tndt_s, 'seed', idx_trials, 'sigma', 1);
 
+    
+    if idx_trials < 50 & idx_trials > 40
+        figure
+        hold on
+        plot(traj_ed)
+        plot(traj_ac)
+        plot(sm_chunk)
+        hold on
+    end
 end
+
 toc
 
 rt.ac = rt_ac; rt.ed = rt_ed; rt.sm_ts = sm_raw;
@@ -131,7 +141,7 @@ xlabel('Duration')
 ylabel('Count')
 apply_generic(gca, 24);
 
-
+%
 y = table;
 y.sm = bouts_proc.avg_sm_freeze_norm;
 y.smp = bouts_proc.avg_sm_freeze_norm;
@@ -155,6 +165,7 @@ for gen_type = tested_datasets
     gen_data = gen_type{1};
     y.durations_s = rt.(gen_data);
 
+    y.durations_s(isnan(y.durations_s)) = sim_params.T + 1;
     % No need to create path, we will have a global mat file with all the fits.
     paths_temp.results = fullfile(paths.results, sprintf('sims_%s', gen_data));
     mkdir(paths_temp.results); cd(paths_temp.results)

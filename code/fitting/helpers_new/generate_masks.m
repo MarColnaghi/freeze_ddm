@@ -10,16 +10,17 @@ for i = 1:numel(param_blocks)
     for idx_preds = 1:length(preds)
         if strcmp(preds{idx_preds}.name, 'sm')
             mask(1) = 1;
-        elseif strcmp(preds{idx_preds}.name, 'fs')
-            mask(2) = 1;
-        elseif strcmp(preds{idx_preds}.name, 'ln')
-            mask(3) = 1;
-        elseif strcmp(preds{idx_preds}.name, 'ls')
-            mask(4) = 1;
-        elseif strcmp(preds{idx_preds}.name, 'intercept')
-            mask(5) = 1;
         elseif strcmp(preds{idx_preds}.name, 'smp')
+            mask(2) = 1;
+        elseif strcmp(preds{idx_preds}.name, 'fs')
+            mask(3) = 1;
+        elseif strcmp(preds{idx_preds}.name, 'ln')
+            mask(4) = 1;
+        elseif strcmp(preds{idx_preds}.name, 'ls')
+            mask(5) = 1;
+        elseif strcmp(preds{idx_preds}.name, 'intercept')
             mask(6) = 1;
+
         end
 
     end

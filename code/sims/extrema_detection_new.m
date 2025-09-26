@@ -1,7 +1,7 @@
 function [rt, traj, t, det_cum, sto_cum] = extrema_detection_new(varargin)
 %DRIFT_DIFF_DYN Simulate a bounded DDM with optional time-varying drift.
 %
-%   [rt, traj, t] = DRIFT_DIFF_DYN('mu', val, 'mu_t', vec, ...)
+%   [rt, traj, t] = extrema_detection_new('mu', val, 'mu_t', vec, ...)
 %   simulates a DDM with optional time-varying drift.
 %
 %   Parameters:
@@ -30,11 +30,14 @@ function [rt, traj, t, det_cum, sto_cum] = extrema_detection_new(varargin)
     addParameter(p, 'T',        10,   @(x) validateattributes(x, {'numeric'}, {'scalar', 'positive'}));
     addParameter(p, 'ndt',      0.3,  @(x) validateattributes(x, {'numeric'}, {'scalar', 'nonnegative'}));
     addParameter(p, 'truncate', false, @(x) islogical(x));
-    addParameter(p, 'seed', 0);
+    addParameter(p, 'seed', []);
 
     parse(p, varargin{:});
     params = p.Results;
-    rng(params.seed);
+
+    if ~isempty(params.seed)
+        rng(params.seed);
+    end
 
     % Time vector
     t = 0:params.dt:params.T;
@@ -52,11 +55,12 @@ function [rt, traj, t, det_cum, sto_cum] = extrema_detection_new(varargin)
     end
 
     while true
-        dW = randn(n_t, 1);
+         dW = randn(n_t, 1);
         det_part = mu_t * params.dt ;
         sto_part = params.sigma * sqrt(params.dt) .* dW;
-        dx = det_part + sto_part;
-        dx(1) = dx(1) + params.z;
+        dx = [params.z; det_part + sto_part];
+        det_cum = [params.z; cumsum(det_part)];
+        sto_cum = [0; cumsum(sto_part)];
         traj = dx;
         rt = NaN;
 

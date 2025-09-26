@@ -59,10 +59,9 @@ function [rt, traj, t, det_cum, sto_cum] = drift_diff_new(varargin)
         dW = randn(n_t, 1);
         det_part = mu_t * params.dt ;
         sto_part = params.sigma * sqrt(params.dt) .* dW;
-        dx = det_part + sto_part;
-        dx(1) = dx(1) + params.z;
-        det_cum = params.z + cumsum(det_part);
-        sto_cum = cumsum(sto_part);
+        dx = [params.z; det_part + sto_part];
+        det_cum = [params.z; cumsum(det_part)];
+        sto_cum = [0; cumsum(sto_part)];
         traj = cumsum(dx);
         rt = NaN;
 
