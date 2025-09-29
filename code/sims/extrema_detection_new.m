@@ -46,7 +46,7 @@ function [rt, traj, t, det_cum, sto_cum] = extrema_detection_new(varargin)
     % Use time-varying drift if provided
     use_dynamic_mu = ~isempty(params.mu_t);
     if use_dynamic_mu
-        if length(params.mu_t) ~= n_t
+        if length(params.mu_t) ~= n_t - 1
             error('mu_t must match the number of time steps.');
         end
         mu_t = params.mu_t(:);  % Ensure column vector
@@ -55,7 +55,7 @@ function [rt, traj, t, det_cum, sto_cum] = extrema_detection_new(varargin)
     end
 
     while true
-         dW = randn(n_t, 1);
+         dW = randn(n_t - 1, 1);
         det_part = mu_t * params.dt ;
         sto_part = params.sigma * sqrt(params.dt) .* dW;
         dx = [params.z; det_part + sto_part];

@@ -11,7 +11,7 @@ paths = path_generator('folder', 'extrema_detection/ac_vs_ed', 'bouts_id', id_co
 
 load(fullfile(paths.dataset, 'bouts.mat'));
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le');
-bouts_proc = bouts_proc(bouts_proc.nloom < 19, :);
+bouts_proc = bouts_proc(bouts_proc.nloom < 15, :);
 
 % Load the motion ts
 sim_params.motion_cache_path = fullfile(paths.dataset, 'motion_cache.mat');
@@ -72,10 +72,10 @@ rng(1);
 % General simulation parameters
 sim_params.n_trials = height(bouts_proc);
 sim_params.dt = 1/60;
-sim_params.T = 10.5;
+sim_params.T = 90;
 sim_params.time_vector = sim_params.dt:sim_params.dt:sim_params.T;
 sim_params.z = 0;
-sim_params.theta_factor = 10;
+sim_params.snr = 100;
 sim_params.gt_table = gt_table;
 
 % Simulation settings
@@ -111,10 +111,10 @@ for idx_trials = 1:height(bouts_proc)
 
     % Simulate RT from full DDM
     [rt_ac(idx_trials), traj_ac] = drift_diff_new('mu_t', mu_tv, 'theta', theta_s, ...
-        'z', sim_params.z, 'dt', sim_params.dt, 'T', sim_params.T, 'ndt', tndt_s, 'seed', idx_trials, 'sigma', 1);
+        'z', sim_params.z, 'dt', sim_params.dt, 'T', sim_params.T, 'ndt', tndt_s, 'sigma', 1);
 
-    [rt_ed(idx_trials), traj_ed] = extrema_detection_new('mu_t', mu_tv .* sim_params.theta_factor, 'theta', theta_s, ...
-        'z', sim_params.z, 'dt', sim_params.dt, 'T', sim_params.T, 'ndt', tndt_s, 'seed', idx_trials, 'sigma', 1);
+    [rt_ed(idx_trials), traj_ed] = extrema_detection_new('mu_t', mu_tv .* sim_params.snr, 'theta', theta_s, ...
+        'z', sim_params.z, 'dt', sim_params.dt, 'T', sim_params.T, 'ndt', tndt_s, 'sigma', 1);
 
     
     if idx_trials < 50 & idx_trials > 40
