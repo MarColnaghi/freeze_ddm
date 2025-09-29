@@ -4,6 +4,7 @@ close all
 % Load the table first. We will take advantage of an already existing
 % dataset.
 
+store = false;
 col = cmapper();
 
 threshold_imm = 3; threshold_mob = 3; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
@@ -75,7 +76,7 @@ sim_params.dt = 1/60;
 sim_params.T = 90;
 sim_params.time_vector = sim_params.dt:sim_params.dt:sim_params.T;
 sim_params.z = 0;
-sim_params.snr = 100;
+sim_params.snr = 50;
 sim_params.gt_table = gt_table;
 
 % Simulation settings
@@ -153,27 +154,30 @@ y.onsets = bouts_proc.onsets;
 y.fly = bouts_proc.fly;
 y.id = bouts_proc.id;
 
-create_output_dirs(paths)
+if store
+    create_output_dirs(paths)
+    cd(paths.results)
+    save('sim_params.mat', 'sim_params')
 
-tested_datasets = {'ac', 'ed'};
+    tested_datasets = {'ac', 'ed'};
 
-%%%%%%% Loop FIT %%%%%%%
+    %%%%%%% Loop FIT %%%%%%%
 
-for gen_type = tested_datasets
+    for gen_type = tested_datasets
 
-    % Select dataset and modify durations column in the table
-    gen_data = gen_type{1};
-    y.durations_s = rt.(gen_data);
+        % Select dataset and modify durations column in the table
+        gen_data = gen_type{1};
+        y.durations_s = rt.(gen_data);
 
-    y.durations_s(isnan(y.durations_s)) = sim_params.T + 1;
-    % No need to create path, we will have a global mat file with all the fits.
-    paths_temp.results = fullfile(paths.results, sprintf('sims_%s', gen_data));
-    mkdir(paths_temp.results); cd(paths_temp.results)
+        y.durations_s(isnan(y.durations_s)) = sim_params.T + 1;
+        % No need to create path, we will have a global mat file with all the fits.
+        paths_temp.results = fullfile(paths.results, sprintf('sims_%s', gen_data));
+        mkdir(paths_temp.results); cd(paths_temp.results)
 
-    save('y.mat', 'y')
+        save('y.mat', 'y')
 
+    end
 end
-
 
 function create_output_dirs(paths)
     % Ensure base directories exist

@@ -1,0 +1,117 @@
+
+function s = initbump_rt(varargin)
+
+
+%% Parse inputs
+p = inputParser;
+addParameter(p, 'export', false);
+addParameter(p, 'template_length', '');
+addParameter(p, 'frames_2b_exp', '');
+addParameter(p, 'n_selected_comparisons', '');  % Plot all trials if true
+addParameter(p, 'run2analyse', []);  % 'offset' (old behavior) or 'onset'
+
+parse(p, varargin{:});
+
+export = p.Results.export;
+d = p.Results.template_length;
+frames_2b_exp = p.Results.frames_2b_exp;
+n_selected_comparisons = p.Results.n_selected_comparisons;
+run2analyse = p.Results.run2analyse;
+
+% Specify Paths
+run = sprintf('run%02d', run2analyse);
+paths = path_generator('folder', fullfile('/extrema_detection', 'ac_vs_ed', run));
+
+% Load the Motion Cache
+sim_params = importdata(fullfile(paths.results, 'sim_params.mat'));
+motion_cache = importdata(sim_params.motion_cache_path);
+
+% Calculations
+extra_frames = d - frames_2b_exp - 1;
+d_s = d /60;
+
+% Select Color Map
+col = cbrewer2('Spectral', n_selected_comparisons);
+
+% Already Creates the figure for the histogram
+fh = figure('color', 'w', 'Position', [100, 100, 600, 250]);
+hold on
+
+% Load relevant files
+y.ed = importdata(fullfile(paths.results, 'sims_ed/y.mat'));
+y.ac = importdata(fullfile(paths.results, 'sims_ac/y.mat'));
+
+code4segm = sprintf('d_%d-2bexp_%d-ncomp_%d', d, frames_2b_exp, n_selected_comparisons);
+paths_out = path_generator('folder', fullfile('/extrema_detection', 'ac_vs_ed', run, code4segm));
+mkdir(paths_out.fig); mkdir(paths_out.results);
+
+% Select only freezes with specific durations
+y_curr = y.ed;
+y_curr = y_curr(y_curr.durations_s > d_s & y_curr.durations_s < sim_params.T, :);
+
+flies = y_curr.fly;
+allfr_onsets = y_curr.onsets;
+allfr_durations = round(y_curr.durations_s .* 60);
+allfr_offsets = allfr_onsets + allfr_durations;
+
+s = struct;
+
+for idx_bout = 1:height(y_curr)
+
+    fprintf('bout n:%d\n', idx_bout);
+    sm = motion_cache(flies(idx_bout));
+    freeze_onset = allfr_onsets(idx_bout);
+    freeze_duration = allfr_durations(idx_bout);
+    freeze_offset = allfr_offsets(idx_bout);
+
+    sm_bout = sm(freeze_onset:freeze_offset);
+
+    template_onset = length(sm_bout) - d + 1;
+
+    v1 = sm_bout(template_onset:end);
+
+    bout = table();
+    similarity_value = nan(1, height(y_curr));
+    similarity_sort = nan(1, height(y_curr));
+    summed_motion_b4 = nan(1, height(y_curr));
+    rt_post_template = nan(1, height(y_curr));
+    all_cropped = cell(1, height(y_curr));
+
+    for idx_comparison = 1:height(y_curr)
+
+        comparison_sm = motion_cache(flies(idx_comparison));
+        comparison_onset = allfr_onsets(idx_comparison);
+        comparison_duration = allfr_durations(idx_comparison);
+        comparison_offset_wextra = allfr_offsets(idx_comparison) + extra_frames;
+
+        comparison_sm_cropped = comparison_sm(comparison_onset:comparison_offset_wextra);
+
+        dots = conv(comparison_sm_cropped, flipud(v1), 'valid');
+        ssq  = conv(comparison_sm_cropped.^2, ones(d, 1), 'valid');
+        v1sq = sum(v1.^2);
+
+        similarity_framebframe_vectorized = sqrt(max(v1sq + ssq - 2*dots, 0));
+        
+        [closest_similarity, best_frame] = min(similarity_framebframe_vectorized);
+        similarity_value(idx_comparison) = closest_similarity;
+        similarity_sort(idx_comparison) = best_frame;
+        all_cropped{idx_comparison} = comparison_sm_cropped;
+        summed_motion_b4(idx_comparison) = sum(comparison_sm_cropped(1:best_frame - 1));
+        rt_post_template(idx_comparison) = comparison_duration - best_frame;
+    end
+
+    bout.closest_similarity = similarity_value';
+    bout.best_frame = similarity_sort';
+    % bout.cropped_signals = all_cropped';
+    bout.summed_motion_b4 = summed_motion_b4';
+    bout.rt_post_template = rt_post_template';
+    bout.idx_freeze = (1:height(y_curr))';
+
+    sorted_bout = sortrows(bout, 'closest_similarity');
+    s(idx_bout).boutlist = sorted_bout;
+
+end
+
+cd(paths_out.results)
+save('struct_ed.mat', 's')
+end

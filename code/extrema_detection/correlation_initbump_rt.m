@@ -54,7 +54,7 @@ for idx_surrogate_run = surrogate_runs
     if ~ischar(idx_surrogate_loop)
 
         %y_surrogate = importdata(sprintf('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/momentary_integration/surrogate/%s/run%d/sims_tv/y.mat', model, idx_surrogate_loop));
-        y_surrogate = importdata('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/extrema_detection/ac_vs_ed/run05/sims_ed/y.mat');
+        y_surrogate = importdata('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/extrema_detection/ac_vs_ed/run02/sims_ed/y.mat');
 
         folder_name = fullfile(sprintf('d_%d-2bexp_%d-ncomp_%d', d, frames_2b_exp, n_selected_comparisons), sprintf('run%d', idx_surrogate_loop));
 
@@ -288,7 +288,7 @@ for idx_surrogate_run = surrogate_runs
     ylim([-0.5 11.5])
     xlim([-5 305])
 
-    exporter(fh_ind_bouts, paths_loop, sprintf('bout_%d.pdf', idx_bout))
+    exporter(fh_ind_bouts, paths_loop, sprintf('bout_%d.pdf', idx_bout), 'export', export)
    
     end
 end
@@ -301,7 +301,7 @@ xlim([-1 1])
 apply_generic(gca, 20)
 
 paths = path_generator('folder', fullfile('/extrema_detection', model));
-exporter(fh, paths, 'correlation.pdf')
+exporter(fh, paths, 'correlation.pdf', 'export', export)
 
 end
 
@@ -335,6 +335,6 @@ cbh = colorbar('Location', 'northoutside', 'LineWidth', 2, 'FontSize', 18);
 cbh.Label.String = 'Post-Template Duration(frames)';
 
 apply_generic(gca, 20)
-exporter(fh_imgsc, paths, 'imagesc_rt.pdf')
+exporter(fh_imgsc, paths, 'imagesc_rt.pdf', 'export', export)
 
 end
