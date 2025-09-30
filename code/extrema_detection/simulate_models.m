@@ -4,7 +4,7 @@ close all
 % Load the table first. We will take advantage of an already existing
 % dataset.
 
-store = false;
+store = true;
 col = cmapper();
 
 threshold_imm = 3; threshold_mob = 3; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
@@ -12,7 +12,7 @@ paths = path_generator('folder', 'extrema_detection/ac_vs_ed', 'bouts_id', id_co
 
 load(fullfile(paths.dataset, 'bouts.mat'));
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le');
-bouts_proc = bouts_proc(bouts_proc.nloom < 15, :);
+bouts_proc = bouts_proc(bouts_proc.nloom < 10, :);
 
 % Load the motion ts
 sim_params.motion_cache_path = fullfile(paths.dataset, 'motion_cache.mat');
@@ -44,13 +44,11 @@ model.mu = struct( ...
 
 % For theta
 model.theta = struct( ...
-    'predictors', {{ ...
-    struct('name', 'fs'), ...
-    struct('name', 'ls'), ...
+    'predictors', {{
     struct('name', 'intercept') ...
     }}, ...
-    'mask', [0 0 1 0 1 1], ...
-    'ground_truth', [1 1 1], ...
+    'mask', [0 0 0 0 0 1], ...
+    'ground_truth', 2.5, ...
     'link', link_linear ...
     );
 
@@ -73,7 +71,7 @@ rng(1);
 % General simulation parameters
 sim_params.n_trials = height(bouts_proc);
 sim_params.dt = 1/60;
-sim_params.T = 90;
+sim_params.T = 30;
 sim_params.time_vector = sim_params.dt:sim_params.dt:sim_params.T;
 sim_params.z = 0;
 sim_params.snr = 50;
@@ -115,17 +113,16 @@ for idx_trials = 1:height(bouts_proc)
         'z', sim_params.z, 'dt', sim_params.dt, 'T', sim_params.T, 'ndt', tndt_s, 'sigma', 1);
 
     [rt_ed(idx_trials), traj_ed] = extrema_detection_new('mu_t', mu_tv .* sim_params.snr, 'theta', theta_s, ...
-        'z', sim_params.z, 'dt', sim_params.dt, 'T', sim_params.T, 'ndt', tndt_s, 'sigma', 1);
-
-    
-    if idx_trials < 50 & idx_trials > 40
-        figure
-        hold on
-        plot(traj_ed)
-        plot(traj_ac)
-        plot(sm_chunk)
-        hold on
-    end
+        'z', sim_params.z, 'dt', sim_params.dt, 'T', sim_params.T, 'ndt', tndt_s, 'sigma', 0);
+     
+%         if idx_trials < 322 & idx_trials > 300
+%             figure
+%             hold on
+%             plot(traj_ed)
+%             plot(traj_ac)
+%             plot(sm_chunk)
+%             hold on
+%         end
 end
 
 toc

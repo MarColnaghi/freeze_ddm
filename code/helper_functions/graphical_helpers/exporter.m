@@ -2,6 +2,7 @@ function exporter(fh, paths, filename, varargin)
 
 opt = inputParser;
 addParameter(opt, 'flag', true);
+addParameter(opt, 'padding', 'figure');
 
 parse(opt, varargin{:});
 

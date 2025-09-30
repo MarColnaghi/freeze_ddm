@@ -28,7 +28,7 @@ motion_cache = importdata(sim_params.motion_cache_path);
 
 % Calculations
 extra_frames = d - frames_2b_exp - 1;
-d_s = d /60;
+d_s = d/60;
 
 % Select Color Map
 col = cbrewer2('Spectral', n_selected_comparisons);
@@ -109,9 +109,9 @@ for idx_bout = 1:height(y_curr)
 
     sorted_bout = sortrows(bout, 'closest_similarity');
     s(idx_bout).boutlist = sorted_bout;
-
 end
 
 cd(paths_out.results)
 save('struct_ed.mat', 's')
+
 end
