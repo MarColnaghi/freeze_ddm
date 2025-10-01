@@ -2,27 +2,29 @@
 
 
 n = 60;
-n_selected_comparisons = 120;
+n_selected_comparisons = 30;
 
 % Select Color Map
-col = cmapper();
+col = cmapper(); col.spectral = cbrewer2('Spectral', n_selected_comparisons);
 d = 180;
 frames_2b_exp = 120;
+extra_frames = d - frames_2b_exp - 1;
 
 code4segm = sprintf('d_%d-2bexp_%d', d, frames_2b_exp);
 
 % Specify Paths
 run2analyse = 1;
 run = sprintf('run%02d', run2analyse);
-paths = path_generator('folder', fullfile('/extrema_detection', 'ac_vs_ed', run, code4segm));
-
+paths = path_generator('folder', fullfile('/extrema_detection', 'ac_vs_ed', run));
+sim_params = importdata(fullfile(paths.results, 'sim_params.mat'));
+bound = sim_params.gt_table.theta_intercept;
 
 fh = figure('color', 'w', 'Position', [100, 100, 600, 300]);
 hold on; ax = gca;
 
 for idx_gen_model = {'ac', 'ed'}
     gen_model = idx_gen_model{1};
-    load(fullfile(paths.results, sprintf('struct_%s', gen_model)))
+    load(fullfile(paths.results, code4segm, sprintf('struct_%s', gen_model)))
     similarities = nan(1, size(s,2));
     correlations = nan(1, size(s,2));
 
@@ -46,11 +48,15 @@ end
 
 apply_generic(ax)
 
-%% 
+%%
 
-for idx_bout = randi(size(s), 1, 5)
+comparison_sm = importdata(fullfile(paths.results, code4segm, sprintf('comparison_sm_cropped_%s.mat', gen_model)));
+
+for idx_bout = 2644% randi(size(s), 1, 5)
 
     s_temp = s(idx_bout).boutlist;
+    s_temp_selected = s_temp(1:n_selected_comparisons, :);
+    s_temp_selected = sortrows(s_temp_selected, 'summed_motion_b4', 'descend');
 
     fh_ind_bouts = figure('color','w','Position',[100, 100, 1200, 650]);
     tiledlayout(2, 3, 'TileSpacing', 'loose', 'Padding', 'loose')
@@ -64,74 +70,55 @@ for idx_bout = randi(size(s), 1, 5)
     legend('Box', 'off', 'FontSize', 18);
     apply_generic(gca)
 
-    
     nexttile(2, [1 2])
     
     hold on
     fprintf('bout n:%d\n', idx_bout);
-    sm = motion_cache(flies(idx_bout));
-    freeze_onset = allfr_onsets(idx_bout);
-    freeze_duration = allfr_durations(idx_bout);
-    freeze_offset = allfr_offsets(idx_bout);
-
-    sm_bout = sm(freeze_onset:freeze_offset);
-
-    template_onset = length(sm_bout) - d + 1;
-
-    v1 = sm_bout(template_onset:end);
-
-
+    sm = s(idx_bout).sm;
+    template_onset = length(sm) - d + 1;
+    v1 = sm(template_onset:end);
+    
     fill([0 d d 0], [-.35 -.35 15.5 15.5], [0.9 0.9 0.9], 'EdgeColor', 'none', 'HandleVisibility', 'off')
 
     for idx_tops = 1:n_selected_comparisons
+        
+        freeze_id = s_temp_selected.idx_freeze(idx_tops);
 
-        sm = i;
-        comparison_sm_cropped ;
+        comparison_sm_cropped = comparison_sm{freeze_id};
+        
+        comparison_sm_cropped = comparison_sm_cropped(1:end - extra_frames);
 
-        starting_frame = s_temp.best_frame(idx_tops);
+        starting_frame = s_temp_selected.best_frame(idx_tops);
 
-        plot(-starting_frame + 1: - starting_frame + length(comparison_sm_cropped), comparison_sm_cropped, 'Color', [col(i, :) 0.8], 'HandleVisibility', 'off')
+        plot(-starting_frame + 1: - starting_frame + length(comparison_sm_cropped), comparison_sm_cropped, 'Color', [col.spectral(idx_tops, :) 0.8], 'HandleVisibility', 'off')
 
-        scatter(ending_duration(idx_bout, idx_tops), -0.7, 60, [col(i, :)], '|', 'LineWidth', 2, 'HandleVisibility', 'off', 'Clipping', 'off', 'MarkerEdgeAlpha', 0.6)
+        scatter(s_temp_selected.rt_post_template(idx_tops) + randn * 0.1, -0.7, 60, [col.spectral(idx_tops, :)], '|', 'LineWidth', 2, 'HandleVisibility', 'off', 'Clipping', 'off', 'MarkerEdgeAlpha', 0.6)
     end
 
-    plot([0 1], [-10 -10], 'Color', col(1, :), 'LineWidth', 2.5, 'DisplayName', 'Selected Freezes')
-    plot(1:length(v1), v1, 'k-', 'LineWidth', 2.5, 'DisplayName', 'Template')
+    plot([0 1], [-10 -10], 'Color', col.spectral(1, :), 'LineWidth', 2.5, 'DisplayName', 'Selected Freezes')
+    plot(0:length(v1) - 1, v1, 'k-', 'LineWidth', 1, 'DisplayName', 'Template')
+    yline(bound, 'k--', 'LineWidth', 1, 'DisplayName', 'Bound')
     xlabel('Template-Aligned Time (frames)')
     ylabel('Social Motion')
     ylim([-.35 15.5]); xlim([-420 420 + d]);
     legend('Box', 'off', 'FontSize', 18);
+    apply_generic(gca, 20)
     set(gca ,'Layer', 'Top')
 
-    apply_generic(gca, 20)
 
     nexttile
     hold on
-    scatter(init_bump_sorted, y_surrogate.durations_s(best_similarities(init_bump_idx), :), 40, col, 'filled')
-    scatter(initial_bump(idx_bout, 1), y_surrogate.durations_s(best_similarities(1), :), 60, 'k', 'filled')
-
-    clim([0 200])
-    xlabel({'Pre-Template', 'Accumulated Soc. Mot.'})
-    ylabel('Total Freeze Duration (s)')
-    yline(y_surrogate.durations_s(idx_bout), 'k--', 'LineWidth', 2, 'Label', 'Template', 'FontSize', 18)
-    xline(initial_bump(idx_bout, 1), 'k--', 'LineWidth', 2)
-    apply_generic(gca,20)
-    xlim([-5 305])
-    ylim([-0.5 11.5])
-
-    nexttile
-    hold on
-    scatter(init_bump_sorted,  ending_duration(idx_bout, init_bump_idx) ./60, 40, col, 'filled')
-    scatter(initial_bump(idx_bout, 1), ending_duration(idx_bout, 1) ./60, 60, 'k', 'filled')
+    scatter(s_temp_selected.summed_motion_b4,  s_temp_selected.rt_post_template, 40, col.spectral, 'filled')
+    % scatter(initial_bump(idx_bout, 1), ending_duration(idx_bout, 1) ./60, 60, 'k', 'filled')
 
     clim([0 200])
     xlabel({'Pre-Template', 'Accumulated Soc. Mot.'})
     ylabel('Duration Post-Template (s)')
-    yline(ending_duration(idx_bout, 1) ./60, 'k--', 'LineWidth', 2, 'Label', 'Template', 'FontSize', 18)
-    xline(initial_bump(idx_bout, 1) , 'k--', 'LineWidth', 2)
+   % yline(ending_duration(idx_bout, 1) ./60, 'k--', 'LineWidth', 2, 'Label', 'Template', 'FontSize', 18)
+   % xline(initial_bump(idx_bout, 1) , 'k--', 'LineWidth', 2)
     apply_generic(gca,20)
-    ylim([-0.5 11.5])
-    xlim([-5 305])
+    ylim([-0.5 700.5])
+    xlim([-50 750])
 
-    exporter(fh_ind_bouts, paths_loop, sprintf('bout_%d.pdf', idx_bout), 'export', export)
+   % exporter(fh_ind_bouts, paths_loop, sprintf('bout_%d.pdf', idx_bout), 'export', export)
 end

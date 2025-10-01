@@ -156,7 +156,6 @@ if store
 
     tested_datasets = {'ac', 'ed'};
 
-    %%%%%%% Loop FIT %%%%%%%
 
     for gen_type = tested_datasets
 
@@ -165,7 +164,7 @@ if store
         y.durations_s = rt.(gen_data);
 
         y.durations_s(isnan(y.durations_s)) = sim_params.T + 1;
-        % No need to create path, we will have a global mat file with all the fits.
+
         paths_temp.results = fullfile(paths.results, sprintf('sims_%s', gen_data));
         mkdir(paths_temp.results); cd(paths_temp.results)
 

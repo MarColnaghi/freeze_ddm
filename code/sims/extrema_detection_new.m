@@ -1,5 +1,5 @@
 function [rt, traj, t, det_cum, sto_cum] = extrema_detection_new(varargin)
-%DRIFT_DIFF_DYN Simulate a bounded DDM with optional time-varying drift.
+
 %
 %   [rt, traj, t] = extrema_detection_new('mu', val, 'mu_t', vec, ...)
 %   simulates a DDM with optional time-varying drift.

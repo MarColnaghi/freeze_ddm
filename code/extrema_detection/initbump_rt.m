@@ -96,7 +96,7 @@ for idx_gen_model = {'ac', 'ed'}
             similarity_sort(idx_comparison) = best_frame;
             all_cropped{idx_comparison} = comparison_sm_cropped;
             summed_motion_b4(idx_comparison) = sum(comparison_sm_cropped(1:best_frame - 1));
-            rt_post_template(idx_comparison) = comparison_duration - best_frame;
+            rt_post_template(idx_comparison) = allfr_durations(idx_comparison) - best_frame;
 
         end
 
@@ -109,10 +109,12 @@ for idx_gen_model = {'ac', 'ed'}
 
         sorted_bout = sortrows(bout, 'closest_similarity');
         s(idx_bout).boutlist = sorted_bout;
+        s(idx_bout).sm = sm_bout;
     end
 
     cd(paths_out.results)
     save(sprintf('struct_%s.mat', gen_model), 's')
+    save(sprintf('comparison_sm_cropped_%s.mat', gen_model), 'comparison_sm_cropped_all')
 
 end
 end

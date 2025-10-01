@@ -84,3 +84,4 @@ col.timevarying_sm = '#1982C4';
 col.extremadetection ='#DF2CC7';
 col.closedform = '#AF8BD1';
 col.bsl = 'k';
+
