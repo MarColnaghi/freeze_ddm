@@ -1,5 +1,5 @@
 clear all
-idx_seed = randi(100);
+idx_seed = randi(6);
 
 exporting = true;
 col = cmapper();
@@ -57,7 +57,7 @@ predictors = y.Properties.VariableNames;
 model_eval = eval(sprintf('model_%s', model));
 ncomp_vars = evaluate_model(model_eval, est_params, y);
 
-y.durations_s(y.durations_s > model_results.(gen_data).points.censoring, :) = 11;
+y.durations_s(y.durations_s > model_results.(gen_data).points.censoring, :) = model_results.(gen_data).points.censoring + 1;
 
 rt = table(); rt.(gen_data) = y.durations_s; rt.id = y.id;
 
@@ -67,6 +67,8 @@ save('sim_params.mat', 'sim_params')
 
 paths_temp.results = fullfile(paths.results, sprintf('sims_%s', gen_data));
 mkdir(paths_temp.results); cd(paths_temp.results)
+
+%%
 lls_output = evaluate_likelihood_parallel(y, motion_cache, sim_params, model_results.(gen_data), []);
 
 save('lls_final.mat', 'lls_output')

@@ -36,7 +36,7 @@ for idx_run = run_code
             disp('matching')
         end
 
-        fh = figure('color','w','Position',[100, 100, 900, 350]);
+        fh = figure('color','w','Position',[100, 100, 900, 400]);
         tiledlayout(1, 3, 'TileSpacing', 'compact', 'Padding', 'compact')
         nexttile
         total_ll_bar(lls, col, gen_data)
@@ -56,10 +56,10 @@ for idx_run = run_code
         xline(idx_crossing(1), 'Label', sprintf('%.2f%%', (sum(sorted_deltall > 0)./length(sorted_deltall)) * 100), 'FontSize', 20, 'LabelOrientation','horizontal')
 
         bar(sorted_deltall, 'FaceColor', 'k', 'EdgeColor', 'none' )
-        xlabel('trials id')
+        xlabel('individual freezes')
         xticks([])
-        ylabel('LL_{tv} - LL_{st}')
-
+        ylabel('$\log \!\big(\mathcal{L}_{\mathrm{tv}} / \mathcal{L}_{\mathrm{st}}\big)$', ...
+       'Interpreter','latex')
         apply_generic(ax)
 
         if export
@@ -91,11 +91,11 @@ elseif strcmp(gen_data, 'ig')
 end
 
 xticklabels({'tv', 'st', 'st-cf'})
-ylabel('total LL')
+ylabel('Total log($\mathcal{L}$)', 'Interpreter', 'latex')
 ax = gca;
 apply_generic(ax)
 ax.YAxis.Direction = 'reverse';
-ylim([-12000 0])
-text(2, ax.YLim(1), sprintf('$\\Delta_{ll}: %.2f$', sum(lls_output.ll_tv) - sum(lls_output.ll_st)), 'FontSize', 20, 'Interpreter', 'latex')
+ylim([-12000 0]); ax.YTickLabel(1) = {'worse'}; ax.YTickLabel(end) = {'better'};
+text(2, ax.YLim(1), sprintf('$\\Delta log(\\mathcal{L}): %.2f$', sum(lls_output.ll_tv) - sum(lls_output.ll_st)), 'FontSize', 20, 'Interpreter', 'latex', 'HorizontalAlignment', 'center')
 
 end

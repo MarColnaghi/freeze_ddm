@@ -2,7 +2,7 @@
 
 
 n = 60;
-n_selected_comparisons = 30;
+n_selected_comparisons = 300;
 
 % Select Color Map
 col = cmapper(); col.spectral = cbrewer2('Spectral', n_selected_comparisons);
@@ -22,7 +22,7 @@ bound = sim_params.gt_table.theta_intercept;
 fh = figure('color', 'w', 'Position', [100, 100, 600, 300]);
 hold on; ax = gca;
 
-for idx_gen_model = {'ac', 'ed'}
+for idx_gen_model = {'ac'}%, 'ed'}
     gen_model = idx_gen_model{1};
     load(fullfile(paths.results, code4segm, sprintf('struct_%s', gen_model)))
     similarities = nan(1, size(s,2));
@@ -52,7 +52,7 @@ apply_generic(ax)
 
 comparison_sm = importdata(fullfile(paths.results, code4segm, sprintf('comparison_sm_cropped_%s.mat', gen_model)));
 
-for idx_bout = 2644% randi(size(s), 1, 5)
+for idx_bout = randi(size(s), 1, 5)
 
     s_temp = s(idx_bout).boutlist;
     s_temp_selected = s_temp(1:n_selected_comparisons, :);

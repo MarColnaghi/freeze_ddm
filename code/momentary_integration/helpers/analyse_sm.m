@@ -89,10 +89,12 @@ function analyse_sm(run_code, model, varargin)
             % ----- X axis depends on alignment -----
             if strcmpi(align_to,'onset')
                 x = 0:trace_len-1;                  % frames since onset
-                xlabel('Time from onset (frames)');
+                xlabel({'Time (frames)', '[freeze start aligned]'});
+                ylabel({'Soc. Motion Signal', '(start subtracted)'});
             else
                 x = -trace_len+1:0;                  % old behavior: time to unfreeze
-                xlabel('Time to unfreeze (frames)');
+                xlabel({'Time (frames)', '[freeze break aligned]'});
+                ylabel({'Soc. Motion Signal', '(endpoint subtracted)'});
             end
 
             % ----- Plot -----
@@ -102,19 +104,24 @@ function analyse_sm(run_code, model, varargin)
                     plot(x, all_mat(idx_trials,:), 'Color', colmap(idx_trials,:),'LineWidth', 0.25);
                 end
             else
-                plot(x, bottom_mat, 'Color', [hex2rgb(col.stationary_sm) 0.05], 'LineWidth', 0.5);
-                plot(x, median(bottom_mat, 'omitnan'), 'Color', col.stationary_sm, 'LineWidth', 2);
-                plot(x, top_mat, 'Color', [hex2rgb(col.timevarying_sm) 0.05], 'LineWidth', 0.5);
-                plot(x, median(top_mat, 'omitnan'), 'Color', col.timevarying_sm, 'LineWidth', 2);
+                plot(x, bottom_mat, 'Color', [hex2rgb(col.stationary_sm) 0.1], 'LineWidth', 0.5);
+                plot(x, median(bottom_mat, 1, 'omitnan'), 'Color', col.stationary_sm, 'LineWidth', 2);
+                plot(x, top_mat, 'Color', [hex2rgb(col.timevarying_sm) 0.1], 'LineWidth', 0.5);
+                plot(x, median(top_mat, 1, 'omitnan'), 'Color', col.timevarying_sm, 'LineWidth', 2);
             end
 
-            ylabel('Motion Signal (relative)');
             apply_generic(gca);
 
-            if strcmpi(align_to,'onset')
+            if strcmpi(align_to, 'onset')
                 xlim([0 600]);   % adjust as you like
+                xlabel({'Time (frames)', '[freeze start aligned]'});
+                ylabel({'Soc. Motion Signal', '(start subtracted)'});
+
             else
                 xlim([-600 0]);
+                xlabel({'Time (frames)', '[freeze break aligned]'});
+                ylabel({'Soc. Motion Signal', '(endpoint subtracted)'});
+
             end
             ylim([-3 3]);
 
@@ -122,7 +129,7 @@ function analyse_sm(run_code, model, varargin)
                 cd(fullfile('/Users/marcocolnaghi/PhD/freeze_ddm/figures/momentary_integration', type, model, run_str));
                 folderi = sprintf('sims_%s', gen_data);
                 mkdir(folderi); paths.fig = fullfile('/Users/marcocolnaghi/PhD/freeze_ddm/figures/momentary_integration', type, model, run_str, folderi);
-                exporter(fh, paths, 'analyse_sm.pdf');
+                exporter(fh, paths, sprintf('analyse_sm_%s_%d.pdf', align_to, selection));
             end
         end
     end

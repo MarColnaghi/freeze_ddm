@@ -20,7 +20,7 @@ model = eval(model_str);
 estimates_mean = model_results.estimates_mean;
 est_params = table2array(estimates_mean(:, find(~ismissing(estimates_mean))));
 ncomp_vars = evaluate_model(model, est_params, synth_data);
-chunk_len = length(ddm_params.time_vector);
+chunk_len = length(ddm_params.time_vector) - 1;
 
 points = model_results.points;
 points.truncation = [];
