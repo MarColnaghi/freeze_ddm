@@ -4,8 +4,8 @@ close all
 % Load the table first. We will take advantage of an already existing
 % dataset.
 
-store = false;
-plot = true;
+store = true;
+plott = true;
 col = cmapper();
 
 threshold_imm = 3; threshold_mob = 3; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
@@ -18,6 +18,10 @@ bouts_proc = bouts_proc(bouts_proc.nloom < 15, :);
 % Load the motion ts
 sim_params.motion_cache_path = fullfile(paths.dataset, 'motion_cache.mat');
 load(sim_params.motion_cache_path)
+
+if store || plott
+    create_output_dirs(paths)
+end
 
 % Only save useful variables in the table
 y = table;
@@ -39,7 +43,7 @@ model.mu = struct( ...
     struct('name', 'intercept')
     }}, ...
     'mask', [1 0 0 0 0 1], ...
-    'ground_truth', [3 0], ...
+    'ground_truth', [1.5 0], ...
     'link', link_linear ...
     );
 
@@ -49,7 +53,7 @@ model.theta = struct( ...
     struct('name', 'intercept') ...
     }}, ...
     'mask', [0 0 0 0 0 1], ...
-    'ground_truth', 5.0, ...
+    'ground_truth', 3.0, ...
     'link', link_linear ...
     );
 
@@ -97,7 +101,10 @@ sm_raw = cell(sim_params.n_trials, 1);
 
 % Extract Social Motion TimeSeries
 chunk_len = length(sim_params.time_vector);
-
+if plott
+    fh = figure('color', 'w', 'Position', [100, 100, 1400, 700]);
+    tiledlayout(3, 4)
+end
 tic
 for idx_trials = 1:height(bouts_proc)
     
@@ -118,15 +125,18 @@ for idx_trials = 1:height(bouts_proc)
     [rt_ed(idx_trials), traj_ed] = extrema_detection_new('mu_t', mu_tv .* sim_params.snr, 'theta', theta_s, ...
         'z', sim_params.z, 'dt', sim_params.dt, 'T', sim_params.T, 'ndt', tndt_s, 'sigma', sim_params.sigma_ed);
 
-    if plot & (idx_trials < 322 && idx_trials > 300)
+    if plott & (idx_trials <= 311 && idx_trials >= 300)
+        nexttile
         plot_traces(traj_ed, traj_ac, sm_chunk, col, theta_s);
     end
 end
 
+exporter(fh, paths, sprintf('trial_%d.pdf', idx_trials));
+
 toc
 
 rt.ac = rt_ac; rt.ed = rt_ed; rt.sm_ts = sm_raw;
-fh = figure('color', 'w', 'Position', [100, 100, 600, 600]);
+fh = figure('color', 'w', 'Position', [100, 100, 600, 300]);
 
 hold on
 histogram(rt.ed, sim_params.dt/2:sim_params.dt * 5 :sim_params.T + 1, 'FaceColor', col.extremadetection, 'EdgeColor', 'none', 'Normalization', 'pdf')
@@ -136,6 +146,7 @@ xline(mean(rt.ac, 'omitnan'), 'Color', col.timevarying_sm, 'LineWidth', 2)
 xlabel('Duration')
 ylabel('Count')
 apply_generic(gca, 24);
+exporter(fh, paths, 'durations.pdf');
 
 %
 y = table;
@@ -150,7 +161,6 @@ y.fly = bouts_proc.fly;
 y.id = bouts_proc.id;
 
 if store
-    create_output_dirs(paths)
     cd(paths.results)
     save('sim_params.mat', 'sim_params')
 
@@ -210,9 +220,8 @@ function create_output_dirs(paths)
 end
 
 
-function plot_traces(traj_ed, traj_ac, sm_chunk, col, theta_s)
+function fh = plot_traces(traj_ed, traj_ac, sm_chunk, col, theta_s)
 
-fh = figure('color','w', 'Position', [100 100 800 350]);
 ax = gca;
 hold on
 x_traj = 0:1/60:(length(traj_ed) - 1)/60;

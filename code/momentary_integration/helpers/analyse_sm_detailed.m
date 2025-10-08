@@ -83,13 +83,15 @@ function [early_sm, late_sm, com, slopes, Signal_Slope, Center_of_Mass, Trend_Sc
             
             metrics = {'Signal_Slope', 'Center_of_Mass', 'ES_difference', 'Variance'};
             limits = {[-0.1 0.1], [0 1], [-2 2], [0 1], [0.45 0.55]};
+            xticks = {[-0.1 0 0.1], [0 0.5 1], [-2 0 2], [0 0.5 1], [0.45 0 0.55]};
 
             for idx_metrics = 1:length(metrics)
-                fh = figure('color', 'w', 'Position', [100, 100, 800, 350]);
+                fh = figure('color', 'w', 'Position', [100, 100, 900, 300]);
                 tl = tiledlayout(1, 3, 'TileSpacing', 'loose', 'Padding', 'loose');
                 nexttile
                 %imagesc(eval(metrics{idx_metrics}), limits{idx_metrics})
                 scatter(1:height(y_sorted), eval(metrics{idx_metrics}), 5, y_sorted.durations_s, 'filled')
+                clim([0 5])
                 apply_generic(gca, 20)
                 xlim([-50 height(y_sorted) + 50])
                 ylim(limits{idx_metrics})
@@ -102,7 +104,8 @@ function [early_sm, late_sm, com, slopes, Signal_Slope, Center_of_Mass, Trend_Sc
                 ax = gca;
                 apply_generic(ax)
                 ax.YAxis.Visible = 'off';
-                xlim([-3 3]); xlabel('$\Delta_{ll}$', 'Interpreter', 'latex');
+                xlim([-3 3]); xlabel('$\log \!\big(\mathcal{L}_{\mathrm{tv}} / \mathcal{L}_{\mathrm{st}}\big)$', ...
+       'Interpreter','latex')
 
                 nexttile
                 scatter(sort_ll, eval(metrics{idx_metrics}), 5, y_sorted.durations_s, 'filled')

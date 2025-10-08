@@ -194,9 +194,9 @@ sm_signal_tv = sm_aroundfreeze(core_idx);
 sm_signal_st = ones(size(sm_signal_tv)) * avg_core;
 
 try
-    vw = VideoWriter('st.mp4','MPEG-4');   % .mp4 (H.264)
+    vw = VideoWriter('st2.mp4','MPEG-4');   % .mp4 (H.264)
 catch
-    vw = VideoWriter('st.avi','Motion JPEG AVI');  % fallback
+    vw = VideoWriter('tv2.avi','Motion JPEG AVI');  % fallback
     vw.Quality = 95;  % Only for Motion JPEG AVI
 end
 
@@ -318,7 +318,13 @@ for k = 2:n
     if framePause>0, pause(framePause); end
 
     if k > 270 && k < 330
-        pause(0)
+    writeVideo(vw, getframe(fh));
+    writeVideo(vw, getframe(fh));
+    writeVideo(vw, getframe(fh));
+    writeVideo(vw, getframe(fh));
+    writeVideo(vw, getframe(fh));
+    writeVideo(vw, getframe(fh));
+
 
     elseif k == n
         set(hArrow, 'Visible', 'off');

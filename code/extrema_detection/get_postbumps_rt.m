@@ -9,7 +9,7 @@ addParameter(p, 'frames_2b_exp', '');
 addParameter(p, 'n_selected_comparisons', '');
 addParameter(p, 'gen_model', '');
 
-addParameter(p, 'run2analyse', []); 
+addParameter(p, 'run2analyse', []);
 
 parse(p, varargin{:});
 
@@ -18,7 +18,7 @@ d = p.Results.template_length;
 frames_2b_exp = p.Results.frames_2b_exp;
 n_selected_comparisons = p.Results.n_selected_comparisons;
 run2analyse = p.Results.run2analyse;
-gen_model = p.Results.gen_model;
+%gen_model = p.Results.gen_model;
 
 % Specify Paths
 run = sprintf('run%02d', run2analyse);
@@ -33,68 +33,83 @@ extra_frames = d - frames_2b_exp - 1;
 d_s = d/60;
 
 % Select Color Map
-col = cbrewer2('Spectral', n_selected_comparisons);
+col = cmapper();
+fh_hist = figure('color', 'w', 'Position', [100, 100, 600, 400]);
 
-% Already Creates the figure for the histogram
-fh = figure('color', 'w', 'Position', [100, 100, 600, 250]);
-hold on
+for idx_gen_model = {'ac', 'ed'}
 
-% Load relevant files
-y.ed = importdata(fullfile(paths.results, 'sims_ed/y.mat'));
-y.ac = importdata(fullfile(paths.results, 'sims_ac/y.mat'));
+    gen_model = idx_gen_model{1};
+    % Already Creates the figure for the histogram
+    hold on
 
-code4segm = sprintf('d_%d-2bexp_%d-ncomp_%d', d, frames_2b_exp, n_selected_comparisons);
-paths_out = path_generator('folder', fullfile('/extrema_detection', 'ac_vs_ed', run, code4segm));
-mkdir(paths_out.fig); mkdir(paths_out.results);
+    % Load relevant files
+    y.ed = importdata(fullfile(paths.results, 'sims_ed/y.mat'));
+    y.ac = importdata(fullfile(paths.results, 'sims_ac/y.mat'));
 
-% Select only freezes with specific durations
-y_curr = y.(gen_model);
-y_curr = y_curr(y_curr.durations_s < sim_params.T, :);
+    code4segm = sprintf('d_%d-2bexp_%d-ncomp_%d', d, frames_2b_exp, n_selected_comparisons);
+    paths_out = path_generator('folder', fullfile('/extrema_detection', 'ac_vs_ed', run, code4segm));
+    mkdir(paths_out.fig); mkdir(paths_out.results);
 
-flies = y_curr.fly;
-allfr_onsets = y_curr.onsets;
-allfr_durations = round(y_curr.durations_s .* 60) + 1;
-allfr_offsets = allfr_onsets + allfr_durations;
+    % Select only freezes with specific durations
+    y_curr = y.(gen_model);
+    y_curr = y_curr(y_curr.durations_s < sim_params.T, :);
 
-s = struct;
+    flies = y_curr.fly;
+    allfr_onsets = y_curr.onsets;
+    allfr_durations = round(y_curr.durations_s .* 60) + 1;
+    allfr_offsets = allfr_onsets + allfr_durations;
 
-fh = figure('color','w','Position',[100, 100, 1200, 650]);
-ax = gca;
-apply_generic(ax, 18)
-xlabel('Time aligned to Onset (frames)')
-ax.YAxis.Visible = 'off';
-hold on
-distance = nan(1, height(y_curr));
-peaks = nan(1, height(y_curr));
+    s = struct;
 
-for idx_bout = 1:height(y_curr)
+    fh = figure('color','w','Position',[100, 100, 1200, 650]);
+    ax = gca;
+    apply_generic(ax, 18)
+    xlabel('Time aligned to Onset (frames)')
+    ax.YAxis.Visible = 'off';
+    hold on
+    distance = nan(1, height(y_curr));
+    peaks = nan(1, height(y_curr));
 
-    fprintf('bout n:%d\n', idx_bout);
-    sm = motion_cache(flies(idx_bout));
-    
-    freeze_onset = allfr_onsets(idx_bout);
-    freeze_duration = allfr_durations(idx_bout);
-    freeze_offset = allfr_offsets(idx_bout);
+    for idx_bout = 1:height(y_curr)
 
-    sm_bout = sm(freeze_onset:freeze_offset);
+        fprintf('bout n:%d\n', idx_bout);
+        sm = motion_cache(flies(idx_bout));
 
-    [pks, idx] = findpeaks(sm_bout, 'MinPeakHeight', 1);
+        freeze_onset = allfr_onsets(idx_bout);
+        freeze_duration = allfr_durations(idx_bout);
+        freeze_offset = allfr_offsets(idx_bout);
 
-    if idx_bout < 80
-        plh = plot(sm_bout + idx_bout, 'k');
-        scatter(idx, [pks + idx_bout + 0.3], 'MarkerFaceColor', 'r', 'Marker', 'v', 'MarkerEdgeColor', 'none', 'SizeData', 8)
+        sm_bout = sm(freeze_onset:freeze_offset);
+
+        [pks, idx] = findpeaks(sm_bout, 'MinPeakHeight', 1);
+
+        if idx_bout < 80
+            plh = plot(sm_bout + idx_bout, 'k');
+            scatter(idx, [pks + idx_bout + 0.3], 'MarkerFaceColor', 'r', 'Marker', 'v', 'MarkerEdgeColor', 'none', 'SizeData', 8)
+        end
+        if ~isempty(pks)
+            peaks(idx_bout) = pks(end);
+            distance(idx_bout) = idx(end) - freeze_duration;
+        end
+
     end
-    if ~isempty(pks)
-        peaks(idx_bout) = pks(end);
-        distance(idx_bout) = idx(end) - freeze_duration;
+    exporter(fh, paths, sprintf('traces_%s.pdf', gen_model))
+
+    figure(fh_hist)
+    if strcmp(gen_model, 'ac')
+        histogram(distance, -600.5:5:1.5, 'Normalization', 'pdf', 'FaceColor', col.timevarying_sm, 'EdgeColor', 'none')
+
+    elseif strcmp(gen_model, 'ed')
+        histogram(distance, -600.5:5:1.5, 'Normalization', 'pdf', 'FaceColor', col.extremadetection, 'EdgeColor', 'none');
+
     end
+    ylabel('Count')
+    xlabel('Distance from Last Peak (frames)')
 
 end
-
-figure
-histogram(distance, -600.5:5:1.5)
-ylabel('Count')
-xlabel('Distance from Last Peak (frames)')
+ylim([-0.001 0.051])
+apply_generic(gca)
+exporter(fh_hist, paths, sprintf('distances.pdf', gen_model))
 
 apply_generic(gca)
 figure
