@@ -66,7 +66,7 @@ for idx_run = run_code
             cd(fullfile('/Users/marcocolnaghi/PhD/freeze_ddm/figures/momentary_integration', type, model, run_str));
             folderi = sprintf('sims_%s', gen_data);
             mkdir(folderi); paths.fig = fullfile('/Users/marcocolnaghi/PhD/freeze_ddm/figures/momentary_integration', type, model, run_str, folderi);
-            exporter(fh, paths, 'total_ll.pdf')
+            exporter(fh, paths, 'total_ll.eps')
         end
     end
 end
@@ -97,5 +97,4 @@ apply_generic(ax)
 ax.YAxis.Direction = 'reverse';
 ylim([-15000 0]); %ax.YTickLabel(1) = {'worse'}; ax.YTickLabel(end) = {'better'};
 text(2, ax.YLim(1) + 1000, sprintf('$\\Delta log(\\mathcal{L}): %.2f$', sum(lls_output.ll_tv) - sum(lls_output.ll_st)), 'FontSize', 20, 'Interpreter', 'latex', 'HorizontalAlignment', 'center')
-ytickformat(ax, '')
 end

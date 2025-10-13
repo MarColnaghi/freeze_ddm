@@ -71,7 +71,7 @@ for idx_run = run_code
             cd(fullfile('/Users/marcocolnaghi/PhD/freeze_ddm/figures/momentary_integration', type, model, run_str));
             folderi = sprintf('sims_%s', gen_data);
             mkdir(folderi); paths.fig = fullfile('/Users/marcocolnaghi/PhD/freeze_ddm/figures/momentary_integration', type, model, run_str, folderi);
-            exporter(fh, paths, sprintf('examples_%s.pdf', selection));
+            exporter(fh, paths, sprintf('examples_%s.eps', selection));
         end
     end
 end

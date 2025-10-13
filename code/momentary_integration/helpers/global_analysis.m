@@ -14,7 +14,7 @@ gen_model = opt.Results.gen_model;
 col = cmapper();
 
 
-fh = figure('color','w','Position',[100, 100, 500, 400]);
+fh = figure('color','w','Position',[100, 100, 400, 200]);
 hold on
 
 for idx_run = run_code
@@ -79,9 +79,10 @@ end
 apply_generic(gca)
 xlim([0.5 2.5])
 xticks([1,1.5,2])
-xticklabels({'tv-sim', 'empirical', 'st-sim'})
+xticklabels({'sim. tv', 'data', 'sim. st'})
+xtickangle(0)
 ylim([-500 500])
-ylabel('delta LL')
+%ylabel('delta LL')
 ax = gca;
 
 if export
