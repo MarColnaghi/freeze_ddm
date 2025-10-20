@@ -32,7 +32,6 @@ fprintf('We are trying to recover a model \n');
 %% Model Setup
 model_str = sprintf('model_%s', idx_model);
 model_out = eval(model_str);
-model_out = generate_masks(model_out);
 [LB, PLB, PUB, UB] = extract_bounds_from_model(model_out);
 
 %% Objective Function
@@ -62,7 +61,6 @@ end
 toc
 [~, best_idx] = sort(fval);
 eval_param = eval_param(best_idx,:); fval = fval(best_idx, :);
-
 
 [~, lbl, mask] = get_ground_truth_vector(model_out);
 estimates = nan(1, length(lbl));
@@ -129,7 +127,8 @@ if export_results
     paths.results = fullfile(paths.results, idx_model);
     create_output_dirs(paths);
     model_results.bouts_path = paths.results;
-
+    model_results.motion_cache_path = fullfile(paths.dataset, 'motion_cache.mat');
+    
     save(fullfile(paths.results, sprintf('fit_results_%s.mat', idx_model)), '-struct', 'model_results');
     save(fullfile(paths.results, 'surrogate.mat'), 'surrogate');
 end

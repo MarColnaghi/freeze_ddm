@@ -8,7 +8,6 @@ threshold_imm = 3; threshold_mob = 3; threshold_pc = 4; id_code = sprintf('imm%d
 paths = path_generator('folder', 'fitting_freezes/le', 'bouts_id', id_code);
 load(fullfile(paths.dataset, 'bouts.mat'));
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le');
-bouts_proc
 points.censoring = 10.5;
 points.truncation = 0.5;
 

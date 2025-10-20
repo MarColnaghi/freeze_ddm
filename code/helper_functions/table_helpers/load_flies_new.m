@@ -129,7 +129,8 @@ for dataset = 1
 
                 imm_frames = Fly1.pixelchange < thresholds.pc;
 
-                % Filling in is done here
+                % Filling in is done here - might make sense potentially to
+                % switch around the filling in process.
 
                 imm_frames = bwareaopen(imm_frames, thresholds.fill_in_imm); % Remove small immobile bouts
                 imm_frames = ~bwareaopen(~imm_frames, thresholds.fill_in_mob); % Remove small moving bouts

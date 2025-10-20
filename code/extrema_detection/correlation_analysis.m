@@ -1,19 +1,18 @@
 %calculate_corrs()
 
 
-n = 60;
-n_selected_comparisons = 30;
+n = 100;
 
 % Select Color Map
-col = cmapper(); col.spectral = cbrewer2('Spectral', n_selected_comparisons);
-d = 180;
-frames_2b_exp = 120;
+col = cmapper(); col.spectral = cbrewer2('Spectral', n);
+d = 120;
+frames_2b_exp = 60;
 extra_frames = d - frames_2b_exp - 1;
 
 code4segm = sprintf('d_%d-2bexp_%d', d, frames_2b_exp);
 
 % Specify Paths
-run2analyse = 2;
+run2analyse = 3;
 run = sprintf('run%02d', run2analyse);
 paths = path_generator('folder', fullfile('/extrema_detection', 'ac_vs_ed', run));
 sim_params = importdata(fullfile(paths.results, 'sim_params.mat'));
@@ -22,7 +21,7 @@ bound = sim_params.gt_table.theta_intercept;
 fh = figure('color', 'w', 'Position', [100, 100, 600, 300]);
 hold on; ax = gca;
 
-for idx_gen_model = {'ac'}
+for idx_gen_model = {'ac', 'ed'}
     gen_model = idx_gen_model{1};
     load(fullfile(paths.results, code4segm, sprintf('struct_%s', gen_model)))
     similarities = nan(1, size(s,2));
@@ -57,10 +56,10 @@ comparison_sm = importdata(fullfile(paths.results, code4segm, sprintf('compariso
 load(fullfile(paths.results, code4segm, sprintf('struct_%s', gen_model)))
 paths_loop = path_generator('folder', fullfile('/extrema_detection', 'ac_vs_ed', run, code4segm));
 
-for idx_bout = randi(size(s), 1, 5)
+for idx_bout = randi(size(s), 1, 10)
 
     s_temp = s(idx_bout).boutlist;
-    s_temp_selected = s_temp(1:n_selected_comparisons, :);
+    s_temp_selected = s_temp(1:n, :);
     s_temp_selected = sortrows(s_temp_selected, 'summed_motion_b4', 'descend');
 
     fh_ind_bouts = figure('color','w','Position',[100, 100, 1200, 650]);
@@ -68,8 +67,8 @@ for idx_bout = randi(size(s), 1, 5)
     nexttile(1)
     hold on
     histogram(s_temp.closest_similarity, 0:0.25:15, 'FaceColor', 'none', 'EdgeColor', 'k', 'DisplayStyle', 'stairs', 'LineWidth', 2, 'HandleVisibility', 'off')
-    temp = s_temp.closest_similarity; temp(temp >= s_temp.closest_similarity(n_selected_comparisons)) = nan;
-    histogram(temp, 0:0.25:15, 'FaceColor', 'k', 'EdgeColor', 'none', 'DisplayName', sprintf('Top %d Similar', n_selected_comparisons))
+    temp = s_temp.closest_similarity; temp(temp >= s_temp.closest_similarity(n)) = nan;
+    histogram(temp, 0:0.25:15, 'FaceColor', 'k', 'EdgeColor', 'none', 'DisplayName', sprintf('Top %d Similar', n))
     ylabel('Count')
     xlabel('Distance to Template')
     legend('Box', 'off', 'FontSize', 18);
@@ -85,7 +84,7 @@ for idx_bout = randi(size(s), 1, 5)
     
     fill([0 d d 0], [-.35 -.35 15.5 15.5], [0.9 0.9 0.9], 'EdgeColor', 'none', 'HandleVisibility', 'off')
 
-    for idx_tops = 1:n_selected_comparisons
+    for idx_tops = 1:n
         
         freeze_id = s_temp_selected.idx_freeze(idx_tops);
 
@@ -136,7 +135,7 @@ for idx_bout = randi(size(s), 1, 5)
     
     fill([0 d d 0], [-.35 -.35 15.5 15.5], [0.9 0.9 0.9], 'EdgeColor', 'none', 'HandleVisibility', 'off')
 
-    for idx_tops = 1:n_selected_comparisons
+    for idx_tops = 1:n
         
         freeze_id = s_temp_selected.idx_freeze(idx_tops);
 
@@ -163,5 +162,5 @@ for idx_bout = randi(size(s), 1, 5)
     xlim([d - 10, d + 10])
     
 
-    exporter(fh_ind_bouts, paths, sprintf('bout_%d.pdf', idx_bout))
+    % exporter(fh_ind_bouts, paths, sprintf('bout_%d.pdf', idx_bout))
 end

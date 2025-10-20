@@ -79,7 +79,10 @@ y.ls = bif.ls;
 y.intercept = bif.intercept;
 
 model = model_func();
-out = evaluate_model(model, x, y);
+[gt, lbl] = get_ground_truth_vector(model);
+lbl = lbl(~isnan(gt));
+gt_table = array2table(x, 'VariableNames', lbl);
+out = evaluate_model(model, gt_table, y);
 
 % assess freeze duration categories
 bet = bif.durations_s <= points.censoring;
