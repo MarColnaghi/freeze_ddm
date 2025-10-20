@@ -13,8 +13,12 @@ gen_model = opt.Results.gen_model;
 
 col = cmapper();
 
+mrk_size = 150;
 
-fh = figure('color','w','Position',[100, 100, 400, 200]);
+fh_prc = figure('color','w','Position',[100, 100, 300, 350]);
+hold on
+
+fh_sc = figure('color','w','Position',[100, 100, 300, 350]);
 hold on
 
 for idx_run = run_code
@@ -38,11 +42,23 @@ for idx_run = run_code
         if sort_rt.id(1) == lls.id(1)
             disp('matching')
         end
-        
+
+        [sorted_deltall, idx_deltall_tv] = sort(lls.ll_tv - lls.ll_st);
+
+        figure(fh_sc)
         if sum(lls.ll_tv) - sum(lls.ll_st) > 0
-            scatter(1, sum(lls.ll_tv) - sum(lls.ll_st), 120, hex2rgb(col.timevarying_sm), 'filled', 'MarkerFaceAlpha', 0.35)
+            scatter(1, sum(lls.ll_tv) - sum(lls.ll_st), mrk_size, hex2rgb(col.timevarying_sm), 'filled', 'MarkerFaceAlpha', 0.35)
         elseif sum(lls.ll_tv) - sum(lls.ll_st) < 0
-            scatter(2, sum(lls.ll_tv) - sum(lls.ll_st), 120, hex2rgb(col.stationary_sm), 'filled', 'MarkerFaceAlpha', 0.35)
+            scatter(2, sum(lls.ll_tv) - sum(lls.ll_st), mrk_size, hex2rgb(col.stationary_sm), 'filled', 'MarkerFaceAlpha', 0.35)
+        end
+
+        figure(fh_prc)
+        prc = sum(sorted_deltall > 0) ./ length(sorted_deltall);
+
+        if sum(lls.ll_tv) - sum(lls.ll_st) > 0
+            scatter(1, prc , mrk_size, hex2rgb(col.timevarying_sm), 'filled', 'MarkerFaceAlpha', 0.35)
+        elseif sum(lls.ll_tv) - sum(lls.ll_st) < 0
+            scatter(2, prc, mrk_size, hex2rgb(col.stationary_sm), 'filled', 'MarkerFaceAlpha', 0.35)
         end
 
     end
@@ -69,26 +85,55 @@ for idx_run = 1:5
             disp('matching')
         end
 
-        scatter(1.5, sum(lls.ll_tv) - sum(lls.ll_st), 120, 'k', 'filled', 'MarkerFaceAlpha', 0.35)
+        [sorted_deltall, idx_deltall_tv] = sort(lls.ll_tv - lls.ll_st);
 
+        figure(fh_sc)
+        scatter(1.5, sum(lls.ll_tv) - sum(lls.ll_st), mrk_size, 'k', 'filled', 'MarkerFaceAlpha', 0.35)
+
+        figure(fh_prc)
+        prc = sum(sorted_deltall > 0) ./ length(sorted_deltall);
+        scatter(1.5, prc, mrk_size, 'k', 'filled', 'MarkerFaceAlpha', 0.35)
 
     end
 end
 
-
+figure(fh_sc)
 apply_generic(gca)
 xlim([0.5 2.5])
-xticks([1,1.5,2])
-xticklabels({'sim. tv', 'data', 'sim. st'})
+
+%xticks([1,1.5,2])
+%xticklabels({'sim. tv', 'data', 'sim. st'})
 xtickangle(0)
 ylim([-500 500])
 %ylabel('delta LL')
 ax = gca;
+ax.XAxis.Visible = 'off';
+ylabel('$\sum(\log ({\mathrm L}_{\mathrm{tv}} / {\mathrm L}_{\mathrm{st}})$', ...
+    'Interpreter','latex')
+% ax.YAxis.Exponent = 2;
+yline(0, '--')
+
+figure(fh_prc)
+apply_generic(gca)
+xlim([0.5 2.5])
+%xticks([1,1.5,2])
+%xticklabels({'sim. tv', 'data', 'sim. st'})
+xtickangle(0)
+ylim([0 1])
+yticks([0 0.5 1])
+
+%ylabel('delta LL')
+ax = gca;
+ax.XAxis.Visible = 'off';
+ylabel('$\frac{{\mathrm L}_{\mathrm{tv}} > {\mathrm L}_{\mathrm{st}}}{N}$', ...
+    'Interpreter','latex')
+yline(0.5, '--')
 
 if export
     cd(fullfile('/Users/marcocolnaghi/PhD/freeze_ddm/figures/momentary_integration', 'freezes', model));
     paths.fig = fullfile('/Users/marcocolnaghi/PhD/freeze_ddm/figures/momentary_integration', 'freezes', model);
-    exporter(fh, paths, 'summary.pdf')
+    exporter(fh_sc, paths, 'summary_total_ll.pdf')
+     exporter(fh_prc, paths, 'summary_percentage.pdf')
 end
 
 end

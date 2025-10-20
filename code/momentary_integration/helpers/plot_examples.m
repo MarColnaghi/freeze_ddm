@@ -46,7 +46,7 @@ for idx_run = run_code
 
         [deltall, idx_deltall] = sort(lls.ll_tv - lls.ll_st);
     
-        fh = figure('color','w','Position',[100, 100, 1600, 800]);
+        fh = figure('color','w','Position',[100, 100, 1200, 800]);
         n_col = 3; n_rows = 3; items = n_col * n_rows;
         tiledlayout(n_rows, n_col, 'TileSpacing', 'tight', 'Padding', 'compact')
         
@@ -55,6 +55,9 @@ for idx_run = run_code
             selected_trials = idx_deltall(end - items + 1:end);
         elseif strcmp(selection, 'worst')
             selected_trials = idx_deltall(1:items);
+        elseif strcmp(selection, 'any')
+            selected_trials = randi(length(idx_deltall), items, 1);
+
         end
 
         for idx_tile = 1:items
@@ -79,5 +82,6 @@ end
 
 function apply_legend(ax)
 
-ax(1).XAxis.TickValues = [0 15];
+ax(1).XAxis.TickValues = [0 11];
+xticks([0 10])
 xlabel('')

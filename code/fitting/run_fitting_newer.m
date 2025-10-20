@@ -36,6 +36,12 @@ model_out = generate_masks(model_out);
 [LB, PLB, PUB, UB] = extract_bounds_from_model(model_out);
 
 %% Objective Function
+surrogate.sm = surrogate.avg_sm_freeze_norm;
+surrogate.smp = surrogate.avg_sm_freeze_norm;
+surrogate.fs = surrogate.avg_fs_1s_norm;
+surrogate.ln = surrogate.nloom_norm;
+surrogate.ls = surrogate.sloom_norm;
+surrogate.intercept = ones(height(surrogate), 1);
 llfun = @(x) nll_fly_ddm_newer(x, surrogate, points, model_str, 'iid', 'n', extra);
 
 %% BADS Optimization

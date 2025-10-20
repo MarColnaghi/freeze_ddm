@@ -74,10 +74,10 @@ for idx_trials = select_indexes'
 
     plot(ddm_params.kde_grid, kde_st, 'LineWidth', 2, 'Color', col.stationary_sm)
     plot(ddm_params.kde_grid, kde_tv, 'LineWidth', 2, 'Color', col.timevarying_sm)
-    histogram(rts_st,  1/120:2/60:points.censoring, 'DisplayStyle', 'stairs', 'Normalization', 'pdf', 'LineWidth', 1, 'EdgeColor', col.stationary_sm)
-    histogram(rts_tv,  1/120:2/60:points.censoring, 'DisplayStyle', 'stairs', 'Normalization', 'pdf', 'LineWidth', 1, 'EdgeColor', col.timevarying_sm)
+    %histogram(rts_st,  1/120:2/60:points.censoring, 'DisplayStyle', 'stairs', 'Normalization', 'pdf', 'LineWidth', 1, 'EdgeColor', col.stationary_sm)
+    %histogram(rts_tv,  1/120:2/60:points.censoring, 'DisplayStyle', 'stairs', 'Normalization', 'pdf', 'LineWidth', 1, 'EdgeColor', col.timevarying_sm)
     
-    plot(fd, f, 'k--')
+    %plot(fd, f, 'k--')
     xlabel('Duration (s)')
     ylabel('density')
 
@@ -89,9 +89,9 @@ for idx_trials = select_indexes'
     imagesc(ddm_params.kde_grid, -0.55, create_vector_for_imagesc, [0 2]);  % set XData = time_vector
     colormap(col.vars.sm)
 
-    xlim([0 15])
-    ylim([-0.2 2.0])
-    xticks([0 15])
+    xlim([0 11])
+    ylim([-0.3 2.0])
+    xticks([0 10])
 
     ax.Clipping= 'on';
     set(ax ,'Layer', 'Top')
@@ -112,7 +112,7 @@ for idx_trials = select_indexes'
     text(trial_data.durations_s + 0.5, ax.YLim(1) - 0.15, sprintf('id: %d', trial_data.id))
 
     if legend
-        xticklabels([0 15])
+        xticklabels([0 10])
     else
         xticklabels({''})
         xlabel('')
