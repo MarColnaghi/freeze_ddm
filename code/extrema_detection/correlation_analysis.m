@@ -33,6 +33,7 @@ for idx_gen_model = {'ac', 'ed'}
         corrmat = corrcoef(temp_s.summed_motion_b4(1:n), temp_s.rt_post_template(1:n));
         correlations(idx_freezes) = corrmat(2);
     end
+    
     figure(fh)
     if strcmp(gen_model, 'ac')
         histogram(correlations, -1:0.05:1, 'Normalization', 'pdf', 'FaceColor', col.timevarying_sm, 'EdgeColor', 'none')
@@ -40,9 +41,7 @@ for idx_gen_model = {'ac', 'ed'}
     elseif strcmp(gen_model, 'ed')
         histogram(correlations, -1:0.05:1, 'Normalization', 'pdf', 'FaceColor', col.extremadetection, 'EdgeColor', 'none');
 
-
     end
-
 
     figure('color', 'w', 'Position', [100, 100, 600, 300]);
     scatter(similarities, correlations)

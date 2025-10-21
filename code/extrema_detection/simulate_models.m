@@ -30,6 +30,7 @@ systemic = true;
 
 % General simulation parameters
 if isempty(sim_params)
+
     systemic = false;
     sim_params.seed = 1;
     sim_params.dt = 1/60;
@@ -125,9 +126,10 @@ sm_raw = cell(sim_params.n_trials, 1);
 % Extract Social Motion TimeSeries
 chunk_len = length(sim_params.time_vector);
 if plott
-    fh = figure('color', 'w', 'Position', [100, 100, 1400, 700]);
+    fh_traces = figure('color', 'w', 'Position', [100, 100, 1400, 700]);
     tiledlayout(3, 4)
 end
+
 tic
 for idx_trials = 1:height(bouts_proc)
 
@@ -154,8 +156,8 @@ for idx_trials = 1:height(bouts_proc)
     end
 end
 
-if store
-    exporter(fh, paths, 'examples.pdf');
+if store && plott
+    exporter(fh_traces, paths, 'examples.pdf');
 end
 
 toc
@@ -163,7 +165,7 @@ toc
 rt.ac = rt_ac; rt.ed = rt_ed; rt.sm_ts = sm_raw;
 
 if plott
-    fh = figure('color', 'w', 'Position', [100, 100, 600, 300]);
+    fh_hist = figure('color', 'w', 'Position', [100, 100, 600, 300]);
 
     hold on
     histogram(rt.ed, sim_params.dt/2:sim_params.dt * 5 :sim_params.T + 1, 'FaceColor', col.extremadetection, 'EdgeColor', 'none', 'Normalization', 'pdf')
@@ -176,8 +178,8 @@ if plott
 end
 
 
-if store
-    exporter(fh, paths, 'durations.pdf');
+if store && plott
+    exporter(fh_hist, paths, 'durations.pdf');
 end
 
 %
@@ -210,7 +212,15 @@ if store
         y.durations_s(isnan(y.durations_s)) = sim_params.T + 1;
         if systemic
             paths_temp.results = fullfile(paths.results, sprintf('mu%d_theta%d_snr%d', sim_params.ddm.mu1, sim_params.ddm.theta1, sim_params.snr));
+            paths_temp.fig = fullfile(paths.fig, sprintf('mu%d_theta%d_snr%d', sim_params.ddm.mu1, sim_params.ddm.theta1, sim_params.snr));
             mkdir(paths_temp.results); cd(paths_temp.results)
+            mkdir(paths_temp.fig); cd(paths_temp.fig)
+
+            if store
+                exporter(fh_hist, paths_temp, 'durations.pdf');
+                exporter(fh_traces, paths_temp, 'examples.pdf');
+            end
+
         end
 
         paths_temp.results = fullfile(paths_temp.results, sprintf('sims_%s', gen_data));
@@ -258,7 +268,7 @@ end
     end
 
 
-    function fh = plot_traces(traj_ed, traj_ac, sm_chunk, col, theta_s)
+    function fh_traces = plot_traces(traj_ed, traj_ac, sm_chunk, col, theta_s)
 
         ax = gca;
         hold on

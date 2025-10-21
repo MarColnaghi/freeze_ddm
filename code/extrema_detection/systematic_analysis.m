@@ -9,7 +9,6 @@ sim_params.z = 0;
 sim_params.snr = 60;
 sim_params.sigma_ed = 1;
 sim_params.sigma_ac = 1;
-rng(sim_params.seed);
 
 % DDM params
 sim_params.ddm.mu1 = 5;
@@ -26,12 +25,17 @@ sim_params.points.censoring = sim_params.T;
 
 create_output_dirs(paths)
 
-for idx_mu = [1, 3, 5]
+for idx_mu = [1, 3, 5, 10]
     for idx_theta = [2, 4, 6]
-        sim_params.ddm.mu1 = idx_mu;
-        sim_params.ddm.theta1 = idx_theta;
-        sim_params.ddm.ndt = 0;
-        simulate_models('sim_params', sim_params, 'plot', true, 'store', true, 'paths', paths)
+        for idx_snr = [30, 60]
+       
+            sim_params.ddm.mu1 = idx_mu;
+            sim_params.ddm.theta1 = idx_theta;
+            sim_params.ddm.ndt = 0;
+            sim_params.snr = idx_snr;
+            simulate_models('sim_params', sim_params, 'plot', true, 'store', true, 'paths', paths)
+
+        end
     end
 end
 
