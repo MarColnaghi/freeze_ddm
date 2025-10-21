@@ -23,7 +23,7 @@ run = sprintf('run%02d', run2analyse);
 paths = path_generator('folder', fullfile('/extrema_detection', test, run));
 
 % Load the Motion Cache
-if strcmp(test, 'ground_truth')
+if strcmp(test, 'ground_truth') || strcmp(test, 'systematic_analysis')
     sim_params = importdata(fullfile(paths.results, 'sim_params.mat'));
 
 elseif strcmp(test, 'empirical')
@@ -33,116 +33,123 @@ end
 motion_cache = importdata(sim_params.motion_cache_path);
 
 % Calculations
-extra_frames = d - frames_2b_exp - 1;
+extra_frames = d - frames_2b_exp;
 d_s = d/60;
+exp_gradient = 15; 
+
+% d is the template length
+% Choose a weighting profile (pick one)
+
+% 1) Linear weights: small -> large across the template
+% w = linspace(0.5, 1.0, d).';              % adjust endpoints as desired
+
+% 2) Exponential weights (stronger emphasis on latest samples)
+% lambda controls how fast weights grow; try 2–5
+% idx 0..d-1 so the last entries get the largest weight
+w = exp(linspace(0, exp_gradient, d)).';            % example with growth factor ~e^2
+
+% Optional: normalize so average weight is 1 (keeps scale comparable)
+w = w * (d / sum(w));
 
 % Load relevant files
-y.ed = importdata(fullfile(paths.results, 'sims_ed/y.mat'));
-y.ac = importdata(fullfile(paths.results, 'sims_ac/y.mat'));
+file_list = dir(paths.results);
+folders = file_list([file_list.isdir]);
+folders = folders(~ismember({folders.name}, {'.', '..'}));
 
-code4segm = sprintf('d_%d-2bexp_%d', d, frames_2b_exp);
-paths_out = path_generator('folder', fullfile('/extrema_detection', test, run, code4segm));
-mkdir(paths_out.fig); mkdir(paths_out.results);
+for idx_file = 2:length(folders)
+    paths.results = fullfile(folders(idx_file).folder, folders(idx_file).name);
+    y.ed = importdata(fullfile(paths.results, 'sims_ed/y.mat'));
+    y.ac = importdata(fullfile(paths.results, 'sims_ac/y.mat'));
 
-% Select only freezes with specific durations
-for idx_gen_model = {'ac', 'ed'}
-    
-    gen_model = idx_gen_model{1};
-    y_curr = y.(gen_model);
-    y_curr = y_curr(y_curr.durations_s > d_s & y_curr.durations_s < sim_params.T, :);
+    code4segm = sprintf('d%d_2bexp%d_expkern%d', d, frames_2b_exp, exp_gradient);
 
-    flies = y_curr.fly;
-    allfr_onsets = y_curr.onsets;
-    allfr_durations = round(y_curr.durations_s .* 60);
-    allfr_offsets = allfr_onsets + allfr_durations - 1;
+    % Select only freezes with specific durations
+    for idx_gen_model = {'ac', 'ed'}
+           
+        gen_model = idx_gen_model{1};
+        gen_path = sprintf('sims_%s', gen_model);
 
-    s = struct;
+        paths_out = path_generator('folder', fullfile('/extrema_detection', test, run, folders(idx_file).name, gen_path, code4segm));
+        mkdir(paths_out.fig); mkdir(paths_out.results);
 
-    comparison_sm_cropped_all = cell(1, height(y_curr));
-  
-    for idx_comparison = 1:height(y_curr)
-        comparison_sm = motion_cache(flies(idx_comparison));
-        comparison_onset = allfr_onsets(idx_comparison);
-        comparison_duration = allfr_durations(idx_comparison);
-        comparison_offset_wextra = allfr_offsets(idx_comparison) + extra_frames;
-        comparison_sm_cropped_all{idx_comparison} = comparison_sm(comparison_onset:comparison_offset_wextra);
-    end
+        y_curr = y.(gen_model);
+        y_curr = y_curr(y_curr.durations_s > d_s & y_curr.durations_s < sim_params.T, :);
 
-    for idx_bout = 1:height(y_curr)
+        flies = y_curr.fly;
+        allfr_onsets = y_curr.onsets;
+        allfr_durations = round(y_curr.durations_s .* 60);
+        allfr_offsets = allfr_onsets + allfr_durations;
 
-        fprintf('bout n:%d\n', idx_bout);
-        sm = motion_cache(flies(idx_bout));
-        freeze_onset = allfr_onsets(idx_bout);
-        freeze_duration = allfr_durations(idx_bout);
-        freeze_offset = allfr_offsets(idx_bout);
+        s = struct;
 
-        sm_bout = sm(freeze_onset:freeze_offset);
-
-        template_onset = length(sm_bout) - d + 1;
-
-        v1 = sm_bout(template_onset:end);
-        v1sq = sum(v1.^2);
-
-        bout = table();
-        similarity_value = nan(1, height(y_curr));
-        similarity_sort = nan(1, height(y_curr));
-        summed_motion_b4 = nan(1, height(y_curr));
-        rt_post_template = nan(1, height(y_curr));
-        all_cropped = cell(1, height(y_curr));
-        id = nan(1, height(y_curr)); 
+        comparison_sm_cropped_all = cell(1, height(y_curr));
 
         for idx_comparison = 1:height(y_curr)
-
-            comparison_sm_cropped = comparison_sm_cropped_all{idx_comparison};
-
-            % d is the template length
-            % Choose a weighting profile (pick one)
-
-            % 1) Linear weights: small -> large across the template
-            w = linspace(0.5, 1.0, d).';              % adjust endpoints as desired
-
-            % 2) Exponential weights (stronger emphasis on latest samples)
-            % lambda controls how fast weights grow; try 2–5
-            % idx 0..d-1 so the last entries get the largest weight
-            w = exp(linspace(0, 5, d)).';            % example with growth factor ~e^2
-
-            % Optional: normalize so average weight is 1 (keeps scale comparable)
-            w = w * (d / sum(w));
-
-            % Precompute weighted template terms
-            v1_wsq = sum(w .* (v1.^2));                % scalar
-            dots_w = conv(comparison_sm_cropped, flipud(w .* v1), 'valid');
-            ssq_w  = conv(comparison_sm_cropped.^2, flipud(w), 'valid');
-
-            % Weighted SSD distance
-            similarity_framebframe_vectorized = sqrt(max(v1_wsq + ssq_w - 2*dots_w, 0));
-
-            % The rest stays the same
-            [closest_similarity, best_frame] = min(similarity_framebframe_vectorized);
-            similarity_value(idx_comparison) = closest_similarity;
-            similarity_sort(idx_comparison) = best_frame;
-            all_cropped{idx_comparison} = comparison_sm_cropped;
-            summed_motion_b4(idx_comparison) = sum(comparison_sm_cropped(1:best_frame - 1));
-            rt_post_template(idx_comparison) = allfr_durations(idx_comparison) - best_frame;
-
-
+            comparison_sm = motion_cache(flies(idx_comparison));
+            comparison_onset = allfr_onsets(idx_comparison);
+            comparison_offset_wextra = allfr_offsets(idx_comparison) + extra_frames;
+            comparison_sm_cropped_all{idx_comparison} = comparison_sm(comparison_onset:comparison_offset_wextra);
         end
 
-        bout.closest_similarity = similarity_value';
-        bout.best_frame = similarity_sort';
-        % bout.cropped_signals = all_cropped';
-        bout.summed_motion_b4 = summed_motion_b4';
-        bout.rt_post_template = rt_post_template';
-        bout.idx_freeze = (1:height(y_curr))';
+        tic
+        for idx_bout = 1:height(y_curr)
 
-        sorted_bout = sortrows(bout, 'closest_similarity');
-        s(idx_bout).boutlist = sorted_bout;
-        s(idx_bout).sm = sm_bout;
+            if ~(mod(idx_bout, 1000))
+                fprintf('bout n:%d\n', idx_bout);
+            end
+
+            sm = motion_cache(flies(idx_bout));
+            freeze_onset = allfr_onsets(idx_bout);
+            freeze_offset = allfr_offsets(idx_bout);
+
+            sm_bout = sm(freeze_onset:freeze_offset);
+
+            template_onset = length(sm_bout) - d + 1;
+
+            v1 = sm_bout(template_onset:end);
+
+            bout = table();
+            similarity_value = nan(1, height(y_curr));
+            similarity_sort = nan(1, height(y_curr));
+            summed_motion_b4 = nan(1, height(y_curr));
+            rt_post_template = nan(1, height(y_curr));
+           
+            for idx_comparison = 1:height(y_curr)
+                
+                comparison_sm_cropped = comparison_sm_cropped_all{idx_comparison};
+
+                % Precompute weighted template terms
+                v1_wsq = sum(w .* (v1.^2));                % scalar
+                dots_w = conv(comparison_sm_cropped, flipud(w .* v1), 'valid');
+                ssq_w  = conv(comparison_sm_cropped.^2, flipud(w), 'valid');
+
+                % Weighted SSD distance
+                similarity_framebframe_vectorized = sqrt(max(v1_wsq + ssq_w - 2*dots_w, 0));
+
+                % The rest stays the same
+                [closest_similarity, best_frame] = min(similarity_framebframe_vectorized);
+                similarity_value(idx_comparison) = closest_similarity;
+                similarity_sort(idx_comparison) = best_frame;
+                summed_motion_b4(idx_comparison) = sum(comparison_sm_cropped(1:best_frame - 1));
+                rt_post_template(idx_comparison) = allfr_durations(idx_comparison) - best_frame;
+
+            end
+
+            bout.closest_similarity = similarity_value';
+            bout.best_frame = similarity_sort';
+            bout.summed_motion_b4 = summed_motion_b4';
+            bout.rt_post_template = rt_post_template';
+            bout.idx_freeze = (1:height(y_curr))';
+
+            sorted_bout = sortrows(bout, 'closest_similarity');
+            s(idx_bout).boutlist = sorted_bout;
+            s(idx_bout).sm = sm_bout;
+            
+        end
+        toc
+        cd(paths_out.results)
+        save(sprintf('struct_%s.mat', gen_model), 's')
+        save(sprintf('comparison_sm_cropped_%s.mat', gen_model), 'comparison_sm_cropped_all')
     end
-
-    cd(paths_out.results)
-    save(sprintf('struct_%s.mat', gen_model), 's')
-    save(sprintf('comparison_sm_cropped_%s.mat', gen_model), 'comparison_sm_cropped_all')
-
 end
 end

@@ -12,9 +12,9 @@ extra_frames = d - frames_2b_exp - 1;
 code4segm = sprintf('d_%d-2bexp_%d', d, frames_2b_exp);
 
 % Specify Paths
-run2analyse = 3;
+run2analyse = 6;
 run = sprintf('run%02d', run2analyse);
-paths = path_generator('folder', fullfile('/extrema_detection', 'ac_vs_ed', run));
+paths = path_generator('folder', fullfile('/extrema_detection', 'ground_truth', run));
 sim_params = importdata(fullfile(paths.results, 'sim_params.mat'));
 bound = sim_params.gt_table.theta_intercept;
 
@@ -29,10 +29,11 @@ for idx_gen_model = {'ac', 'ed'}
 
     for idx_freezes = 1:size(s,2)
         temp_s = s(idx_freezes).boutlist;
-        similarities(idx_freezes) = temp_s.closest_similarity(n);
+        similarities(idx_freezes) = median(temp_s.closest_similarity(1:n));
         corrmat = corrcoef(temp_s.summed_motion_b4(1:n), temp_s.rt_post_template(1:n));
         correlations(idx_freezes) = corrmat(2);
     end
+    figure(fh)
     if strcmp(gen_model, 'ac')
         histogram(correlations, -1:0.05:1, 'Normalization', 'pdf', 'FaceColor', col.timevarying_sm, 'EdgeColor', 'none')
 
@@ -43,20 +44,24 @@ for idx_gen_model = {'ac', 'ed'}
     end
 
 
+    figure('color', 'w', 'Position', [100, 100, 600, 300]);
+    scatter(similarities, correlations)
 end
 
 xlabel('Correlation')
 apply_generic(ax)
 exporter(fh, paths, 'correlations.pdf')
 
+
+
 %%
-idx_gen_model = {'ac'};
+idx_gen_model = {'ed'};
 gen_model = idx_gen_model{1};
 comparison_sm = importdata(fullfile(paths.results, code4segm, sprintf('comparison_sm_cropped_%s.mat', gen_model)));
 load(fullfile(paths.results, code4segm, sprintf('struct_%s', gen_model)))
-paths_loop = path_generator('folder', fullfile('/extrema_detection', 'ac_vs_ed', run, code4segm));
+paths_loop = path_generator('folder', fullfile('/extrema_detection', 'ground_truth', run, code4segm));
 
-for idx_bout = randi(size(s), 1, 10)
+for idx_bout = randi(size(s), 1, 5)
 
     s_temp = s(idx_bout).boutlist;
     s_temp_selected = s_temp(1:n, :);

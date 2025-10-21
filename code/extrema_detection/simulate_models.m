@@ -1,25 +1,72 @@
-clear all
-close all
+function simulate_models(varargin)
+
+opt = inputParser;
+addParameter(opt, 'sim_params', []);
+addParameter(opt, 'store', false);
+addParameter(opt, 'plot', false);
+addParameter(opt, 'systematic', false);
+addParameter(opt, 'paths', []);
+
+parse(opt, varargin{:});
+
+sim_params = opt.Results.sim_params;
+store = opt.Results.store;
+plott = opt.Results.plot;
+paths = opt.Results.paths;
 
 % Load the table first. We will take advantage of an already existing
 % dataset.
-
-store = true;
-plott = true;
-col = cmapper();
-
 threshold_imm = 3; threshold_mob = 3; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
-paths = path_generator('folder', 'extrema_detection/ground_truth', 'bouts_id', id_code);
 
-load(fullfile(paths.dataset, 'bouts.mat'));
+if isempty(paths)
+    paths = path_generator('folder', 'extrema_detection/ground_truth', 'bouts_id', id_code);
+end
+
+% Import the Table
+bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le');
 bouts_proc = bouts_proc(bouts_proc.nloom < 15, :);
+systemic = true;
 
-% Load the motion ts
+% General simulation parameters
+if isempty(sim_params)
+    systemic = false;
+    sim_params.seed = 1;
+    sim_params.dt = 1/60;
+    sim_params.T = 30;
+    sim_params.time_vector = sim_params.dt:sim_params.dt:sim_params.T;
+    sim_params.z = 0;
+    sim_params.snr = 60;
+    sim_params.sigma_ed = 1;
+    sim_params.sigma_ac = 1;
+    rng(sim_params.seed);
+
+    % DDM params
+    sim_params.ddm.mu1 = 5;
+    sim_params.ddm.theta1 = 6;
+    sim_params.ddm.ndt = 0;
+
+    % Simulation settings
+    sim_params.kde_grid = 0:1/600:120;
+    sim_params.num_sims = 20000;
+
+    % Censoring/Truncation
+    sim_params.points.truncation = [];
+    sim_params.points.censoring = sim_params.T;
+
+    % Load the motion ts
+
+end
+
+sim_params.n_trials = height(bouts_proc);
 sim_params.motion_cache_path = fullfile(paths.dataset, 'motion_cache.mat');
-load(sim_params.motion_cache_path)
 
-if store || plott
+col = cmapper();
+
+% Load the Motion Cache
+motion_cache = importdata(sim_params.motion_cache_path);
+
+if store && ~systemic
     create_output_dirs(paths)
 end
 
@@ -31,10 +78,8 @@ y.fs = bouts_proc.avg_fs_1s_norm;
 y.ln = bouts_proc.nloom_norm;
 y.ls = bouts_proc.sloom_norm;
 y.intercept = ones(height(y),1);   % N‑by‑1 column of ones
-predictors = y.Properties.VariableNames;
 
 link_linear = @(x) x;     % log link for bound height
-link_logistic = @(x) 1./(1 + exp(-x));     % log link for bound height
 
 % For mu
 model.mu = struct( ...
@@ -43,7 +88,7 @@ model.mu = struct( ...
     struct('name', 'intercept')
     }}, ...
     'mask', [1 0 0 0 0 1], ...
-    'ground_truth', [4 0], ...
+    'ground_truth', [sim_params.ddm.mu1 0], ...
     'link', link_linear ...
     );
 
@@ -53,7 +98,7 @@ model.theta = struct( ...
     struct('name', 'intercept') ...
     }}, ...
     'mask', [0 0 0 0 0 1], ...
-    'ground_truth', 5.0, ...
+    'ground_truth', sim_params.ddm.theta1, ...
     'link', link_linear ...
     );
 
@@ -61,37 +106,15 @@ model.theta = struct( ...
 model.tndt = struct( ...
     'predictors', {{ struct('name', 'intercept') }}, ...
     'mask', [0 0 0 0 0 1], ...
-    'ground_truth', 0, ...
+    'ground_truth', sim_params.ddm.ndt, ...
     'link', link_linear ...
     );
 
 [gt, lbl] = get_ground_truth_vector(model);
 x = gt(~isnan(gt));
-ncomp_vars = evaluate_model(model, x, y);
 gt_table = array2table(gt, 'VariableNames', lbl);
-
-% Specify the seed
-rng(1);
-
-% General simulation parameters
-sim_params.n_trials = height(bouts_proc);
-sim_params.dt = 1/60;
-sim_params.T = 30;
-sim_params.time_vector = sim_params.dt:sim_params.dt:sim_params.T;
-sim_params.z = 0;
-sim_params.snr = 60;
+ncomp_vars = evaluate_model(model, gt_table, y);
 sim_params.gt_table = gt_table;
-sim_params.sigma_ed = 1;
-sim_params.sigma_ac = 1;
-
-% Simulation settings
-sim_params.kde_grid = 0:1/600:120;
-sim_params.eval_trials = sim_params.n_trials;
-sim_params.num_sims = 20000;
-
-% Censoring/Truncation
-sim_params.points.truncation = [];
-sim_params.points.censoring = sim_params.T;
 
 % Initialize outputs
 rt = table;
@@ -107,7 +130,7 @@ if plott
 end
 tic
 for idx_trials = 1:height(bouts_proc)
-    
+
     ons = bouts_proc.onsets(idx_trials);
 
     sum_motion = motion_cache(bouts_proc.fly(idx_trials));
@@ -131,22 +154,31 @@ for idx_trials = 1:height(bouts_proc)
     end
 end
 
-exporter(fh, paths, 'examples.pdf');
+if store
+    exporter(fh, paths, 'examples.pdf');
+end
 
 toc
 
 rt.ac = rt_ac; rt.ed = rt_ed; rt.sm_ts = sm_raw;
-fh = figure('color', 'w', 'Position', [100, 100, 600, 300]);
 
-hold on
-histogram(rt.ed, sim_params.dt/2:sim_params.dt * 5 :sim_params.T + 1, 'FaceColor', col.extremadetection, 'EdgeColor', 'none', 'Normalization', 'pdf')
-histogram(rt.ac, sim_params.dt/2:sim_params.dt * 5 :sim_params.T + 1, 'FaceColor', col.timevarying_sm, 'EdgeColor', 'none', 'Normalization', 'pdf')
-xline(mean(rt.ed, 'omitnan'), 'Color', col.extremadetection, 'LineWidth', 2)
-xline(mean(rt.ac, 'omitnan'), 'Color', col.timevarying_sm, 'LineWidth', 2)
-xlabel('Duration')
-ylabel('Count')
-apply_generic(gca, 24);
-exporter(fh, paths, 'durations.pdf');
+if plott
+    fh = figure('color', 'w', 'Position', [100, 100, 600, 300]);
+
+    hold on
+    histogram(rt.ed, sim_params.dt/2:sim_params.dt * 5 :sim_params.T + 1, 'FaceColor', col.extremadetection, 'EdgeColor', 'none', 'Normalization', 'pdf')
+    histogram(rt.ac, sim_params.dt/2:sim_params.dt * 5 :sim_params.T + 1, 'FaceColor', col.timevarying_sm, 'EdgeColor', 'none', 'Normalization', 'pdf')
+    xline(mean(rt.ed, 'omitnan'), 'Color', col.extremadetection, 'LineWidth', 2)
+    xline(mean(rt.ac, 'omitnan'), 'Color', col.timevarying_sm, 'LineWidth', 2)
+    xlabel('Duration')
+    ylabel('Count')
+    apply_generic(gca, 24);
+end
+
+
+if store
+    exporter(fh, paths, 'durations.pdf');
+end
 
 %
 y = table;
@@ -173,65 +205,72 @@ if store
         gen_data = gen_type{1};
         y.durations_s = rt.(gen_data);
 
+        paths_temp.results = paths.results;
+        
         y.durations_s(isnan(y.durations_s)) = sim_params.T + 1;
+        if systemic
+            paths_temp.results = fullfile(paths.results, sprintf('mu%d_theta%d_snr%d', sim_params.ddm.mu1, sim_params.ddm.theta1, sim_params.snr));
+            mkdir(paths_temp.results); cd(paths_temp.results)
+        end
 
-        paths_temp.results = fullfile(paths.results, sprintf('sims_%s', gen_data));
+        paths_temp.results = fullfile(paths_temp.results, sprintf('sims_%s', gen_data));
         mkdir(paths_temp.results); cd(paths_temp.results)
 
         save('y.mat', 'y')
-
     end
 end
 
-function create_output_dirs(paths)
-    % Ensure base directories exist
-    if ~exist(paths.fig, 'dir'), mkdir(paths.fig); end
-    if ~exist(paths.results, 'dir'), mkdir(paths.results); end
 
-    % Auto-incrementing run folder inside results
-    run_folders = dir(fullfile(paths.results, 'run*'));
-    run_nums = [];
+    function create_output_dirs(paths)
+        % Ensure base directories exist
+        if ~exist(paths.fig, 'dir'), mkdir(paths.fig); end
+        if ~exist(paths.results, 'dir'), mkdir(paths.results); end
 
-    for i = 1:length(run_folders)
-        if run_folders(i).isdir
-            tokens = regexp(run_folders(i).name, '^run(\d+)$', 'tokens');
-            if ~isempty(tokens)
-                run_nums(end+1) = str2double(tokens{1}{1}); %#ok<AGROW>
+        % Auto-incrementing run folder inside results
+        run_folders = dir(fullfile(paths.results, 'run*'));
+        run_nums = [];
+
+        for i = 1:length(run_folders)
+            if run_folders(i).isdir
+                tokens = regexp(run_folders(i).name, '^run(\d+)$', 'tokens');
+                if ~isempty(tokens)
+                    run_nums(end+1) = str2double(tokens{1}{1}); %#ok<AGROW>
+                end
             end
         end
+
+        if isempty(run_nums)
+            next_run = 1;
+        else
+            next_run = max(run_nums) + 1;
+        end
+
+        run_name = sprintf('run%02d', next_run);
+        paths.results = fullfile(paths.results, run_name);
+        mkdir(paths.results);
+
+        % Also update figure path to match the new run
+        paths.fig = fullfile(paths.fig, run_name);
+        mkdir(paths.fig);
+
+        % Assign the updated paths back to base workspace (if needed)
+        assignin('caller', 'paths', paths);
     end
 
-    if isempty(run_nums)
-        next_run = 1;
-    else
-        next_run = max(run_nums) + 1;
+
+    function fh = plot_traces(traj_ed, traj_ac, sm_chunk, col, theta_s)
+
+        ax = gca;
+        hold on
+        x_traj = 0:1/60:(length(traj_ed) - 1)/60;
+        plot(x_traj, traj_ed, 'Color', col.extremadetection, 'LineWidth', 1.5)
+        plot(x_traj, traj_ac, 'Color',col.timevarying_sm, 'LineWidth', 1.5)
+        plot(x_traj(2:end), sm_chunk, 'k--')
+        yline(theta_s, 'LineWidth', 2)
+        hold on
+        ylim([-theta_s - 1 theta_s + 1])
+        xlim([0 20])
+        apply_generic(ax, 20)
+        xlabel('Time (frames)')
     end
-
-    run_name = sprintf('run%02d', next_run);
-    paths.results = fullfile(paths.results, run_name);
-    mkdir(paths.results);
-
-    % Also update figure path to match the new run
-    paths.fig = fullfile(paths.fig, run_name);
-    mkdir(paths.fig);
-
-    % Assign the updated paths back to base workspace (if needed)
-    assignin('caller', 'paths', paths);
-end
-
-
-function fh = plot_traces(traj_ed, traj_ac, sm_chunk, col, theta_s)
-
-ax = gca;
-hold on
-x_traj = 0:1/60:(length(traj_ed) - 1)/60;
-plot(x_traj, traj_ed, 'Color', col.extremadetection, 'LineWidth', 1.5)
-plot(x_traj, traj_ac, 'Color',col.timevarying_sm, 'LineWidth', 1.5)
-plot(x_traj(2:end), sm_chunk, 'k--')
-yline(theta_s, 'LineWidth', 2)
-hold on
-ylim([-5 5])
-xlim([0 20])
-apply_generic(ax, 20)
-xlabel('Time (frames)')
 end
