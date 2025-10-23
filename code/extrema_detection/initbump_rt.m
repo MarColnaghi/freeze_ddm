@@ -52,7 +52,8 @@ folders = file_list([file_list.isdir]);
 folders = folders(~ismember({folders.name}, {'.', '..'}));
 
 for idx_file = 1:size(folders, 1)
-    fprintf('folder %d out of %d',idx_file, size(folders, 1))
+    fprintf('folder %d out of %d \n',idx_file, size(folders, 1))
+    tic
     paths.results = fullfile(folders(idx_file).folder, folders(idx_file).name);
     y.ed = importdata(fullfile(paths.results, 'sims_ed/y.mat'));
     y.ac = importdata(fullfile(paths.results, 'sims_ac/y.mat'));
@@ -60,7 +61,6 @@ for idx_file = 1:size(folders, 1)
     for exp_gradient = [0 1 3]
         w = exp(linspace(0, exp_gradient, d)).';            % example with growth factor ~e^2
 
-        % Optional: normalize so average weight is 1 (keeps scale comparable)
         w = w * (d / sum(w));
 
         code4segm = sprintf('d%d_2bexp%d_expkern%d', d, frames_2b_exp, exp_gradient);
@@ -92,7 +92,7 @@ for idx_file = 1:size(folders, 1)
                 comparison_offset_wextra = allfr_offsets(idx_comparison) + extra_frames - 1;
                 comparison_sm_cropped_all{idx_comparison} = comparison_sm(comparison_onset:comparison_offset_wextra);
             end
-            
+
             parfor idx_bout = 1:height(y_curr)
 
                 sm = motion_cache(flies(idx_bout));
@@ -147,12 +147,15 @@ for idx_file = 1:size(folders, 1)
                 s(idx_bout).boutlist = sorted_bout;
                 s(idx_bout).sm = sm_bout;
 
+                
             end
             
+            size(s, 2) == height(y_curr)
             cd(paths_out.results)
             save(sprintf('struct_%s.mat', gen_model), 's')
             save(sprintf('comparison_sm_cropped_%s.mat', gen_model), 'comparison_sm_cropped_all')
         end
     end
+toc
 end
 end

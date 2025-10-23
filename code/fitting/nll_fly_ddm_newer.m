@@ -150,12 +150,23 @@ if strcmp('iid', iid)
 
         g(bet) = f(ts(bet), bet) ./ trunc_factor(bet);
         g(abo) = (1 - F(points.censoring, abo)) ./ trunc_factor(abo);
-    end
+    
+    elseif  strcmp('ed', tok{1})
 
+        bet = bif.durations_s > out.tndt & bif.durations_s - out.tndt < points.censoring;
+        abo = bif.durations_s - out.tndt >= points.censoring;
+
+        fs = 60;
+        out.mu = extra.soc_mot_array .* x(1) .* (1/fs);
+        [pdf, cdf] = pdf_cdf({'ed'});
+        f = pdf.ed; F = cdf.ed;
+        g(bet) = f(ts(bet) - out.tndt(bet), out.theta(bet), out.mu(bet, :), fs);
+        g(abo) = F(points.censoring, out.theta(abo), out.mu(abo, :), fs);
+
+    end
 end
 
-g = max(g, 1e-6);
+g = max(g, 1e-5);
 log_g = log(g); %- log(trunc_factor(ones(size(ts))));
 
 end
-

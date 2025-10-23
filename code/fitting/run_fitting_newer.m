@@ -83,6 +83,7 @@ lpriorfun = @(x) msplinetrapezlogpdf(x, LB, PLB, PUB, UB);
 postfun = @(x) lpostfun(x, llfun, lpriorfun);
 
 options_vbmc.Display = 'iter';
+options_vbmc.RetryMaxFunEvals = options_vbmc.MaxFunEvals;
 
 [VP, ELBO, ELBO_SD] = vbmc(postfun, eval_param(1,:), LB, UB, PLB, PUB, options_vbmc);
 [x_mean, x_sigma] = vbmc_moments(VP);

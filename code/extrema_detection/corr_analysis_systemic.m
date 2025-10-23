@@ -1,6 +1,6 @@
 %calculate_corrs()
 
-n = 50;
+n = 60;
 
 % Select Color Map
 col = cmapper(); col.spectral = cbrewer2('Spectral', n);
@@ -8,78 +8,104 @@ path = '/Users/marcocolnaghi/PhD/freeze_ddm/model_results/extrema_detection/syst
 file_list = dir(path);
 folders = file_list([file_list.isdir]);
 folders = folders(~ismember({folders.name}, {'.', '..'}));
-d = 120;
+
+% Extract numeric substrings for each parameter
+mu_tokens    = regexp({folders.name}, 'mu(\d+)', 'tokens');
+theta_tokens = regexp({folders.name}, 'theta(\d+)', 'tokens');
+snr_tokens   = regexp({folders.name}, 'snr(\d+)', 'tokens');
+
+% Convert cell-of-cells to numeric arrays
+mu_vals    = cellfun(@(c) str2double(c{1}{1}), mu_tokens(~cellfun('isempty', mu_tokens)));
+theta_vals = cellfun(@(c) str2double(c{1}{1}), theta_tokens(~cellfun('isempty', theta_tokens)));
+snr_vals   = cellfun(@(c) str2double(c{1}{1}), snr_tokens(~cellfun('isempty', snr_tokens)));
+
+% Get unique values
+unique_mu    = unique(mu_vals);
+unique_theta = unique(theta_vals);
+unique_snr   = unique(snr_vals);
+
+d = 180;
 frames_2b_exp = 60;
-expkern = 15;
+expkern = 0;
 extra_frames = d - frames_2b_exp;
 
 code = sprintf('d%d_2bexp%d_expkern%d', d, frames_2b_exp, expkern);
 
-fh_distr = figure('color', 'w', 'Position', [100, 100, 900, 900]);
-tiledlayout(3, 3, "TileSpacing", 'compact', 'Padding', 'compact');
+for idx_snr = unique_snr
 
-fh_scatter = figure('color', 'w', 'Position', [100, 100, 900, 900]);
-tiledlayout(3, 3, "TileSpacing", 'compact', 'Padding', 'compact');
+    fh_distr = figure('color', 'w', 'Position', [100, 100, 900, 900]);
+    tiledlayout(length(unique_theta), length(unique_mu), "TileSpacing", 'compact', 'Padding', 'compact');
 
-for idx_file = 1:length(folders)
-    
-    cd(fullfile(folders(idx_file).folder, fullfile(folders(idx_file).name)))
-    
-    figure(fh_distr)
-    nexttile
-    hold on
+%     fh_scatter = figure('color', 'w', 'Position', [100, 100, 900, 900]);
+%     tiledlayout(length(unique_mu), length(unique_theta), "TileSpacing", 'compact', 'Padding', 'compact');
 
-    figure(fh_scatter)
-    nexttile
-    hold on
-
-    for idx_gen_model = {'ac', 'ed'}
-
-        gen_model = idx_gen_model{1};
-        stringy = fullfile(sprintf('sims_%s', gen_model), code);
-
-        load(fullfile(stringy, sprintf('struct_%s', gen_model)));
-        similarities = nan(1, size(s,2));
-        correlations = nan(1, size(s,2));
-
-        for idx_freezes = 1:size(s,2)
-            temp_s = s(idx_freezes).boutlist;
-            similarities(idx_freezes) = median(temp_s.closest_similarity(1:n));
-            corrmat = corrcoef(temp_s.summed_motion_b4(1:n), temp_s.rt_post_template(1:n));
-            correlations(idx_freezes) = corrmat(2);
-        end
+    for idx_theta = unique_theta
         
-        figure(fh_distr)
+        for idx_mu = unique_mu
 
-        if strcmp(gen_model, 'ac')
-            histogram(correlations, -1:0.05:1, 'Normalization', 'pdf', 'FaceColor', col.timevarying_sm, 'EdgeColor', 'none')
+            figure(fh_distr)
+            nexttile
+            hold on
 
-        elseif strcmp(gen_model, 'ed')
-            histogram(correlations, -1:0.05:1, 'Normalization', 'pdf', 'FaceColor', col.extremadetection, 'EdgeColor', 'none');
+%             figure(fh_scatter)
+%             nexttile
+%             hold on
+
+            code_ddm_params = sprintf('mu%d_theta%d_snr%d',idx_mu, idx_theta, idx_snr);
+
+            for idx_gen_model = {'ac', 'ed'}
+
+                gen_model = idx_gen_model{1};
+                code_analysis = sprintf('sims_%s', gen_model);
+
+                string_path = fullfile(path, code_ddm_params, code_analysis, code);
+
+                load(fullfile(string_path, sprintf('struct_%s', gen_model)));
+                similarities = nan(1, size(s,2));
+                correlations = nan(1, size(s,2));
+
+                for idx_freezes = 1:size(s,2)
+                    temp_s = s(idx_freezes).boutlist;
+                    similarities(idx_freezes) = median(temp_s.closest_similarity(1:n));
+                    corrmat = corrcoef(temp_s.summed_motion_b4(1:n), temp_s.rt_post_template(1:n));
+                    correlations(idx_freezes) = corrmat(2);
+                end
+
+                figure(fh_distr)
+
+                if strcmp(gen_model, 'ac')
+                    histogram(correlations, -1:0.05:1, 'Normalization', 'pdf', 'FaceColor', col.timevarying_sm, 'EdgeColor', 'none')
+
+                elseif strcmp(gen_model, 'ed')
+                    histogram(correlations, -1:0.05:1, 'Normalization', 'pdf', 'FaceColor', col.extremadetection, 'EdgeColor', 'none');
+
+                end
+
+
+%                 figure(fh_scatter)
+% 
+%                 if strcmp(gen_model, 'ac')
+%                     scatter(similarities, correlations, 5, 'MarkerFaceColor', col.timevarying_sm, 'MarkerEdgeColor', 'none')
+% 
+%                 elseif strcmp(gen_model, 'ed')
+%                     scatter(similarities, correlations, 5, 'MarkerFaceColor', col.extremadetection, 'MarkerEdgeColor', 'none')
+% 
+%                 end
+
+            end
+
+            figure(fh_distr)
+
+            text(0, 5, code_ddm_params, 'HorizontalAlignment', 'center', 'FontSize', 22)
+            xlabel('Correlation')
+            apply_generic(gca)
+            ylim([0 5])
+
+%            figure(fh_scatter)
+           % apply_generic(gca)
 
         end
-
-
-        figure(fh_scatter)
-        if strcmp(gen_model, 'ac')
-            scatter(similarities, correlations, 5, 'MarkerFaceColor', col.timevarying_sm, 'MarkerEdgeColor', 'none')
-
-        elseif strcmp(gen_model, 'ed')
-            scatter(similarities, correlations, 5, 'MarkerFaceColor', col.extremadetection, 'MarkerEdgeColor', 'none')
-
-        end
-
     end
-    figure(fh_distr)
-
-    text(0, 5, fullfile(folders(idx_file).name), 'HorizontalAlignment', 'center', 'FontSize', 22)
-    xlabel('Correlation')
-    apply_generic(gca)
-    ylim([0 5])
-
-    figure(fh_scatter)
-    apply_generic(gca)
-
 end
 
 

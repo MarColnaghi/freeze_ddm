@@ -51,7 +51,7 @@ function [rt, traj, t, det_cum, sto_cum] = extrema_detection_new(varargin)
         end
         mu_t = params.mu_t(:);  % Ensure column vector
     else
-        mu_t = params.mu * ones(n_t, 1);
+        mu_t = params.mu * ones(n_t - 1, 1);
     end
 
     while true
