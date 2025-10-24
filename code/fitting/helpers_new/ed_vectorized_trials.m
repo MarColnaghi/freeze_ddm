@@ -1,9 +1,3 @@
-% Extrema detection - vectorized over independent trials
-% ts: time in seconds [1 × n_trials] or scalar
-% theta: threshold [1 × n_trials] or scalar
-% mu: evidence matrix [n_trials × n_frames]
-% fs: sampling rate in Hz
-% output_type: 'pdf' (default), 'cdf', or 'both'
 function result = ed_vectorized_trials(ts, theta, mu, fs, output_type)
     % Default to PDF output
     if nargin < 5
@@ -37,7 +31,8 @@ function result = ed_vectorized_trials(ts, theta, mu, fs, output_type)
     
     % Convert times to frames [n_trials × 1]
     frames = round(ts * fs);
-    
+    % frames = ts * fs;
+
     % Clip frames to valid range
     frames = max(1, min(n_frames, frames));
     

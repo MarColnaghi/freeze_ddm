@@ -153,20 +153,28 @@ if strcmp('iid', iid)
     
     elseif  strcmp('ed', tok{1})
 
-        bet = bif.durations_s > out.tndt & bif.durations_s - out.tndt < points.censoring;
-        abo = bif.durations_s - out.tndt >= points.censoring;
-
         fs = 60;
+       out.tndt = zeros(length(out.theta), 1);
+
+        bet = ts > out.tndt & ts - out.tndt < points.censoring;
+        abo = ts - out.tndt >= points.censoring;
+
         out.mu = extra.soc_mot_array .* x(1) .* (1/fs);
         [pdf, cdf] = pdf_cdf({'ed'});
-        f = pdf.ed; F = cdf.ed;
-        g(bet) = f(ts(bet) - out.tndt(bet), out.theta(bet), out.mu(bet, :), fs);
-        g(abo) = F(points.censoring, out.theta(abo), out.mu(abo, :), fs);
-
+        
+        f = @(ts, inds) pdf.ed(ts, out.theta(inds), out.mu(inds, :), out.tndt(inds), fs); 
+        F = @(ts, inds) cdf.ed(ts, out.theta(inds), out.mu(inds, :), out.tndt(inds), fs);
+        
+        %g(bet) = f(ts(bet) - out.tndt(bet), out.theta(bet), out.mu(bet, :), fs);
+        %g(abo) = F(points.censoring, out.theta(abo), out.mu(abo, :), fs);
+        
+        g(bet) = f(ts(bet), bet);
+        g(abo) = F(points.censoring, abo);
+        log_g = g;
     end
 end
 
-g = max(g, 1e-5);
-log_g = log(g); %- log(trunc_factor(ones(size(ts))));
+%g = max(g, 1e-5);
+%log_g = log(g); %- log(trunc_factor(ones(size(ts))));
 
 end

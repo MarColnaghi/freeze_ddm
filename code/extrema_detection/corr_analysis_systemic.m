@@ -26,18 +26,19 @@ unique_snr   = unique(snr_vals);
 
 d = 180;
 frames_2b_exp = 60;
-expkern = 0;
+expkern = 3;
 extra_frames = d - frames_2b_exp;
 
 code = sprintf('d%d_2bexp%d_expkern%d', d, frames_2b_exp, expkern);
+idx = 0;
 
 for idx_snr = unique_snr
 
-    fh_distr = figure('color', 'w', 'Position', [100, 100, 900, 900]);
-    tiledlayout(length(unique_theta), length(unique_mu), "TileSpacing", 'compact', 'Padding', 'compact');
+    fh_distr = figure('color', 'w', 'Position', [100, 100, 1200, 800]);
+    tiledlayout(length(unique_theta), length(unique_mu), 'TileSpacing', 'compact', 'Padding', 'compact');
 
-%     fh_scatter = figure('color', 'w', 'Position', [100, 100, 900, 900]);
-%     tiledlayout(length(unique_mu), length(unique_theta), "TileSpacing", 'compact', 'Padding', 'compact');
+    fh_scatter = figure('color', 'w', 'Position', [100, 100, 1200, 800]);
+    tiledlayout(length(unique_theta), length(unique_mu), "TileSpacing", 'compact', 'Padding', 'compact');
 
     for idx_theta = unique_theta
         
@@ -47,11 +48,12 @@ for idx_snr = unique_snr
             nexttile
             hold on
 
-%             figure(fh_scatter)
-%             nexttile
-%             hold on
+            figure(fh_scatter)
+            nexttile
+            hold on
 
             code_ddm_params = sprintf('mu%d_theta%d_snr%d',idx_mu, idx_theta, idx_snr);
+            idx = idx + 1;
 
             for idx_gen_model = {'ac', 'ed'}
 
@@ -82,34 +84,53 @@ for idx_snr = unique_snr
                 end
 
 
-%                 figure(fh_scatter)
-% 
-%                 if strcmp(gen_model, 'ac')
-%                     scatter(similarities, correlations, 5, 'MarkerFaceColor', col.timevarying_sm, 'MarkerEdgeColor', 'none')
-% 
-%                 elseif strcmp(gen_model, 'ed')
-%                     scatter(similarities, correlations, 5, 'MarkerFaceColor', col.extremadetection, 'MarkerEdgeColor', 'none')
-% 
-%                 end
+                figure(fh_scatter)
+
+                if strcmp(gen_model, 'ac')
+                    scatter(similarities, correlations, 5, 'MarkerFaceColor', col.timevarying_sm, 'MarkerEdgeColor', 'none')
+
+                elseif strcmp(gen_model, 'ed')
+                    scatter(similarities, correlations, 5, 'MarkerFaceColor', col.extremadetection, 'MarkerEdgeColor', 'none')
+
+                end
 
             end
 
             figure(fh_distr)
 
-            text(0, 5, code_ddm_params, 'HorizontalAlignment', 'center', 'FontSize', 22)
-            xlabel('Correlation')
-            apply_generic(gca)
-            ylim([0 5])
+            ax = gca;
 
+            text(0, 5, strrep(code_ddm_params, '_', '\_'), 'HorizontalAlignment', 'center', 'FontSize', 22)
+            apply_generic(ax)
+            ylim([0 5])
+            ax.YAxis.Visible = 'off';
+
+            figure(fh_scatter)
+            ax = gca;
+
+            text(1, 1, strrep(code_ddm_params, '_', '\_'), 'HorizontalAlignment', 'center', 'FontSize', 22)
+            apply_generic(ax)
+            xlim([0 100])
+            ylim([-1 1])
+            ax.YAxis.Visible = 'off';
+            set(ax,'Xscale','log')
+
+%             if idx == 1
+%                 xlabel('Correlations')
+%                 yticks([0 5])
+%                 ax.YAxis.Visible = 'on';
+% 
+%             end
 %            figure(fh_scatter)
            % apply_generic(gca)
 
         end
     end
+    paths = path_generator('folder', 'extrema_detection/systematic_analysis/run01_analysis');
+ %   exporter(fh_scatter, paths, sprintf('scatter_snr%d.pdf', idx_snr));
 end
 
 
-%exporter(fh, paths, 'correlations.pdf')
 
 %%
 for idx_file = 1:length(folders)
@@ -227,7 +248,7 @@ for idx_file = 1:length(folders)
             apply_generic(gca, 20)
             set(gca ,'Layer', 'Top')
             xlim([d - 10, d + 10])
-
+            
 
             %exporter(fh_ind_bouts, paths, sprintf('bout_%d.pdf', idx_bout))
         end

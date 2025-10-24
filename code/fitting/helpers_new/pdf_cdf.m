@@ -13,8 +13,8 @@ all_cdf.exp = @(ts, lambda) 1 - exp(-lambda .* ts);
 all_pdf.kde_pdf_interp = @(z) interp1(extra.xkde, extra.fkde, z, 'linear', 0);
 all_pdf.kde_cdf_interp = @(z) interp1(extra.xkde, extra.Fkde, z, 'linear', 0);
 
-all_pdf.ed = @(ts, theta, mu, fs) ed_vectorized_trials(ts, theta, mu, fs, 'pdf');
-all_cdf.ed = @(ts, theta, mu, fs) ed_vectorized_trials(ts, theta, mu, fs, 'cdf');
+all_pdf.ed = @(ts, theta, mu, ndt, fs) ed_vectorized_trials_log_continuous(ts - ndt, theta, mu, fs, 'pdf');
+all_cdf.ed = @(ts, theta, mu, ndt, fs) ed_vectorized_trials_log_continuous(ts - ndt, theta, mu, fs, 'cdf');
 
 % Initialize empty structs
 pdf = struct();
