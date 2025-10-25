@@ -55,7 +55,7 @@ tic
 for idx = 1:num_iters
     fprintf('Currently bads run #%d \n', idx)
     [eval_param(idx,:), fval(idx)] = bads(llfun, x0_all(idx,:), LB, UB, PLB, PUB, [], options_bads);
-    
+    eval_param(idx,:)
 end
 
 toc

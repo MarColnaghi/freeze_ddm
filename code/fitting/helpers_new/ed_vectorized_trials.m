@@ -1,23 +1,24 @@
 function result = ed_vectorized_trials(ts, theta, mu, fs, output_type)
+    
     % Default to PDF output
     if nargin < 5
         output_type = 'pdf';
     end
     
-    % Ensure mu is a matrix [n_trials × n_frames]
+    % Make sure mu is a matrix [n_trials × n_frames]
     if isvector(mu)
-        mu = mu(:)'; % make it [1 × frames]
+        mu = mu(:)';
     end
     [n_trials, n_frames] = size(mu);
     
-    % Ensure ts is column vector [n_trials × 1]
+    % Make sure ts is column vector [n_trials × 1]
     if isscalar(ts)
         ts = repmat(ts, n_trials, 1);
     else
         ts = ts(:);
     end
     
-    % Ensure theta is column vector [n_trials × 1]
+    % Make sure theta is column vector [n_trials × 1]
     if isscalar(theta)
         theta = repmat(theta, n_trials, 1);
     else
@@ -29,23 +30,23 @@ function result = ed_vectorized_trials(ts, theta, mu, fs, output_type)
         error('ts, theta, and number of rows in mu must match');
     end
     
-    % Convert times to frames [n_trials × 1]
+    % Time to frames (discrete)
     frames = round(ts * fs);
     % frames = ts * fs;
 
     % Clip frames to valid range
     frames = max(1, min(n_frames, frames));
     
-    % Compute all survival probabilities [n_trials × n_frames]
+    % Compute all survival probabilities
     surv_probs = normcdf(theta - mu, 0, sqrt(1/fs));
     
-    % Compute cumulative products (survival up to each frame) [n_trials × n_frames]
+    % Compute cumulative products (survival up to each frame)
     cum_surv = cumprod(surv_probs, 2);
     
     % Create linear indices for each trial's specific frame
     trial_indices = (1:n_trials)';
     
-    % Compute CDF if needed
+    % Compute CDF
     if strcmp(output_type, 'cdf') || strcmp(output_type, 'both')
         linear_idx = sub2ind([n_trials, n_frames], trial_indices, frames);
         survival_prob_at_t = cum_surv(linear_idx);
@@ -53,7 +54,7 @@ function result = ed_vectorized_trials(ts, theta, mu, fs, output_type)
         cdf = cdf(:)'; % row vector
     end
     
-    % Compute PDF if needed
+    % Compute PDF
     if strcmp(output_type, 'pdf') || strcmp(output_type, 'both')
         % Get survival probability up to frame-1 for each trial
         survival_prob = ones(n_trials, 1);
