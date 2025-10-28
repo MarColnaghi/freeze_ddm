@@ -27,19 +27,20 @@ link_logistic = @(x) 1./(1 + exp(-x));     % log link for bound height
 % For mu 1
 model.mu = struct( ...
     'predictors', {{ ...
-    struct('name', 'sm')}}, ...
-    'ground_truth', 60, ...
+    struct('name', 'sm'), ...
+    struct('name', 'intercept')}}, ...
+    'ground_truth', [0 45], ...
     'link', link_linear ...
     );
 
 % For theta 1
 model.theta = struct(...
     'predictors', {{ ...
-    struct('name', 'fs'), ...
-    struct('name', 'ls'), ...
+%     struct('name', 'fs'), ...
+%     struct('name', 'ls'), ...
     struct('name', 'intercept') ...
     }}, ...
-    'ground_truth', [0 0 2.1], ...
+    'ground_truth', [1.5], ...
     'link', link_linear ...
     );
 
@@ -58,7 +59,7 @@ gt_table = array2table(gt, 'VariableNames', lbl);
 ncomp_vars = evaluate_model(model, gt_table, y);
 
 % Specify the seed
-sim_params.rng = 1;
+sim_params.rng = 10;
 rng(sim_params.rng);
 
 % General simulation parameters
@@ -99,7 +100,7 @@ for idx_trials = 1:sim_params.n_trials
     sm_raw{idx_trials} = sum_motion(ons:ons + chunk_len - 1);
     sm_chunk = sm_raw{idx_trials};
 
-    mu_tv = gt_table.mu_sm .* sm_chunk;% + gt_table.mu1_intercept;
+    mu_tv = gt_table.mu_sm .* sm_chunk + gt_table.mu_intercept;
     mu_st = ncomp_vars.mu(idx_trials);
     theta_s = ncomp_vars.theta(idx_trials);
      %tndt_s = ncomp_vars.tndt(idx_trials);
@@ -129,9 +130,10 @@ exporter(fh, paths, 'Durations.pdf')
 
 rt.ed(isnan(rt.ed)) = sim_params.T + 1; 
 points.censoring = sim_params.T;
-points.truncation = [];
+points.truncation = 0.5;
 
 extra.soc_mot_array = cell2mat(sm_raw)';
+extra.soc_mot_array = extra.soc_mot_array(rt.ed >= points.truncation, :);
 
 %  Now we added our vector column to the bouts table.
 bouts_proc.durations_s = rt.ed;
@@ -143,7 +145,7 @@ bouts_proc.ln = bouts_proc.nloom_norm;
 bouts_proc.intercept = ones(height(y),1);
 
 %
-model_results = run_fitting_newer(bouts_proc, points, 'ed1', paths, 'export', false, 'extra', extra, 'ground_truth', gt_table);
+model_results = run_fitting_newer(bouts_proc, points, 'ed0', paths, 'export', false, 'extra', extra, 'ground_truth', gt_table);
 plot_estimates('results', model_results, 'export', true, 'paths', paths)
 
 function fh_traces = plot_traces(traj_ed, sm_chunk, col, theta_s)

@@ -18,14 +18,14 @@ tok = regexp(model_num, pattern, 'tokens');
 if strcmp(plot_flag, 'p')
 
     tbl = table();
-    tbl.durations_s = [0:0.005:62]';
+    tbl.durations_s = [0:1/60:11]';
     fd = tbl.durations_s;
     f = zeros(height(tbl.durations_s), 1);
     F = zeros(height(tbl.durations_s), 1);
     G = zeros(height(tbl.durations_s), 1);
 
     for idx_bout = 1:height(bouts)
-
+        idx_bout
         tbl.sm = bouts.sm(idx_bout)*ones(height(tbl),1);
         tbl.smp = bouts.smp(idx_bout)*ones(height(tbl),1);
         tbl.fs = bouts.fs(idx_bout)*ones(height(tbl),1);
@@ -33,7 +33,8 @@ if strcmp(plot_flag, 'p')
         tbl.ls = bouts.ls(idx_bout)*ones(height(tbl),1);
         tbl.intercept = bouts.intercept(idx_bout)*ones(height(tbl),1);
 
-        g = comp_loglikelihood(params, tbl, points, model_func, iid, tok, extra);
+        ec.soc_mot_array = extra.soc_mot_array(idx_bout, :);
+        g = comp_loglikelihood(params, tbl, points, model_func, iid, tok, ec);
         %[~, G] = comp_loglikelihood(params, tbl, points, model_func, iid, tok, extra);
 
         F = F + G;
@@ -166,16 +167,27 @@ if strcmp('iid', iid)
         bet = ts > out.tndt & ts - out.tndt < points.censoring;
         abo = ts - out.tndt >= points.censoring;
 
-        out.mu = extra.soc_mot_array .* x(1) .* (1/fs);
+        if size(extra.soc_mot_array, 1) == 1
+            out.mu = repmat(extra.soc_mot_array, height(out.theta), 1) .* x(1) .* (1/fs);
+        else
+            out.mu = extra.soc_mot_array .* x(1) .* (1/fs);
+        end
+
         [pdf, cdf] = pdf_cdf({'ed'});
 
         f = @(ts, inds) pdf.ed(ts, out.theta(inds), out.mu(inds, :), out.tndt(inds), fs);
         F = @(ts, inds) cdf.ed(ts, out.theta(inds), out.mu(inds, :), out.tndt(inds), fs);
         
+        if ~isempty(points.truncation)
+            trunc_factor = @(inds) 1 - F(points.truncation, inds);
+        else
+            trunc_factor = @(inds) ones(size(ts(inds)));
+        end
+
         g = max(g, 1e-5);
         g = log(g);
-        g(bet) = f(ts(bet), bet);
-        g(abo) = F(points.censoring, abo);
+        g(bet) = f(ts(bet), bet) ./ trunc_factor(bet);
+        g(abo) = F(points.censoring, abo) ./ trunc_factor(abo);
         log_g = g;
     end
 end

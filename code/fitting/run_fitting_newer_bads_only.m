@@ -81,35 +81,10 @@ else
     disp(starting_point)
 end
 
-%% VBMC Optimization
-llfun = @(x) -nll_fly_ddm_newer(x, surrogate, points, model_str, 'iid', 'n', extra);
-lpriorfun = @(x) msplinetrapezlogpdf(x, LB, PLB, PUB, UB);
-postfun = @(x) lpostfun(x, llfun, lpriorfun);
 
-options_vbmc.Display = 'iter';
-options_vbmc.MaxFunEvals = 500;
-options_vbmc.RetryMaxFunEvals = 3 * 500;
-
-[VP, ELBO, ELBO_SD] = vbmc(postfun, eval_param(1,:), LB, UB, PLB, PUB, options_vbmc);
-[x_mean, x_sigma] = vbmc_moments(VP);
-x_std = sqrt(diag(x_sigma));
-vbmc_plot(VP);
-
-%% Store Fit Results
-model_results = struct;
-model_results.elbo = [ELBO, ELBO_SD];
-model_results.elbo_normalized = [ELBO, ELBO_SD] ./ height(surrogate);
-model_results.time = datetime;
-
-[~, lbl, mask] = get_ground_truth_vector(model_out);
-estimates_mean = nan(1, length(lbl));
-estimates_std = nan(1, length(lbl));
-
-estimates_mean(find(mask)) = x_mean;
-estimates_std(find(mask)) = x_std;
+estimates_mean = estimates;
 
 model_results.estimates_mean = array2table(estimates_mean, 'VariableNames', lbl);
-model_results.estimates_std = array2table(estimates_std, 'VariableNames', lbl);
 
 model_results.points.truncation = points.truncation;
 model_results.points.censoring = points.censoring;
