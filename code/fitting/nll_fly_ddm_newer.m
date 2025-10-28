@@ -18,7 +18,7 @@ tok = regexp(model_num, pattern, 'tokens');
 if strcmp(plot_flag, 'p')
 
     tbl = table();
-    tbl.durations_s = [0:1/60:11]';
+    tbl.durations_s = [0:1/60:(points.censoring + 1)]';
     fd = tbl.durations_s;
     f = zeros(height(tbl.durations_s), 1);
     F = zeros(height(tbl.durations_s), 1);
@@ -181,13 +181,18 @@ if strcmp('iid', iid)
         if ~isempty(points.truncation)
             trunc_factor = @(inds) 1 - F(points.truncation, inds);
         else
-            trunc_factor = @(inds) ones(size(ts(inds)));
+            trunc_factor = @(inds) ones(size(ts(inds)))';
         end
+
+        %                  g = max(g, 1e-5);
+        %                  g = log(g);
+
+        g(bet) = f(ts(bet), bet) ./ trunc_factor(bet);
+        g(abo) = F(points.censoring, abo) ./ trunc_factor(abo);
 
         g = max(g, 1e-5);
         g = log(g);
-        g(bet) = f(ts(bet), bet) ./ trunc_factor(bet);
-        g(abo) = F(points.censoring, abo) ./ trunc_factor(abo);
+
         log_g = g;
     end
 end

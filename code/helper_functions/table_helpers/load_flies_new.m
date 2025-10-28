@@ -123,17 +123,18 @@ for dataset = 1
                 loom_starts = loom_frames([true;diff(loom_frames)>2])+1;
                 loom_ends = loom_frames([diff(loom_frames)>1;true])+1;
                 loom_durs = repmat(loom_ends - loom_starts, 2, 1);
-                
+
                 event_indices = repmat(loom_starts, 2, 1);
                 event_indices(1:20,:) = event_indices(1:20,:) - 18001;
 
                 imm_frames = Fly1.pixelchange < thresholds.pc;
 
                 % Filling in is done here - might make sense potentially to
-                % switch around the filling in process.
-
-                imm_frames = bwareaopen(imm_frames, thresholds.fill_in_imm); % Remove small immobile bouts
+                % switch around the filling in process. used to be small
+                % imm first
+    
                 imm_frames = ~bwareaopen(~imm_frames, thresholds.fill_in_mob); % Remove small moving bouts
+                imm_frames = bwareaopen(imm_frames, thresholds.fill_in_imm); % Remove small immobile bouts
 
                 diff_ts = [0; diff(imm_frames)]; % Detect changes
                 run_ends = [find(diff_ts ~= 0); length(imm_frames)]; % Indices of run ends
@@ -152,7 +153,7 @@ for dataset = 1
                 loom_ts_next = interp1(event_indices, event_indices, onsets, 'next', 'extrap');
                 [~, nloom] = ismember(loom_ts_previous, event_indices);
                 z.period = nloom > 20;
-                
+
                 z.onsets_loomaligned =  onsets - loom_ts_previous;
                 z.durations = run_lengths;
 
@@ -168,7 +169,9 @@ for dataset = 1
                     z.frozen_start = false(size(z.nloom)); % Ensure correct output format
                 end
 
-                z.avg_sm = compute_means(Fly1.sum_motion(1:end), run_ends - run_lengths, run_ends - 1);
+                capped_lengths = min(run_lengths, 630);
+                z.avg_sm = compute_means(Fly1.sum_motion(1:end), onsets, onsets + capped_lengths - 1);
+
                 l.ts_sm = arrayfun(@(start_idx, end_idx) ...
                     Fly1.sum_motion(start_idx:end_idx), ...
                     run_ends - run_lengths, run_ends - 1, ...
@@ -181,7 +184,7 @@ for dataset = 1
 
                 z.genotype = genotype .* ones(length(run_lengths), 1);
                 z.moving_flies = n_moving(moving_flies) .* ones(length(run_lengths), 1);
-                
+
                 z.onsets = onsets;
                 z.ends = run_ends;
 
@@ -216,5 +219,6 @@ if nargin > 1
         save('soc_mot.mat','bouts', '-v7.3')
     elseif strcmp(opt.Results.save, 'bouts')
         save('bouts.mat','bouts', '-v7.3')
+    else
     end
 end

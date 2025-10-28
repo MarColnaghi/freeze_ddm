@@ -1,4 +1,4 @@
-idx = 1
+idx = 4
 figure; hold on;
 plot(mu(idx,:))
 yline(theta(idx))
