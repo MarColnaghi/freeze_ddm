@@ -94,7 +94,7 @@ g = zeros(size(ts));
 if strcmp('iid', iid)
 
     if  strcmp('sddm', tok{1})
-        
+
         bet = bif.durations_s > out.tndt & bif.durations_s <= points.censoring;
 
         % pdf and cdf for single bound ddm
@@ -135,11 +135,11 @@ if strcmp('iid', iid)
 
         g(bet) = f(ts(bet), bet) ./ trunc_factor(bet);
         g(abo) = (1 - F(points.censoring, abo)) ./ trunc_factor(abo);
-        
+
         g = max(g, 1e-5);
         log_g = log(g);
 
- elseif  strcmp('exp', tok{1})
+    elseif  strcmp('exp', tok{1})
 
         % pdf and cdf for single bound ddm
         [pdf, cdf] = pdf_cdf({'ddm', 'exp'});
@@ -155,17 +155,48 @@ if strcmp('iid', iid)
 
         g(bet) = f(ts(bet), bet) ./ trunc_factor(bet);
         g(abo) = (1 - F(points.censoring, abo)) ./ trunc_factor(abo);
-    
+
         g = max(g, 1e-5);
         log_g = log(g);
 
     elseif  strcmp('ed', tok{1})
 
-        fs = 60;
-        % out.tndt = zeros(length(out.theta), 1);
+        %        fs = 60;
+        %         out.tndt = ones(length(out.theta), 1) * 0.15;
+        %
+        %         bet = ts > out.tndt & ts - out.tndt < points.censoring;
+        %         abo = ts - out.tndt >= points.censoring;
+        %
+        %         if size(extra.soc_mot_array, 1) == 1
+        %             out.mu = repmat(extra.soc_mot_array, height(out.theta), 1) .* x(1) .* (1/fs);
+        %         else
+        %             out.mu = extra.soc_mot_array .* x(1) .* (1/fs);
+        %         end
+        %
+        %         [pdf, cdf] = pdf_cdf({'ed'});
+        %
+        %         f = @(ts, inds) pdf.ed(ts, out.theta(inds), out.mu(inds, :), out.tndt(inds), fs);
+        %         F = @(ts, inds) cdf.ed(ts, out.theta(inds), out.mu(inds, :), out.tndt(inds), fs);
+        %
+        %         if ~isempty(points.truncation)
+        %             trunc_factor = @(inds) 1 - F(points.truncation, inds);
+        %         else
+        %             trunc_factor = @(inds) ones(size(ts(inds)))';
+        %         end
+        %
+        %         %                  g = max(g, 1e-5);
+        %         %                  g = log(g);
+        %
+        %         g(bet) = f(ts(bet), bet) ./ trunc_factor(bet);
+        %         g(abo) = F(points.censoring, abo) ./ trunc_factor(abo);
+        %
+        %         g = max(g, 1e-5);
+        %         g = log(g);
+        %
+        %         log_g = g;
+        % ndt_prior: [1 x n_ndt] probability distribution over ndt values
 
-        bet = ts > out.tndt & ts - out.tndt < points.censoring;
-        abo = ts - out.tndt >= points.censoring;
+        fs = 60;
 
         if size(extra.soc_mot_array, 1) == 1
             out.mu = repmat(extra.soc_mot_array, height(out.theta), 1) .* x(1) .* (1/fs);
@@ -173,27 +204,40 @@ if strcmp('iid', iid)
             out.mu = extra.soc_mot_array .* x(1) .* (1/fs);
         end
 
+        n_ndt = 31;
+        ndt_values = (0:(n_ndt-1)) / fs; % convert frames to seconds
+        ndt_prior = ones(1, n_ndt) / n_ndt;
+
         [pdf, cdf] = pdf_cdf({'ed'});
 
-        f = @(ts, inds) pdf.ed(ts, out.theta(inds), out.mu(inds, :), out.tndt(inds), fs);
-        F = @(ts, inds) cdf.ed(ts, out.theta(inds), out.mu(inds, :), out.tndt(inds), fs);
-        
-        if ~isempty(points.truncation)
-            trunc_factor = @(inds) 1 - F(points.truncation, inds);
-        else
-            trunc_factor = @(inds) ones(size(ts(inds)))';
+        n_trials = length(ts);
+        log_liks = zeros(n_trials, n_ndt);
+
+        for i = 1:n_ndt
+
+            current_ndt = ndt_values(i);
+
+            out.tndt = current_ndt *  ones(length(out.theta), 1);
+            
+            bet = ts > out.tndt & ts - out.tndt < points.censoring;
+            abo = ts - out.tndt >= points.censoring;
+
+            f = @(ts, inds) pdf.ed(ts, out.theta(inds), out.mu(inds, :), out.tndt(inds), fs);
+            F = @(ts, inds) cdf.ed(ts, out.theta(inds), out.mu(inds, :), out.tndt(inds), fs);
+
+            g(bet) = f(ts(bet), bet);
+            g(abo) = F(points.censoring, abo);
+            pdf_vals = g;
+            log_liks(:, i) = log(pdf_vals(:) + 1e-10);
         end
 
-        %                  g = max(g, 1e-5);
-        %                  g = log(g);
+        % Marginal: sum_ndt p(data|params,ndt) * p(ndt)
+        % In log space with logsumexp trick
 
-        g(bet) = f(ts(bet), bet) ./ trunc_factor(bet);
-        g(abo) = F(points.censoring, abo) ./ trunc_factor(abo);
+        max_ll = max(log_liks, [], 2);  % [n_trials × 1]
+        trial_marginal_ll = max_ll + log(sum(exp(log_liks - max_ll) .* ndt_prior, 2));
 
-        g = max(g, 1e-5);
-        g = log(g);
-
-        log_g = g;
+        log_g = trial_marginal_ll;
     end
 end
 

@@ -117,6 +117,7 @@ model_results.points.censoring = points.censoring;
 model_results.starting_position = eval_param(1,:);
 
 model_results.fitted_model = idx_model;
+model_results.vp = VP;
 
 if ~isempty(ground_truth)
     model_results.ground_truth = ground_truth;
