@@ -44,6 +44,7 @@ model.theta = struct(...
     'link', link_linear ...
     );
 
+
 % % Non decision time
 % model.tndt = struct( ...
 %     'predictors', {{ ...
@@ -88,6 +89,16 @@ col = cmapper();
 sim_params.motion_cache_path = fullfile(paths.dataset, 'motion_cache.mat');
 motion_cache = importdata(sim_params.motion_cache_path);
 
+values = 7:11;              
+pmf = [0.20 0.30 0.35 0.10 0.05];  % Skewed left, sums to 1
+fs = 60;
+N = sim_params.n_trials;
+
+% Sample
+samples = randsample(values, N, true, pmf);
+samples_sec = samples / fs;
+
+
 % Extract Social Motion TimeSeries
 chunk_len = length(sim_params.time_vector);
 figure
@@ -107,7 +118,7 @@ for idx_trials = 1:sim_params.n_trials
 
     % Simulate RT from full DDM
     [rt.ed(idx_trials), traj_ed] = extrema_detection_new('mu_t', mu_tv, 'theta', theta_s, ...
-        'z', sim_params.z, 'dt', sim_params.dt, 'T', sim_params.T, 'ndt', 0.15);
+        'z', sim_params.z, 'dt', sim_params.dt, 'T', sim_params.T, 'ndt', samples_sec(idx_trials));
 
     if idx_trials <= 311 && idx_trials >= 300
         nexttile
@@ -143,9 +154,8 @@ bouts_proc.ls = bouts_proc.sloom_norm;
 bouts_proc.ln = bouts_proc.nloom_norm;
 bouts_proc.intercept = ones(height(y),1);
 
-%
 model_results = run_fitting_newer(bouts_proc, points, 'ed2', paths, 'export', false, 'extra', extra, 'ground_truth', gt_table);
-plot_estimates('results', model_results, 'export', true, 'paths', paths)
+plot_estimates('results', model_results, 'export', false, 'paths', paths)
 bouts_proc.sm = bouts_proc.avg_sm_freeze_norm;
 bouts_proc.smp = bouts_proc.avg_sm_freeze_norm;
 bouts_proc.fs = bouts_proc.avg_fs_freeze_norm;
@@ -161,7 +171,7 @@ vp = model_results.vp;
 
 % Step 2: Sample from the learned posterior q(θ, μ)
 fs = 60;
-n_samples = 10000;
+n_samples = 100;
 samples = vbmc_rnd(vp, n_samples); % [n_samples x n_params]
 
 % Step 3: For each sample, compute posterior over ndt
@@ -193,6 +203,7 @@ for s = 1:n_samples
     % Normalize to get p(ndt | data, θ_s, μ_s)
     log_unnorm = log_unnorm - max(log_unnorm); % stability
     ndt_posterior(s, :) = exp(log_unnorm) / sum(exp(log_unnorm));
+    
 end
 
 % Step 4: Average over posterior samples to get p(ndt | data)
