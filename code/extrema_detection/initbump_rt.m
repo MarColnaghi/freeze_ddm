@@ -58,7 +58,7 @@ for idx_file = 1:size(folders, 1)
     y.ed = importdata(fullfile(paths.results, 'sims_ed/y.mat'));
     y.ac = importdata(fullfile(paths.results, 'sims_ac/y.mat'));
 
-    for exp_gradient = [0 1 3]
+    for exp_gradient = 0
         w = exp(linspace(0, exp_gradient, d)).';            % example with growth factor ~e^2
 
         w = w * (d / sum(w));

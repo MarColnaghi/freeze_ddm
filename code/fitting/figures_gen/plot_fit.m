@@ -29,7 +29,7 @@ if ~conditions
     fh = figure('Position', [100 100 800 400], 'Color', 'w')
     [~, f, fd] = nll_fly_ddm_newer(est_params, freezes, results.points, results.fitted_model, 'iid', 'p', []);
     hold on
-    histogram(freezes.durations_s, 1/120:1/10:63, 'Normalization', 'pdf', 'FaceColor', 'r', 'EdgeColor', 'none')
+    histogram(freezes.durations_s, 1/120:1/60:11, 'Normalization', 'pdf', 'FaceColor', 'r', 'EdgeColor', 'none')
     plot(fd,f, 'k--', 'LineWidth', 1.5)
     apply_generic(gca)
     xlabel('Freeze Duration (s)')
@@ -49,7 +49,7 @@ else
                 freezes_quant = quantilizer(freezes, 'idx_quanti', struct('sm', idx_sm, 'ls', idx_ls, 'fs', idx_fs));
                 [~, f, fd] = nll_fly_ddm_newer(est_params, freezes_quant, results.points, results.fitted_model, 'iid', 'p', []);
 
-                histogram(freezes_quant.durations_s, 1/120:1/5:63, 'Normalization', 'pdf', 'FaceColor', 'r', 'EdgeColor', 'none')
+                histogram(freezes_quant.durations_s, 1/120:1/20:11, 'Normalization', 'pdf', 'FaceColor', 'r', 'EdgeColor', 'none')
                 plot(fd,f, 'k--', 'LineWidth', 1.5)
                 apply_generic(gca)
                 xlim([-0.1 10.1])

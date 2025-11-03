@@ -33,8 +33,8 @@ if strcmp(plot_flag, 'p')
         tbl.ls = bouts.ls(idx_bout)*ones(height(tbl),1);
         tbl.intercept = bouts.intercept(idx_bout)*ones(height(tbl),1);
 
-        ec.soc_mot_array = extra.soc_mot_array(idx_bout, :);
-        g = comp_loglikelihood(params, tbl, points, model_func, iid, tok, ec);
+        % ec.soc_mot_array = extra.soc_mot_array(idx_bout, :);
+        g = comp_loglikelihood(params, tbl, points, model_func, iid, tok, extra);
         %[~, G] = comp_loglikelihood(params, tbl, points, model_func, iid, tok, extra);
 
         F = F + G;
