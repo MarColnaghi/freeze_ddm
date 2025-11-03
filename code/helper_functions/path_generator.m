@@ -20,4 +20,5 @@ end
 
 path.code = '/Users/marcocolnaghi/PhD/freeze_ddm/code';
 path.dataset = fullfile('/Users/marcocolnaghi/PhD/freeze_ddm/datasets/fill_in_combinations/', opt.Results.bouts_id);
+path.motion_cache_path = fullfile('/Users/marcocolnaghi/PhD/freeze_ddm/datasets/motion_cache/', 'motion_cache.mat');
 

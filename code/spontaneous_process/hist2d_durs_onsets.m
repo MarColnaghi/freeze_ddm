@@ -42,10 +42,8 @@ else
     disp('input provided')
     time_window = thresholds.time_window;
     
-    genotype = 1;
-
     clamp = false;
-    bouts_with_loom = 'all';
+    bouts_with_loom = false;
     zoom =  zoom_flag;
     limits = [0 100];
 end
