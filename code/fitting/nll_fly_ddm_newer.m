@@ -18,14 +18,13 @@ tok = regexp(model_num, pattern, 'tokens');
 if strcmp(plot_flag, 'p')
 
     tbl = table();
-    tbl.durations_s = [0:1/60:(points.censoring + 1)]';
+    tbl.durations_s = [0:1/60:(points.censoring + 2)]';
     fd = tbl.durations_s;
     f = zeros(height(tbl.durations_s), 1);
     F = zeros(height(tbl.durations_s), 1);
     G = zeros(height(tbl.durations_s), 1);
 
     for idx_bout = 1:height(bouts)
-        idx_bout
         tbl.sm = bouts.sm(idx_bout)*ones(height(tbl),1);
         tbl.smp = bouts.smp(idx_bout)*ones(height(tbl),1);
         tbl.fs = bouts.fs(idx_bout)*ones(height(tbl),1);
@@ -139,6 +138,47 @@ if strcmp('iid', iid)
         g = max(g, 1e-5);
         log_g = log(g);
 
+    elseif  strcmp('ksddm', tok{1})
+
+        below = bif.durations_s <  out.tndt;
+        bet   = bif.durations_s >= out.tndt & bif.durations_s <= points.censoring;
+        abo   = bif.durations_s >  points.censoring;
+
+        % pdf and cdf (UNtruncated) for the two components
+        [pdf, cdf] = pdf_cdf({'ddm','kde'});
+
+        pdf_ddm_raw = pdf.ddm;
+        cdf_ddm_raw = cdf.ddm;
+
+        pdf.ddm = @(ts, mu, theta, ndt) guard_ddm(pdf_ddm_raw, ts, mu, theta, ndt);
+        cdf.ddm = @(ts, mu, theta, ndt) guard_ddm(cdf_ddm_raw, ts, mu, theta, ndt);
+
+        % Mixers
+        f_kde = @(ts, inds, extra) (1 - out.pmix(inds)) .* pdf.kde(ts, extra);
+        F_kde = @(t,  inds, extra) (1 - out.pmix(inds)) .* cdf.kde(t,  extra);
+
+        f_ddm = @(ts, inds) out.pmix(inds) .* pdf.ddm(ts, out.mu(inds), out.theta(inds), out.tndt(inds));
+        F_ddm = @(t,  inds) out.pmix(inds) .* cdf.ddm(t,  out.mu(inds), out.theta(inds), out.tndt(inds));
+
+        f = @(ts, inds, extra) f_ddm(ts, inds) + f_kde(ts, inds, extra);
+        F = @(t,  inds, extra) F_ddm(t,  inds) + F_kde(t,  inds, extra);
+
+        t0   = points.truncation;
+        C    = points.censoring;
+        epsN = 1e-12;
+
+        % One consistent truncation factor: 1 - F_mix(t0) per index
+        trunc_factor = @(inds) max(1 - F(t0, inds, extra), epsN);
+
+        % Likelihoods
+        g          = nan(size(bif.durations_s));
+        g(below)   = f_kde(ts(below), below, extra) ./ trunc_factor(below);
+        g(bet)     = f(ts(bet),   bet,   extra)     ./ trunc_factor(bet);
+        g(abo)     = (1 - F(C, abo, extra))         ./ trunc_factor(abo);
+
+        g      = max(g, 1e-5);
+        log_g  = log(g);
+
     elseif  strcmp('exp', tok{1})
 
         % pdf and cdf for single bound ddm
@@ -241,4 +281,19 @@ if strcmp('iid', iid)
     end
 end
 
+end
+
+function y = guard_ddm(fun, t, mu, th, ndt)
+    % Returns 0 for entries where t <= ndt; calls `fun` otherwise
+    mu  = mu(:); th = th(:); ndt = ndt(:);
+    if isscalar(t)
+        t = repmat(t, size(mu));     % handle scalar t0/C with vector params
+    else
+        t = t(:);
+    end
+    y = zeros(size(mu));
+    m = t > ndt;
+    if any(m)
+        y(m) = fun(t(m), mu(m), th(m), ndt(m));
+    end
 end

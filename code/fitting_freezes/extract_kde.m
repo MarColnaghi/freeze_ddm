@@ -1,6 +1,6 @@
 function [est_kde] = extract_kde(bouts, points, export)
 
-path = '/Users/marcocolnaghi/PhD/freeze_ddm/model_results/fitting_freezes/bsl/kde_spontaneous';
+paths = '/Users/marcocolnaghi/PhD/freeze_ddm/model_results/fitting_freezes/bsl/kde_spontaneous';
 col = cmapper();
 fh = figure('color','w','Position',[100, 100, 600, 400]);
 
