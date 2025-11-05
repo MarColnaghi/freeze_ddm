@@ -49,7 +49,7 @@ llfun = @(x) nll_fly_ddm_newer(x, surrogate, points, model_str, 'iid', 'n', extr
 
 %% BADS Optimization
 num_iters = 5;
-options_bads.Display = 'iter';
+options_bads.Display = 'none';
 nvars = numel(PLB);
 x0_all = PLB + rand(num_iters, nvars) .* (PUB - PLB);
 

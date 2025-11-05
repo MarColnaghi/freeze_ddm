@@ -84,6 +84,10 @@ lbl = lbl(~isnan(gt));
 gt_table = array2table(x, 'VariableNames', lbl);
 out = evaluate_model(model, gt_table, y);
 
+if ~isfield(out, 'tndt')
+    out.tndt = zeros(size(out, 1), 1);
+end
+
 % assess freeze duration categories
 bet = bif.durations_s <= points.censoring;
 abo = bif.durations_s > points.censoring;
@@ -117,6 +121,7 @@ if strcmp('iid', iid)
     elseif  strcmp('dddm', tok{1})
 
         bet = bif.durations_s > out.tndt & bif.durations_s <= points.censoring;
+        abo = bif.durations_s > points.censoring;
 
         % pdf and cdf for single bound ddm
         [pdf, cdf] = pdf_cdf({'ddm', 'exp'});
