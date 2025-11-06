@@ -1,7 +1,9 @@
 function [bouts, soc_mot] = bouts_formatting(bouts, thresholds, soc_mot)
 
 bouts.id = [1:height(bouts)]'; 
-soc_mot.id = [1:height(soc_mot)]';
+if nargin > 2
+    soc_mot.id = [1:height(soc_mot)]';
+end
 
 bouts.onsets_loomwin(bouts.onsets_loomaligned <= thresholds.time_window(2)) = bouts.onsets_loomaligned(bouts.onsets_loomaligned <= thresholds.time_window(2));
 bouts.onsets_loomwin(bouts.onsets_loomwin <= -thresholds.time_window(1)) = nan;

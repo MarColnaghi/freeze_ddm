@@ -4,6 +4,7 @@ function [bouts, soc_mot] = load_flies_new(thresholds, varargin)
 opt = inputParser;
 addParameter(opt, 'save', 'both');
 addParameter(opt, 'paths', '');
+addParameter(opt, 'imfirst', false);
 addParameter(opt, 'edit_filename', false);
 
 parse(opt, varargin{:});
@@ -133,8 +134,13 @@ for dataset = 1
                 % switch around the filling in process. used to be small
                 % imm first
 
-                imm_frames = ~bwareaopen(~imm_frames, thresholds.fill_in_mob); % Remove small moving bouts
-                imm_frames = bwareaopen(imm_frames, thresholds.fill_in_imm); % Remove small immobile bouts
+                if opt.Results.imfirst
+                    imm_frames = bwareaopen(imm_frames, thresholds.fill_in_imm); % Remove small immobile bouts
+                    imm_frames = ~bwareaopen(~imm_frames, thresholds.fill_in_mob); % Remove small moving bouts
+                else
+                    imm_frames = ~bwareaopen(~imm_frames, thresholds.fill_in_mob); % Remove small moving bouts
+                    imm_frames = bwareaopen(imm_frames, thresholds.fill_in_imm); % Remove small immobile bouts
+                end
 
                 diff_ts = [0; diff(imm_frames)]; % Detect changes
                 run_ends = [find(diff_ts ~= 0); length(imm_frames)]; % Indices of run ends
@@ -160,10 +166,11 @@ for dataset = 1
                 z.nloom = nloom;
                 z.sloom = loom_speed .* ones(length(run_lengths), 1);
 
-                z.bout_with_loom = any((event_indices > onsets') & (event_indices < run_ends'), 1)';
+                z.bout_with_loom = sum((event_indices > onsets') & (event_indices < run_ends'), 1)';
 
-                if any(z.bout_with_loom == 1 & z.type == 1)
-                    frozen_starts = unique(z.nloom(z.bout_with_loom == 1 & z.type == 1 & z.durations >= 30)) + 1;
+                if any(z.bout_with_loom > 0 & z.type == 1 & z.durations >= 30)
+                    frozen_starts = unique(z.nloom(z.bout_with_loom > 0 & z.type == 1 & z.durations >= 30) + z.bout_with_loom(z.bout_with_loom > 0 & z.type == 1 & z.durations >= 30));
+                    % long_freezes = z.bout_with_loom == 1 & z.type == 1 & z.durations >= 30;
                     z.frozen_start = ismember(z.nloom, frozen_starts);
                 else
                     z.frozen_start = false(size(z.nloom)); % Ensure correct output format

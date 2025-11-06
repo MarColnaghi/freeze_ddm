@@ -10,7 +10,7 @@ i = 0; values = [];
 for idx_slooms = [unique(bouts.sloom)]'
     i = i + 1;
     nexttile
-    h_handle = histogram(bouts.onsets_loomwin(bouts.durations >= frame_threshold  & bouts.sloom == idx_slooms), -100.5:1:500.5, 'EdgeColor', 'none', 'FaceColor', col.vars.sloom(3*i, :));
+    h_handle = histogram(bouts.onsets_loomwin(bouts.durations <= frame_threshold  & bouts.sloom == idx_slooms), -100.5:1:500.5, 'EdgeColor', 'none', 'FaceColor', col.vars.sloom(3*i, :));
     ax(i) = gca;
 
     if idx_slooms == 25

@@ -4,6 +4,7 @@ opt = inputParser;
 addParameter(opt, 'bouts_id', 'imm3_mob3_pc4');
 addParameter(opt, 'folder', []);
 addParameter(opt, 'model', []);
+addParameter(opt, 'imfirst', false);
 
 parse(opt, varargin{:});
 
@@ -19,6 +20,10 @@ else
 end
 
 path.code = '/Users/marcocolnaghi/PhD/freeze_ddm/code';
-path.dataset = fullfile('/Users/marcocolnaghi/PhD/freeze_ddm/datasets/fill_in_combinations_mobfirst/', opt.Results.bouts_id);
+if opt.Results.imfirst
+    path.dataset = fullfile('/Users/marcocolnaghi/PhD/freeze_ddm/datasets/fill_in_combinations_imfirst/', opt.Results.bouts_id);
+else
+    path.dataset = fullfile('/Users/marcocolnaghi/PhD/freeze_ddm/datasets/fill_in_combinations_mobfirst/', opt.Results.bouts_id);
+end
 path.cache_path = fullfile('/Users/marcocolnaghi/PhD/freeze_ddm/datasets/caches');
 

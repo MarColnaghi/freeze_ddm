@@ -37,11 +37,16 @@ if nargin == 0
         bouts_proc = bouts_proc(bouts_proc.period == 1, :);
 
     end
+
 else
     disp('input provided')
     paths.fig = fullfile(paths.fig, 'fd_durs');
 
 end
+
+[g, ~] = findgroups(bouts_proc.fly);
+c = splitapply(@(x1){cumsum(x1)}, ones(height(bouts_proc),1), g);
+bouts_proc.n_freezes = vertcat(c{:});
 
 %%%%%%%%%%%%%%%%%%%%%
 % Choose Param here %
@@ -117,7 +122,7 @@ for idx_param = param_list
 
     for idx_quant = 1:num_quantiles
         if strcmp(type, 'ecdf')
-            [f, x] = ecdf(bouts_proc.durations_s(quantiles == idx_quant), 'censoring', bouts_proc.bout_with_loom(quantiles == idx_quant));
+            [f, x] = ecdf(bouts_proc.durations_s(quantiles == idx_quant), 'censoring', bouts_proc.bout_with_loom(quantiles == idx_quant) > 0);
             length(find(bouts_proc.durations_s(quantiles == idx_quant)))
             plot(x, f, 'Color', col.vars.(param)(1 + idx_quant,:), 'LineWidth', 3)
             ylabel('ecdf');

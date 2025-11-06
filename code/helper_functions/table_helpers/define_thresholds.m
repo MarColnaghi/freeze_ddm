@@ -1,6 +1,6 @@
 function thresholds = define_thresholds
 
-thresholds.pc = 17; thresholds.fill_in_mob = 3; thresholds.fill_in_imm = 3;
+thresholds.pc = 4; thresholds.fill_in_mob = 3; thresholds.fill_in_imm = 3;
 thresholds.le_window_sl = [26 45];%[20 65];
 thresholds.le_window_fl = [13 32];%[5 50];
 
