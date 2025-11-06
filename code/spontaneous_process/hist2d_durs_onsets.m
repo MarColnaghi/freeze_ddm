@@ -100,7 +100,7 @@ for idx_slooms = [unique(bouts.sloom)]'
 
     % Set Axis Limits
     ylim([-time_window(1) - 10 time_window(2) + 25])
-    xlim([-10 515]);
+    xlim([-10 710]);
     zlim([-0.2, max(h2h.Values, [], 'all') + 10]);
 
     if zoom

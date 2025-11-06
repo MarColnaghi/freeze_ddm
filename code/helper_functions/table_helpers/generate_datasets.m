@@ -1,8 +1,9 @@
 clear all
 col = cmapper();
 thresholds = define_thresholds();
+string = 'imfirst';
 
-for threshold_imm = 4%:-1:1
+for threshold_imm = 4:-1:1
     % for threshold_mob =  4:-1:1
         for threshold_pc = 4
 
@@ -16,10 +17,10 @@ for threshold_imm = 4%:-1:1
             thresholds.fill_in_mob = threshold_imm;
             thresholds.pc = threshold_pc;
 
-            if isfile(fullfile(paths.dataset, 'soc_mot.mat'))
+            if isfile(fullfile(paths.dataset, 'bouts.mat'))
                 disp('already have this dataset')
             else
-                [bouts, soc_mot] = load_flies_new(thresholds, 'paths', paths, 'save', 'bouts', 'edit_filename', false);
+                [bouts] = load_flies_new(thresholds, 'paths', paths, 'save', 'bouts', 'edit_filename', false);
             end
         end
         %end

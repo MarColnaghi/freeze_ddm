@@ -108,7 +108,7 @@ for idx_param = param_list
     col = cmapper([], extra);
 
     % Create Figure
-    fh = figure('color','w','Position',[700, 100, 400, 500]);
+    fh = figure('color','w','Position',[100, 100, 400, 500]);
     tl = tiledlayout(10, 1, 'TileSpacing', 'compact', 'Padding', 'compact');
 
     nexttile(4, [7 1])

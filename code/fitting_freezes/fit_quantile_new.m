@@ -1,4 +1,3 @@
-clear all
 
 % Load the table first. We will take advantage of an already existing
 % dataset.
@@ -6,10 +5,10 @@ col = cmapper();
 threshold_imm = 3; threshold_mob = 3; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
 paths = path_generator('folder', 'fitting_freezes/le', 'bouts_id', id_code);
 load(fullfile(paths.dataset, 'bouts.mat'));
-motion_cache = importdata(fullfile(paths.motion_cache_path));
+motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le');
 points.censoring = 10.5;
-points.truncation = 0.5;
+points.truncation = [];
 link_logistic = @(x) 1./(1 + exp(-x));     % log link for bound height
 
 model_2_fit = 'dddm0';
@@ -37,13 +36,19 @@ bouts_proc = bouts_proc(bouts_proc.durations_s >= 0.5, :);
 tiledlayout(2, 1, 'TileSpacing', 'loose')
 nexttile
 histogram(bouts_proc.avg_fs_1s_norm, 'FaceColor', col.vars.fs(round(end/2), :), 'EdgeColor', 'none')
-fs_quant = [0 0.4 0.8 1.2 2.2]; xline(fs_quant);
+fs_quant = prctile(bouts_proc.avg_fs_1s_norm, [0, 25, 50, 75, 100]); fs_quant(1) = 0; fs_quant(end) = 2; 
+% fs_quant = [0 0.4 0.8 1.2 2.2]; 
+xline(fs_quant);
 apply_generic(gca)
 nexttile
 histogram(bouts_proc.avg_sm_freeze_norm, 'FaceColor', col.vars.sm(round(end/2), :), 'EdgeColor', 'none');
-sm_quant = [0 0.25 0.5 0.8 2.2]; xline(sm_quant);
+sm_quant = prctile(bouts_proc.avg_sm_freeze_norm, [0, 25, 50, 75, 100]); sm_quant(1) = 0; sm_quant(end) = 2; 
+%sm_quant = [0 0.25 0.5 0.8 2.2]; 
+xline(sm_quant);
 apply_generic(gca)
 
+
+%%
 % Now you should fit a model for each quantile
 % of SOCIAL MOTION
 
@@ -107,7 +112,7 @@ for idx_params = 1:size(estimates, 3)
     apply_generic(gca)
 end
 
-% Now you should fit a model for each quantile
+%% Now you should fit a model for each quantile
 % of FOCAL SPEED
 
 n_quantiles = 4;

@@ -132,7 +132,7 @@ for dataset = 1
                 % Filling in is done here - might make sense potentially to
                 % switch around the filling in process. used to be small
                 % imm first
-    
+
                 imm_frames = ~bwareaopen(~imm_frames, thresholds.fill_in_mob); % Remove small moving bouts
                 imm_frames = bwareaopen(imm_frames, thresholds.fill_in_imm); % Remove small immobile bouts
 
@@ -160,7 +160,7 @@ for dataset = 1
                 z.nloom = nloom;
                 z.sloom = loom_speed .* ones(length(run_lengths), 1);
 
-                z.bout_with_loom = any((event_indices >= onsets') & (event_indices <= run_ends'), 1)';
+                z.bout_with_loom = any((event_indices > onsets') & (event_indices < run_ends'), 1)';
 
                 if any(z.bout_with_loom == 1 & z.type == 1)
                     frozen_starts = unique(z.nloom(z.bout_with_loom == 1 & z.type == 1 & z.durations >= 30)) + 1;
