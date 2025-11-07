@@ -4,7 +4,7 @@ clear all
 
 % Load the table first. We will take advantage of an already existing
 % dataset.
-threshold_imm = 0; threshold_mob = 0; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
+threshold_imm = 2; threshold_mob = 2; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
 paths = path_generator('folder', 'fitting_tests/dddm', 'bouts_id', id_code);
 load(fullfile(paths.dataset, 'bouts.mat'));
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le');
@@ -74,7 +74,7 @@ model.tndt = struct( ...
     'predictors', {{ ...
     struct('name', 'intercept') ...
     }}, ...
-    'ground_truth', 0.0, ...
+    'ground_truth', 0.2, ...
     'link', link_linear ...
     );
 
@@ -169,7 +169,7 @@ xlabel('|t_{simul} - t_{sampled}| (s)'); ylabel('pdf')
 
 rt.st(isnan(rt.st)) = sim_params.T + 1; 
 points.censoring = sim_params.T;
-points.truncation = 0.5;
+points.truncation = 0.7;
 
 %  Now we added our vector column to the bouts table.
 bouts_proc.durations_s = rt.st;
@@ -180,12 +180,13 @@ bouts_proc.ls = bouts_proc.sloom_norm;
 bouts_proc.ln = bouts_proc.nloom_norm;
 bouts_proc.intercept = ones(height(y),1);
 
-model_results = run_fitting_newer(bouts_proc, points, 'dddm1', paths, 'export', true, 'extra', [], 'ground_truth', gt_table);
-%plot_fit('freezes', bouts_proc, 'results', model_results)
-%plot_fit('results', model_results, 'conditions', true)
+% model_results = run_fitting_newer(bouts_proc, points, 'dddm1', paths, 'export', true, 'extra', [], 'ground_truth', gt_table);
+% %plot_fit('freezes', bouts_proc, 'results', model_results)
+% %plot_fit('results', model_results, 'conditions', true)
+% 
+% plot_estimates('results', model_results)
 
-plot_estimates('results', model_results)
-
+%%
 model_results = run_fitting_newer(bouts_proc, points, 'dddm2', paths, 'export', true, 'extra', [], 'ground_truth', gt_table);
 %plot_fit('freezes', bouts_proc, 'results', model_results)
 %plot_fit('results', model_results, 'conditions', true)

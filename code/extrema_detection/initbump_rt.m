@@ -20,53 +20,54 @@ test = p.Results.which_2_test;
 
 % Specify Paths
 run = sprintf('run%02d', run2analyse);
-paths = path_generator('folder', fullfile('/extrema_detection', test, run));
 
 % Load the Motion Cache
 if strcmp(test, 'ground_truth') || strcmp(test, 'systematic_analysis')
+    
+    paths = path_generator('folder', fullfile('/extrema_detection', test, run));
     sim_params = importdata(fullfile(paths.results, 'sim_params.mat'));
 
-elseif strcmp(test, 'empirical')
-    sim_params = importdata(fullfile(paths.results, 'fit_results.mat'));
+    % Load relevant files
+    file_list = dir(paths.results);
+    folders = file_list([file_list.isdir]);
+    folders = folders(~ismember({folders.name}, {'.', '..'}));
 
+elseif strcmp(test, 'empirical')
+    paths = path_generator('folder', fullfile('/fitting_freezes/le/dddm2', run));
+    sim_params = importdata(fullfile(paths.results, 'fit_results_dddm2.mat'));
+    
 end
-motion_cache = importdata(sim_params.motion_cache_path);
+motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 
 % Calculations
 extra_frames = d - frames_2b_exp;
 d_s = d/60;
 
-% d is the template length
-% Choose a weighting profile (pick one)
-
-% 1) Linear weights: small -> large across the template
-% w = linspace(0.5, 1.0, d).';              % adjust endpoints as desired
-
-% 2) Exponential weights (stronger emphasis on latest samples)
-% lambda controls how fast weights grow; try 2–5
-% idx 0..d-1 so the last entries get the largest weight
-
-% Load relevant files
-file_list = dir(paths.results);
-folders = file_list([file_list.isdir]);
-folders = folders(~ismember({folders.name}, {'.', '..'}));
-
 for idx_file = 1:size(folders, 1)
+
     fprintf('folder %d out of %d \n',idx_file, size(folders, 1))
     tic
     paths.results = fullfile(folders(idx_file).folder, folders(idx_file).name);
-    y.ed = importdata(fullfile(paths.results, 'sims_ed/y.mat'));
-    y.ac = importdata(fullfile(paths.results, 'sims_ac/y.mat'));
+    
+    if strcmp(test, 'ground_truth') || strcmp(test, 'systematic_analysis')
+        y.ed = importdata(fullfile(paths.results, 'sims_ed/y.mat'));
+        y.ac = importdata(fullfile(paths.results, 'sims_ac/y.mat'));
+        gens = {'ac', 'ed'};
+    else
+        y.fr = importdata(fullfile(paths.results, 'surrogate.mat'));
+        gens = {'fr'};
+
+    end
 
     for exp_gradient = 0
+        
         w = exp(linspace(0, exp_gradient, d)).';            % example with growth factor ~e^2
-
         w = w * (d / sum(w));
 
         code4segm = sprintf('d%d_2bexp%d_expkern%d', d, frames_2b_exp, exp_gradient);
 
         % Select only freezes with specific durations
-        for idx_gen_model = {'ac', 'ed'}
+        for idx_gen_model = gens
 
             gen_model = idx_gen_model{1};
             gen_path = sprintf('sims_%s', gen_model);
@@ -93,7 +94,7 @@ for idx_file = 1:size(folders, 1)
                 comparison_sm_cropped_all{idx_comparison} = comparison_sm(comparison_onset:comparison_offset_wextra);
             end
 
-            parfor idx_bout = 1:height(y_curr)
+            for idx_bout = 1:height(y_curr)
 
                 sm = motion_cache(flies(idx_bout));
                 freeze_onset = allfr_onsets(idx_bout);
@@ -122,7 +123,7 @@ for idx_file = 1:size(folders, 1)
                     ssq_w  = conv(comparison_sm_cropped.^2, flipud(w), 'valid');
 
                     % Weighted SSD distance
-                    similarity_framebframe_vectorized = v1_wsq + ssq_w - 2*dots_w;
+                    similarity_framebframe_vectorized = v1_wsq + ssq_w - 2 * dots_w;
 
                     % The rest stays the same
                     [closest_similarity, best_frame] = min(similarity_framebframe_vectorized);

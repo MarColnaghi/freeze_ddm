@@ -24,7 +24,7 @@ end
 % Select period: bsl or loom
 if strcmp(opt.Results.period, 'bsl')
     temp = temp(temp.period == 0, :);
-    temp = temp(temp.nloom < 19, :);
+    temp = temp(temp.nloom < 21, :);
     
 elseif strcmp(opt.Results.period, 'loom')
     temp = temp(temp.period == 1, :);
@@ -55,7 +55,7 @@ speed_max = 2; % outliers
 
 % Threshold the Dataset
 
-temp = temp(temp.avg_sm_freeze_norm <= motion_max & temp.avg_fs_1s_norm <= speed_max, :);
+% temp = temp(temp.avg_sm_freeze_norm <= motion_max & temp.avg_fs_1s_norm <= speed_max, :);
 
 
 end

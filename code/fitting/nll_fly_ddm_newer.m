@@ -18,7 +18,7 @@ tok = regexp(model_num, pattern, 'tokens');
 if strcmp(plot_flag, 'p')
 
     tbl = table();
-    tbl.durations_s = [0:1/60:(points.censoring + 2)]';
+    tbl.durations_s = [0:1/300:(points.censoring + 2)]';
     fd = tbl.durations_s;
     f = zeros(height(tbl.durations_s), 1);
     F = zeros(height(tbl.durations_s), 1);
@@ -38,14 +38,14 @@ if strcmp(plot_flag, 'p')
 
         F = F + G;
         f = f + exp(g);
-
+        trapz(tbl.durations_s(tbl.durations_s > points.truncation & tbl.durations_s <= points.censoring), f(tbl.durations_s > points.truncation &  tbl.durations_s <= points.censoring));
     end
 
     f = f ./ height(bouts);
     F = F ./ height(bouts);
+    trapz(tbl.durations_s(tbl.durations_s > points.truncation & tbl.durations_s <= points.censoring), f(tbl.durations_s > points.truncation & tbl.durations_s <= points.censoring)) + f(end)
 
 end
-
 arr = unique(bouts.fly)';
 if strcmp(iid, 'dep')
     g = zeros(1, max(arr));
@@ -84,7 +84,7 @@ lbl = lbl(~isnan(gt));
 gt_table = array2table(x, 'VariableNames', lbl);
 out = evaluate_model(model, gt_table, y);
 
-if ~isfield(out, 'tndt')
+if ~isfield(model, 'tndt')
     out.tndt = zeros(size(out, 1), 1);
 end
 
@@ -120,22 +120,29 @@ if strcmp('iid', iid)
 
     elseif  strcmp('dddm', tok{1})
 
-        bet = bif.durations_s > out.tndt & bif.durations_s <= points.censoring;
+        bet = bif.durations_s >= out.tndt & bif.durations_s <= points.censoring;
         abo = bif.durations_s > points.censoring;
 
         % pdf and cdf for single bound ddm
-        [pdf, cdf] = pdf_cdf({'ddm', 'exp'});
+        [pdf, cdf] = pdf_cdf({'ddm','kde'});
+
+        pdf_ddm_raw = pdf.ddm;
+        cdf_ddm_raw = cdf.ddm;
+
+        pdf.ddm = @(ts, mu, theta, ndt) guard_ddm(pdf_ddm_raw, ts, mu, theta, ndt);
+        cdf.ddm = @(ts, mu, theta, ndt) guard_ddm(cdf_ddm_raw, ts, mu, theta, ndt);
 
         f = @(ts, inds) out.pmix(inds) .* pdf.ddm(ts, out.mu1(inds), out.theta1(inds), out.tndt(inds)) + ...
             (1 - out.pmix(inds)) .* pdf.ddm(ts, out.mu2(inds), out.theta2(inds), out.tndt(inds));
         F = @(ts, inds) out.pmix(inds) .* cdf.ddm(ts, out.mu1(inds), out.theta1(inds), out.tndt(inds)) + ...
             (1 - out.pmix(inds)) .* cdf.ddm(ts, out.mu2(inds), out.theta2(inds), out.tndt(inds));
 
-        if ~isempty(points.truncation) && points.truncation > out.tndt(1)
-            trunc_factor = @(inds) 1 - F(points.truncation, inds);
-        else
-            trunc_factor = @(inds) ones(size(ts(inds)));
-        end
+        t0   = points.truncation;
+        C    = points.censoring;
+        epsN = 1e-12;
+
+        % One consistent truncation factor: 1 - F_mix(t0) per index
+        trunc_factor = @(inds) max(1 - F(t0, inds), epsN);
 
         g(bet) = f(ts(bet), bet) ./ trunc_factor(bet);
         g(abo) = (1 - F(points.censoring, abo)) ./ trunc_factor(abo);

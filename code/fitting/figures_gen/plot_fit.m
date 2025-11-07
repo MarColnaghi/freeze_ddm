@@ -52,7 +52,7 @@ else
                 freezes_quant = quantilizer(freezes, 'idx_quanti', struct('sm', idx_sm, 'ls', idx_ls, 'fs', idx_fs));
                 [~, f, fd] = nll_fly_ddm_newer(est_params, freezes_quant, results.points, results.fitted_model, 'iid', 'p', extra);
 
-                histogram(freezes_quant.durations_s, -1/120:1/30:12, 'Normalization', 'pdf', 'FaceColor', 'r', 'EdgeColor', 'none')
+                histogram(freezes_quant.durations_s, -1/120:1/15:12, 'Normalization', 'pdf', 'FaceColor', 'r', 'EdgeColor', 'none')
                 plot(fd,f, 'k--', 'LineWidth', 1.5)
                 ax(i) = gca;
                 apply_generic(gca)

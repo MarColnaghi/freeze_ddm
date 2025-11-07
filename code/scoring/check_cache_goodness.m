@@ -5,7 +5,7 @@ pixel_cache = importdata(fullfile(paths.cache_path, 'pixel_cache.mat'));
 loom_cache = importdata(fullfile(paths.cache_path, 'loom_cache.mat'));
 motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 thresholds = define_thresholds;
-fly_id = 100;
+fly_id = 245;
 fly_pc = ~pixel_cache(fly_id);
 fly_loom = loom_cache(fly_id);
 loom_frames = find(diff(fly_loom) == 1) + 1;

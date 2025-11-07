@@ -42,7 +42,7 @@ else
     disp('input provided')
     time_window = thresholds.time_window;
     
-    clamp = false;
+    clamp = true;
     bouts_with_loom = false;
     zoom =  zoom_flag;
     limits = [0 100];
@@ -60,6 +60,7 @@ for idx_slooms = [unique(bouts.sloom)]'
     i = i + 1;
     bouts_temp = bouts;
     bouts_temp = bouts(bouts.sloom == idx_slooms, :);
+    % bouts_temp = bouts_temp(bouts_temp.nloom == 16, :);
     % bouts_temp = bouts(bouts.loom_durs == 29, :);
 
     if clamp == true
@@ -100,7 +101,7 @@ for idx_slooms = [unique(bouts.sloom)]'
 
     % Set Axis Limits
     ylim([-time_window(1) - 10 time_window(2) + 25])
-    xlim([-10 710]);
+    xlim([-10 900]);
     zlim([-0.2, max(h2h.Values, [], 'all') + 10]);
 
     if zoom
@@ -134,14 +135,14 @@ for idx_slooms = [unique(bouts.sloom)]'
             end
             % Set Colormap
             colorcet('L08');
-            clim([0 round(max(h2h.Values, [], 'all'), -1)])
+            clim([0 max(h2h.Values, [], 'all')])
 
         case 'tile'
             bin_size = 2;
             view(90, 90)
             % Set Colormap
             colorcet('L02');
-            clim([0 round(max(h2h.Values, [], 'all'), -1)])
+            clim([0 max(h2h.Values, [], 'all')])
 
     end
 
