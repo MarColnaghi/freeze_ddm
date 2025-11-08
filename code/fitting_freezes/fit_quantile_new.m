@@ -2,14 +2,19 @@
 % Load the table first. We will take advantage of an already existing
 % dataset.
 col = cmapper();
-threshold_imm = 3; threshold_mob = 3; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
+threshold_imm = 2; threshold_mob = 2; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
 paths = path_generator('folder', 'fitting_freezes/le', 'bouts_id', id_code);
 load(fullfile(paths.dataset, 'bouts.mat'));
-motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
+thresholds = define_thresholds;
+thresholds.le_window_fl = [5 40];
+thresholds.le_window_sl = [15 50];
+bouts = bouts_formatting(bouts, thresholds);
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le');
 points.censoring = 10.5;
-points.truncation = [];
+points.truncation = 0.4;
 link_logistic = @(x) 1./(1 + exp(-x));     % log link for bound height
+
+motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 
 model_2_fit = 'dddm0';
 
@@ -32,18 +37,18 @@ soc_mot_array = cell2mat(sm_raw)';
 
 %  Now we added our vector column to the bouts table
 fh = figure('Position', [100 100 500 400], 'Color', 'w');
-bouts_proc = bouts_proc(bouts_proc.durations_s >= 0.5, :);
+bouts_proc = bouts_proc(bouts_proc.durations_s >= points.truncation, :);
 tiledlayout(2, 1, 'TileSpacing', 'loose')
 nexttile
-histogram(bouts_proc.avg_fs_1s_norm, 'FaceColor', col.vars.fs(round(end/2), :), 'EdgeColor', 'none')
+histogram(bouts_proc.avg_fs_1s_norm, 0:0.05:4, 'FaceColor', col.vars.fs(round(end/2), :), 'EdgeColor', 'none')
 fs_quant = prctile(bouts_proc.avg_fs_1s_norm, [0, 25, 50, 75, 100]); fs_quant(1) = 0; fs_quant(end) = 2; 
-% fs_quant = [0 0.4 0.8 1.2 2.2]; 
+fs_quant = [0 0.45 0.8 1.2 2.2]; 
 xline(fs_quant);
 apply_generic(gca)
 nexttile
-histogram(bouts_proc.avg_sm_freeze_norm, 'FaceColor', col.vars.sm(round(end/2), :), 'EdgeColor', 'none');
+histogram(bouts_proc.avg_sm_freeze_norm, 0:0.05:4, 'FaceColor', col.vars.sm(round(end/2), :), 'EdgeColor', 'none');
 sm_quant = prctile(bouts_proc.avg_sm_freeze_norm, [0, 25, 50, 75, 100]); sm_quant(1) = 0; sm_quant(end) = 2; 
-%sm_quant = [0 0.25 0.5 0.8 2.2]; 
+sm_quant = [0,.2, 0.45, 0.75, 1.65]; 
 xline(sm_quant);
 apply_generic(gca)
 
@@ -65,6 +70,8 @@ for idx_quantiles = 1:n_quantiles
         mask = bouts_proc.sloom_norm == idx_ln & bouts_proc.avg_sm_freeze_norm >= sm_quant(idx_quantiles) & bouts_proc.avg_sm_freeze_norm < sm_quant(idx_quantiles + 1);
         bouts_quant = bouts_proc(mask, :);
         
+        figure
+        histogram(bouts_quant.durations_s, [-1/120:1/10:points.censoring])
         x_sm(idx_quantiles, idx_ln) = median(bouts_quant.avg_sm_freeze_norm);
 
         % Here you define the Extras

@@ -1,6 +1,6 @@
 % Load the table first. We will take advantage of an already existing
 % dataset.
-threshold_imm = 3; threshold_mob = 3; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
+threshold_imm = 2; threshold_mob = 2; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
 paths = path_generator('folder', 'fitting_freezes/bsl/kde_spontaneous', 'bouts_id', id_code);
 load(fullfile(paths.dataset, 'bouts.mat'));
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'bsl', 'window', 'all');
@@ -10,9 +10,9 @@ points.truncation = min(bouts_proc.durations_s);
 col = cmapper();
 fh = figure('color','w','Position',[100, 100, 600, 400]);
 
-x = 0:1/60:120;
-[ f, xk ] = ksdensity(bouts_proc.durations_s, x, 'Function','pdf', 'Support','positive', 'Bandwidth', 1/10);
-[ F, ~  ] = ksdensity(bouts_proc.durations_s, x, 'Function','cdf', 'Support','positive', 'Bandwidth', 1/10);
+x = 0:1/120:120;
+[ f, xk ] = ksdensity(bouts_proc.durations_s, x, 'Function','pdf', 'Support','positive', 'Bandwidth', 1/7);
+[ F, ~  ] = ksdensity(bouts_proc.durations_s, x, 'Function','cdf', 'Support','positive', 'Bandwidth', 1/7);
 
 % t0 = points.truncation;
 % F_t0 = interp1(xk, F, t0, 'linear', 'extrap');      % CDF at truncation

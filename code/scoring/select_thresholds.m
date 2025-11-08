@@ -12,7 +12,6 @@ bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'win
 bouts_proc = bouts_proc(bouts_proc.durations >= 0, :);
 fd_distr_withparam_new(bouts_proc, 'loom', paths, false)
 
-
 % paths = path_generator('bouts_id', id_code, 'imfirst', true);
 
 thresholds = define_thresholds;
