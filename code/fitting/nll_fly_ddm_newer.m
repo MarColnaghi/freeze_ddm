@@ -213,40 +213,12 @@ if strcmp('iid', iid)
 
     elseif  strcmp('ed', tok{1})
 
-        fs = 60;
-        % out.tndt = ones(length(out.theta), 1) * 0.15;
-
-        below = bif.durations_s <  out.tndt;
-        bet   = bif.durations_s >= out.tndt & bif.durations_s <= points.censoring;
-        abo   = bif.durations_s >  points.censoring;
-
-        if size(extra.soc_mot_array, 1) == 1
-            out.mu = repmat(extra.soc_mot_array, height(out.theta), 1) .* x(1) .* (1/fs);
-        else
-            out.mu = extra.soc_mot_array .* x(1) .* (1/fs);
-        end
-
-        [pdf, cdf] = pdf_cdf({'ed'});
-
-        f = @(ts, inds) pdf.ed(ts, out.theta(inds), out.mu(inds, :), out.tndt(inds), fs);
-        F = @(ts, inds) cdf.ed(ts, out.theta(inds), out.mu(inds, :), out.tndt(inds), fs);
-
-        if ~isempty(points.truncation)
-            trunc_factor = @(inds) 1 - F(points.truncation, inds);
-        else
-            trunc_factor = @(inds) ones(size(ts(inds)))';
-        end
-
-        g(bet) = f(ts(bet), bet) ./ trunc_factor(bet);
-        g(abo) = F(points.censoring, abo) ./ trunc_factor(abo);
-
-        g      = max(g, 1e-5);
-        log_g  = log(g);
-
-%         log_g = g;
-%         ndt_prior: [1 x n_ndt] probability distribution over ndt values
-
 %         fs = 60;
+%         % out.tndt = ones(length(out.theta), 1) * 0.15;
+% 
+%         below = bif.durations_s <  out.tndt;
+%         bet   = bif.durations_s >= out.tndt & bif.durations_s <= points.censoring;
+%         abo   = bif.durations_s >  points.censoring;
 % 
 %         if size(extra.soc_mot_array, 1) == 1
 %             out.mu = repmat(extra.soc_mot_array, height(out.theta), 1) .* x(1) .* (1/fs);
@@ -254,40 +226,85 @@ if strcmp('iid', iid)
 %             out.mu = extra.soc_mot_array .* x(1) .* (1/fs);
 %         end
 % 
-%         n_ndt = 31;
-%         ndt_values = (0:(n_ndt-1)) / fs; % convert frames to seconds
-%         ndt_prior = ones(1, n_ndt) / n_ndt;
-% 
 %         [pdf, cdf] = pdf_cdf({'ed'});
 % 
-%         n_trials = length(ts);
-%         log_liks = zeros(n_trials, n_ndt);
+%         f = @(ts, inds) pdf.ed(ts, out.theta(inds), out.mu(inds, :), out.tndt(inds), fs);
+%         F = @(ts, inds) cdf.ed(ts, out.theta(inds), out.mu(inds, :), out.tndt(inds), fs);
 % 
-%         for i = 1:n_ndt
-% 
-%             current_ndt = ndt_values(i);
-% 
-%             out.tndt = current_ndt *  ones(length(out.theta), 1);
-%             
-%             bet = ts > out.tndt & ts - out.tndt < points.censoring;
-%             abo = ts - out.tndt >= points.censoring;
-% 
-%             f = @(ts, inds) pdf.ed(ts, out.theta(inds), out.mu(inds, :), out.tndt(inds), fs);
-%             F = @(ts, inds) cdf.ed(ts, out.theta(inds), out.mu(inds, :), out.tndt(inds), fs);
-% 
-%             g(bet) = f(ts(bet), bet);
-%             g(abo) = F(points.censoring, abo);
-%             pdf_vals = g;
-%             log_liks(:, i) = log(pdf_vals(:) + 1e-10);
+%         if ~isempty(points.truncation)
+%             trunc_factor = @(inds) 1 - F(points.truncation, inds);
+%         else
+%             trunc_factor = @(inds) ones(size(ts(inds)))';
 %         end
 % 
-%         % Marginal: sum_ndt p(data|params,ndt) * p(ndt)
-%         % In log space with logsumexp trick
+%         g(bet) = f(ts(bet), bet) ./ trunc_factor(bet);
+%         g(abo) = F(points.censoring, abo) ./ trunc_factor(abo);
 % 
-%         max_ll = max(log_liks, [], 2);  % [n_trials × 1]
-%         trial_marginal_ll = max_ll + log(sum(exp(log_liks - max_ll) .* ndt_prior, 2));
-% 
-%         log_g = trial_marginal_ll;
+%         g      = max(g, 1e-5);
+%         log_g  = log(g);
+
+%         log_g = g;
+%         ndt_prior: [1 x n_ndt] probability distribution over ndt values
+
+        fs = 60;
+
+        if size(extra.soc_mot_array, 1) == 1
+            out.mu = repmat(extra.soc_mot_array, height(out.theta), 1) .* x(1) .* (1/fs);
+        else
+            out.mu = extra.soc_mot_array .* x(1) .* (1/fs);
+        end
+
+        n_ndt = 31;
+        ndt_values = (0:(n_ndt-1)) / fs; % convert frames to seconds
+        ndt_prior = ones(1, n_ndt) / n_ndt;
+
+        [pdf, cdf] = pdf_cdf({'ed'});
+
+        n_trials = length(ts);
+        log_liks = zeros(n_trials, n_ndt);
+
+        for i = 1:n_ndt
+
+            g = zeros(n_trials, 1);      % or eps, depending on your convention
+
+            current_ndt = ndt_values(i);
+
+            out.tndt = current_ndt *  ones(length(out.theta), 1);
+
+            below = bif.durations_s <  out.tndt;
+            bet   = bif.durations_s >= out.tndt & bif.durations_s <= points.censoring;
+            abo   = bif.durations_s >  points.censoring;
+            
+            f = @(ts, inds) pdf.ed(ts, out.theta(inds), out.mu(inds, :), out.tndt(inds), fs);
+            F = @(ts, inds) cdf.ed(ts, out.theta(inds), out.mu(inds, :), out.tndt(inds), fs);
+
+            if ~isempty(points.truncation)
+                trunc_factor = @(inds) 1 - F(points.truncation, inds);
+            else
+                trunc_factor = @(inds) ones(size(ts(inds)))';
+            end
+
+            g(bet) = f(ts(bet), bet) ./ trunc_factor(bet);
+            g(abo) = F(points.censoring, abo) ./ trunc_factor(abo);
+            
+            pdf_vals = g;
+            log_liks(:, i) = log(pdf_vals(:) + 1e-10);
+        end
+
+        % Marginal: sum_ndt p(data|params,ndt) * p(ndt)
+        % In log space with logsumexp trick
+        % log_liks(trial, ndt) as you already compute
+        % => now collapse across trials for each ndt:
+        ll_per_ndt = sum(log_liks, 1);           % [1 x n_ndt] log p(data | ndt_i, params)
+
+        % add log prior and do log-sum-exp across ndt:
+        log_prior = log(ndt_prior);              % [1 x n_ndt]
+        log_weighted = log_prior + ll_per_ndt;   % [1 x n_ndt]
+
+        max_ll = max(log_weighted);
+        log_marginal = max_ll + log(sum(exp(log_weighted - max_ll)));
+
+        log_g = log_marginal;
     end
 end
 

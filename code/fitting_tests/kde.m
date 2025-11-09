@@ -65,7 +65,7 @@ gt_table = array2table(gt, 'VariableNames', lbl);
 ncomp_vars = evaluate_model(model, gt_table, y);
 
 % Specify the seed
-sim_params.rng = 111;
+sim_params.rng = 165;
 rng(sim_params.rng);
 
 % General simulation parameters

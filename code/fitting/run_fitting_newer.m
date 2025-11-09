@@ -71,7 +71,11 @@ estimates = nan(1, length(lbl));
 estimates(find(mask)) = eval_param(1, :);
 
 if ~isempty(ground_truth)
-    ground_truth = [ground_truth; array2table(estimates, 'VariableNames', lbl)];
+    if width(ground_truth) == width(array2table(estimates, 'VariableNames', lbl))
+        ground_truth = [ground_truth; array2table(estimates, 'VariableNames', lbl)];
+    else
+        ground_truth = outerjoin(ground_truth, array2table(estimates, 'VariableNames', lbl), 'MergeKeys', true);
+    end
     plc_hold = ground_truth;
     plc_hold(:, all(ismissing(plc_hold))) = [];
     disp(plc_hold)
