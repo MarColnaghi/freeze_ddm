@@ -15,7 +15,19 @@ points.truncation = 0.3;
 
 %%  Now we added our vector column to the bouts table
 
-model_results = run_fitting_newer(bouts_proc, points, 'dddm2', paths, 'export', true, 'extra', []);
+chunk_len = points.censoring * 60;
+
+for idx_trials = 1:height(bouts_proc)
+
+    ons = bouts_proc.onsets(idx_trials);
+    sum_motion = motion_cache(bouts_proc.fly(idx_trials));
+    sm_raw{idx_trials} = sum_motion(ons:ons + chunk_len - 1);
+
+end
+
+soc_mot_array = cell2mat(sm_raw)';
+extra.soc_mot_array = soc_mot_array;
+model_results = run_fitting_newer_bads_only(bouts_proc, points, 'ed5', paths, 'export', true, 'extra', extra);
 model_results.estimates_mean  
 plot_fit('results', model_results, 'conditions', false)
 plot_fit('results', model_results, 'conditions', true)

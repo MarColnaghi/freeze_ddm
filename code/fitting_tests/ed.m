@@ -29,28 +29,28 @@ model.mu = struct( ...
     'predictors', {{ ...
     struct('name', 'sm'), ...
     struct('name', 'intercept')}}, ...
-    'ground_truth', [5 0], ...
+    'ground_truth', [5 1], ...
     'link', link_linear ...
     );
 
 % For theta 1
 model.theta = struct(...
     'predictors', {{ ...
-%     struct('name', 'fs'), ...
-%     struct('name', 'ls'), ...
+    struct('name', 'fs'), ...
+    struct('name', 'ln'), ...
+    struct('name', 'ls'), ...
     struct('name', 'intercept') ...
     }}, ...
-    'ground_truth', [1.0], ...
+    'ground_truth', [0.2 0.5 -0.2 1.0], ...
     'link', link_linear ...
     );
-
 
 % Non decision time
 model.tndt = struct( ...
     'predictors', {{ ...
     struct('name', 'intercept') ...
     }}, ...
-    'ground_truth', 0.1508, ...
+    'ground_truth', 0.150, ...
     'link', link_linear ...
     );
 
@@ -60,7 +60,7 @@ gt_table = array2table(gt, 'VariableNames', lbl);
 ncomp_vars = evaluate_model(model, gt_table, y);
 
 % Specify the seed
-sim_params.rng = 11640;
+sim_params.rng = 3;
 rng(sim_params.rng);
 
 % General simulation parameters
@@ -76,7 +76,6 @@ sim_params.eval_trials = sim_params.n_trials;
 sim_params.num_sims = 20000;
 
 % Censoring/Truncation
-points.truncation = [];
 points.censoring = sim_params.T;
 
 % Initialize outputs
@@ -116,7 +115,7 @@ for idx_trials = 1:sim_params.n_trials
 
     % Simulate RT from full DDM
     [rt.ed(idx_trials), traj_ed] = extrema_detection_new('mu_t', mu_tv, 'theta', theta_s, ...
-        'z', sim_params.z, 'dt', sim_params.dt, 'T', sim_params.T, 'ndt', tndt_s);
+        'z', sim_params.z, 'dt', sim_params.dt, 'T', sim_params.T, 'ndt', tndt_s);% samples_sec(idx_trials));
 
     if idx_trials <= 311 && idx_trials >= 300
         nexttile
@@ -152,8 +151,8 @@ bouts_proc.ls = bouts_proc.sloom_norm;
 bouts_proc.ln = bouts_proc.nloom_norm;
 bouts_proc.intercept = ones(height(y),1);
 
-model_2_fit = 'ed1';
-model_results = run_fitting_newer(bouts_proc, points, model_2_fit, paths, 'export', false, 'extra', extra, 'ground_truth', gt_table);
+model_2_fit = 'ed5';
+model_results = run_fitting_newer(bouts_proc, points, model_2_fit, paths, 'export', true, 'extra', extra, 'ground_truth', gt_table, 'bads_display', true, 'pass_ndt', true);
 plot_estimates('results', model_results, 'export', false, 'paths', paths)
 bouts_proc.sm = bouts_proc.avg_sm_freeze_norm;
 bouts_proc.smp = bouts_proc.avg_sm_freeze_norm;
@@ -161,21 +160,24 @@ bouts_proc.fs = bouts_proc.avg_fs_freeze_norm;
 bouts_proc.ln = bouts_proc.nloom_norm;
 bouts_proc.ls = bouts_proc.sloom_norm;
 bouts_proc.intercept = ones(height(bouts_proc), 1);
+plot_fit('results', model_results, 'conditions', false)
 
 %%
 
-n_samples = 15;  % number of samples from q(x)
+n_samples = 300;  % number of samples from q(x)
 p_ndt_accum = zeros(1, 31);
 samples = vbmc_rnd(model_results.vp, n_samples);
 model_func = str2func(strcat('model_', model_2_fit));
 
 for s = 1:n_samples
     x_s = samples(s,:);  % depends on how your VI is implemented
-    [~, p_ndt_s] = ndt_loglik(x_s, extra, model_func, points, bouts_proc);
+    [~, p_ndt_s, ndt_values] = ndt_loglik(x_s, extra, model_func, points, bouts_proc);
     p_ndt_accum = p_ndt_accum + p_ndt_s;
 end
 
 p_ndt_vi = p_ndt_accum / n_samples;
+[~, idx] = max(p_ndt_vi);
+ndt = ndt_values(idx);
 
 
 function [log_g, p_ndt_given_data, ndt_values] = ndt_loglik(x, extra, model_func, points, bouts_individual_fly)
@@ -374,17 +376,17 @@ end
 % %%
 % [nll, f, fd] = nll_fly_ddm_newer(model_results.starting_position, bouts_proc(1,:), points, 'model_ed1', 'iid', 'p', extra);
 % 
-% function fh_traces = plot_traces(traj_ed, sm_chunk, col, theta_s)
-% 
-% ax = gca;
-% hold on
-% x_traj = 0:1/60:(length(traj_ed) - 1)/60;
-% plot(x_traj, traj_ed, 'Color', col.extremadetection, 'LineWidth', 1.5)
-% plot(x_traj(2:end), sm_chunk, 'k--')
-% yline(theta_s, 'LineWidth', 2)
-% hold on
-% ylim([-theta_s - 1 theta_s + 1])
-% xlim([0 20])
-% apply_generic(ax, 20)
-% xlabel('Time (frames)')
-% end
+function fh_traces = plot_traces(traj_ed, sm_chunk, col, theta_s)
+
+ax = gca;
+hold on
+x_traj = 0:1/60:(length(traj_ed) - 1)/60;
+plot(x_traj, traj_ed, 'Color', col.extremadetection, 'LineWidth', 1.5)
+plot(x_traj(2:end), sm_chunk, 'k--')
+yline(theta_s, 'LineWidth', 2)
+hold on
+ylim([-theta_s - 1 theta_s + 1])
+xlim([0 20])
+apply_generic(ax, 20)
+xlabel('Time (frames)')
+end

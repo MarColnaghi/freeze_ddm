@@ -109,9 +109,11 @@ if export_results
     create_output_dirs(paths);
     model_results.bouts_path = paths.results;
     model_results.motion_cache_path = fullfile(paths.dataset, 'motion_cache.mat');
-    
+
     save(fullfile(paths.results, sprintf('fit_results_%s.mat', idx_model)), '-struct', 'model_results');
     save(fullfile(paths.results, 'surrogate.mat'), 'surrogate');
+    save(fullfile(paths.results, 'soc_mot_array.mat'), 'extra');
+
 end
 end
 

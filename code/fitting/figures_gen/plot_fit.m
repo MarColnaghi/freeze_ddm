@@ -18,9 +18,11 @@ export = opt.Results.export;
 paths = opt.Results.paths;
 
 if isempty(opt.Results.freezes)
-     load(fullfile(opt.Results.results.bouts_path, 'surrogate.mat'));
-     freezes = surrogate;
-
+    load(fullfile(opt.Results.results.bouts_path, 'surrogate.mat'));
+    freezes = surrogate;
+end
+if isempty(opt.Results.extra)
+    load(fullfile(opt.Results.results.bouts_path, 'soc_mot_array.mat'));
 end
 
 est_params = table2array(results.estimates_mean(:, ~ismissing(results.estimates_mean)));

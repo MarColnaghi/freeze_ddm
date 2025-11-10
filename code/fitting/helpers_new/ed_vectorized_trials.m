@@ -10,7 +10,8 @@ function result = ed_vectorized_trials(ts, theta, mu, fs, output_type)
         mu = mu(:)';
     end
     [n_trials, n_frames] = size(mu);
-    
+    mu = mu .* (1/fs);
+
     % Make sure ts is column vector [n_trials × 1]
     if isscalar(ts)
         ts = repmat(ts, n_trials, 1);

@@ -7,6 +7,9 @@ function [model_results] = run_fitting_newer(surrogate, points, idx_model, paths
 opt = inputParser;
 addParameter(opt, 'extra', []);
 addParameter(opt, 'export', false);
+addParameter(opt, 'bads_display', false);
+addParameter(opt, 'pass_ndt', true);
+
 addParameter(opt, 'ground_truth', []);
 addParameter(opt, 'only_bads', false);
 
@@ -15,6 +18,8 @@ parse(opt, varargin{:});
 extra = opt.Results.extra;
 export_results = opt.Results.export;
 ground_truth = opt.Results.ground_truth;
+bads_display = opt.Results.bads_display;
+pass_ndt = opt.Results.pass_ndt;
 
 %% Truncation Filter
 if isfield(points, 'truncation') && ~isempty(points.truncation)
@@ -48,8 +53,12 @@ surrogate.intercept = ones(height(surrogate), 1);
 llfun = @(x) nll_fly_ddm_newer(x, surrogate, points, model_str, 'iid', 'n', extra);
 
 %% BADS Optimization
-num_iters = 5;
-options_bads.Display = 'none';
+num_iters = 2;
+if bads_display
+    options_bads.Display = 'iter';
+else
+    options_bads.Display = 'none';
+end
 nvars = numel(PLB);
 x0_all = PLB + rand(num_iters, nvars) .* (PUB - PLB);
 
@@ -69,6 +78,17 @@ eval_param = eval_param(best_idx,:); fval = fval(best_idx, :);
 [~, lbl, mask] = get_ground_truth_vector(model_out);
 estimates = nan(1, length(lbl));
 estimates(find(mask)) = eval_param(1, :);
+temp_table = array2table(estimates, 'VariableNames', lbl);
+
+if pass_ndt
+    extra.tndt = temp_table.tndt_intercept;
+    eval_param = eval_param(:, 1:end-1);
+    LB = LB(1:end-1);
+    PLB = PLB(1:end-1);
+    PUB = PUB(1:end-1);
+    UB = UB(1:end-1);
+
+end
 
 if ~isempty(ground_truth)
     if width(ground_truth) == width(array2table(estimates, 'VariableNames', lbl))
