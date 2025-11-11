@@ -29,7 +29,7 @@ model.mu = struct( ...
     'predictors', {{ ...
     struct('name', 'sm'), ...
     struct('name', 'intercept')}}, ...
-    'ground_truth', [5 2], ...
+    'ground_truth', [3 0], ...
     'link', link_linear ...
     );
 
@@ -41,7 +41,7 @@ model.theta = struct(...
     struct('name', 'ls'), ...
     struct('name', 'intercept') ...
     }}, ...
-    'ground_truth', [0.2 0.5 -0.2 1.0], ...
+    'ground_truth', [0.2 0.5 -0.4 1.0], ...
     'link', link_linear ...
     );
 
@@ -60,7 +60,7 @@ gt_table = array2table(gt, 'VariableNames', lbl);
 ncomp_vars = evaluate_model(model, gt_table, y);
 
 % Specify the seed
-sim_params.rng = 3;
+sim_params.rng = 30;
 rng(sim_params.rng);
 
 % General simulation parameters
@@ -124,21 +124,21 @@ for idx_trials = 1:sim_params.n_trials
 end
 toc
 
-%%figure;
+rt.ed(rt.ed > points.censoring) = sim_params.T + sim_params.dt;
+rt.ed(isnan(rt.ed)) = sim_params.T + sim_params.dt; 
+points.censoring = sim_params.T;
+points.truncation = [];
+
+%
 fh = figure('color', 'w', 'Position', [100, 100, 600, 300]);
 tiledlayout(1, 1, 'TileSpacing', 'compact', 'Padding', 'loose')
-
 nexttile
 hold on
-histogram(rt.ed, 0:1/10:sim_params.T, 'EdgeColor', 'none', 'Normalization', 'pdf')
+histogram(rt.ed, 0:1/10:sim_params.T + sim_params.dt * 3, 'EdgeColor', 'none', 'Normalization', 'pdf')
 apply_generic(gca)
 xlabel('Duration (s)'); ax.YAxis.Visible = 'off'; 
 
 exporter(fh, paths, 'Durations.pdf')
-
-rt.ed(isnan(rt.ed)) = sim_params.T + 1; 
-points.censoring = sim_params.T;
-points.truncation = [];
 
 extra.soc_mot_array = cell2mat(sm_raw)';
 
@@ -152,7 +152,7 @@ bouts_proc.ln = bouts_proc.nloom_norm;
 bouts_proc.intercept = ones(height(y),1);
 
 model_2_fit = 'ed5';
-model_results = run_fitting_newer(bouts_proc, points, model_2_fit, paths, 'export', true, 'extra', extra, 'ground_truth', gt_table, 'bads_display', true, 'pass_ndt', true);
+model_results = run_fitting_newer(bouts_proc, points, model_2_fit, paths, 'export', true, 'extra', extra, 'ground_truth', gt_table, 'bads_display', true, 'pass_ndt', true, 'n_bads', 2);
 plot_estimates('results', model_results, 'export', false, 'paths', paths)
 bouts_proc.sm = bouts_proc.avg_sm_freeze_norm;
 bouts_proc.smp = bouts_proc.avg_sm_freeze_norm;

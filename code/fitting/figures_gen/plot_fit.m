@@ -22,7 +22,7 @@ if isempty(opt.Results.freezes)
     freezes = surrogate;
 end
 if isempty(opt.Results.extra)
-    load(fullfile(opt.Results.results.bouts_path, 'soc_mot_array.mat'));
+    load(fullfile(opt.Results.results.bouts_path, 'extra.mat'));
 end
 
 est_params = table2array(results.estimates_mean(:, ~ismissing(results.estimates_mean)));
@@ -30,10 +30,10 @@ results.fitted_model = sprintf('model_%s', results.fitted_model);
 
 if ~conditions
 
-    fh = figure('Position', [100 100 800 400], 'Color', 'w');
+    fh = figure('Position', [100 100 800 500], 'Color', 'w');
     [~, f, fd] = nll_fly_ddm_newer(est_params, freezes, results.points, results.fitted_model, 'iid', 'p', extra);
     hold on
-    histogram(freezes.durations_s, -1/120:1/60:12, 'Normalization', 'pdf', 'FaceColor', 'r', 'EdgeColor', 'none')
+    histogram(freezes.durations_s, -1/120:1/60:12, 'Normalization', 'probability', 'FaceColor', 'r', 'EdgeColor', 'none')
     plot(fd,f, 'k--', 'LineWidth', 1.5)
     apply_generic(gca)
     xlabel('Freeze Duration (s)')

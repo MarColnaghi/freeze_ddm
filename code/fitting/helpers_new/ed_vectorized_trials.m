@@ -32,7 +32,7 @@ function result = ed_vectorized_trials(ts, theta, mu, fs, output_type)
     end
     
     % Time to frames (discrete)
-    frames = round(ts * fs);
+    frames = floor(ts * fs);
     % frames = ts * fs;
 
     % Clip frames to valid range

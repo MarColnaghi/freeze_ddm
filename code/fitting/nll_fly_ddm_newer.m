@@ -18,7 +18,7 @@ tok = regexp(model_num, pattern, 'tokens');
 if strcmp(plot_flag, 'p')
 
     tbl = table();
-    tbl.durations_s = [points.truncation:1/60:(points.censoring + 1/60)]';
+    tbl.durations_s = [0:1/60:(points.censoring + 1/60)]';
     fd = tbl.durations_s;
     f = zeros(height(tbl.durations_s), 1);
     F = zeros(height(tbl.durations_s), 1);
@@ -27,7 +27,7 @@ if strcmp(plot_flag, 'p')
     figure
     hold on
     for idx_bout = 1:height(bouts)
-        
+
         tbl.sm = bouts.sm(idx_bout)*ones(height(tbl),1);
         tbl.smp = bouts.smp(idx_bout)*ones(height(tbl),1);
         tbl.fs = bouts.fs(idx_bout)*ones(height(tbl),1);
@@ -41,34 +41,35 @@ if strcmp(plot_flag, 'p')
 
         F = F + G;
         f = f + exp(g);
-        plot(exp(g))
-        drawnow
+        %plot(exp(g))
+        %drawnow
         fprintf('bouts %d: sum(f): = %d \n', idx_bout, sum(exp(g)))
-        trapz(tbl.durations_s(tbl.durations_s > points.truncation & tbl.durations_s <= points.censoring), f(tbl.durations_s > points.truncation &  tbl.durations_s <= points.censoring));
+        %trapz(tbl.durations_s(tbl.durations_s > points.truncation & tbl.durations_s <= points.censoring), f(tbl.durations_s > points.truncation &  tbl.durations_s <= points.censoring));
     end
 
     f = f ./ height(bouts);
     F = F ./ height(bouts);
-    trapz(tbl.durations_s(tbl.durations_s > points.truncation & tbl.durations_s <= points.censoring), f(tbl.durations_s > points.truncation & tbl.durations_s <= points.censoring)) + f(end)
+    %trapz(tbl.durations_s(tbl.durations_s > points.truncation & tbl.durations_s <= points.censoring), f(tbl.durations_s > points.truncation & tbl.durations_s <= points.censoring)) + f(end)
+    nll = [];
+else
 
-end
-arr = unique(bouts.fly)';
-if strcmp(iid, 'dep')
-    g = zeros(1, max(arr));
+    arr = unique(bouts.fly)';
+    if strcmp(iid, 'dep')
+        g = zeros(1, max(arr));
 
-    for idx_flies = arr
-        idx = bouts.fly == idx_flies;
-        g(idx_flies) = sum(comp_loglikelihood(params, bouts(idx, :), points, model_func, iid, tok, extra));
+        for idx_flies = arr
+            idx = bouts.fly == idx_flies;
+            g(idx_flies) = sum(comp_loglikelihood(params, bouts(idx, :), points, model_func, iid, tok, extra));
+        end
+
+    elseif strcmp(iid, 'iid')
+        g = zeros(1, height(bouts));
+        g = comp_loglikelihood(params, bouts, points, model_func, iid, tok, extra);
+
     end
 
-elseif strcmp(iid, 'iid')
-    g = zeros(1, height(bouts));
-    g = comp_loglikelihood(params, bouts, points, model_func, iid, tok, extra);
-
+    nll = -sum(g);
 end
-
-nll = -sum(g);
-
 end
 
 function [log_g] = comp_loglikelihood(x, bouts_individual_fly, points, model_func, iid, tok, extra)
@@ -94,7 +95,12 @@ lbl = lbl(~isnan(gt));
 gt_table = array2table(x, 'VariableNames', lbl);
 
 if isfield(extra, 'soc_mot_array')
-    y.sm = extra.soc_mot_array;
+    if size(extra.soc_mot_array, 1) == 1
+        y.sm = repmat(extra.soc_mot_array, height(y), 1);
+    else
+        y.sm = extra.soc_mot_array;
+    end
+
 end
 
 out = evaluate_model(model, gt_table, y);
@@ -233,10 +239,6 @@ if strcmp('iid', iid)
 
         fs = 60;
 
-        if size(extra.soc_mot_array, 1) == 1
-            out.mu = repmat(out.mu, height(out.theta), 1);
-        end
-
         below = bif.durations_s <  out.tndt;
         bet   = bif.durations_s >= out.tndt & bif.durations_s <= points.censoring;
         abo   = bif.durations_s >  points.censoring;
@@ -257,7 +259,7 @@ if strcmp('iid', iid)
         g(bet) = f(ts(bet), bet) ./ trunc_factor(bet);
         g(abo) = F(points.censoring, abo) ./ trunc_factor(abo);
 
-        g      = max(g, 1e-5);
+        g      = max(g, 1e-12);
         log_g  = log(g);
 
 %         log_g = g;

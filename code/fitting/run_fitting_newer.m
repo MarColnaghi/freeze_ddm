@@ -12,6 +12,7 @@ addParameter(opt, 'pass_ndt', true);
 
 addParameter(opt, 'ground_truth', []);
 addParameter(opt, 'only_bads', false);
+addParameter(opt, 'n_bads', 5);
 
 parse(opt, varargin{:});
 
@@ -20,6 +21,7 @@ export_results = opt.Results.export;
 ground_truth = opt.Results.ground_truth;
 bads_display = opt.Results.bads_display;
 pass_ndt = opt.Results.pass_ndt;
+n_bads = opt.Results.n_bads;
 
 %% Truncation Filter
 if isfield(points, 'truncation') && ~isempty(points.truncation)
@@ -53,7 +55,7 @@ surrogate.intercept = ones(height(surrogate), 1);
 llfun = @(x) nll_fly_ddm_newer(x, surrogate, points, model_str, 'iid', 'n', extra);
 
 %% BADS Optimization
-num_iters = 2;
+num_iters = n_bads;
 if bads_display
     options_bads.Display = 'iter';
 else
@@ -129,6 +131,11 @@ model_results.time = datetime;
 estimates_mean = nan(1, length(lbl));
 estimates_std = nan(1, length(lbl));
 
+if pass_ndt
+    x_mean = [x_mean extra.tndt];
+    x_std  = [x_std; 0];
+end
+
 estimates_mean(find(mask)) = x_mean;
 estimates_std(find(mask)) = x_std;
 
@@ -159,9 +166,11 @@ if export_results
     create_output_dirs(paths);
     model_results.bouts_path = paths.results;
     model_results.motion_cache_path = fullfile(paths.dataset, 'motion_cache.mat');
-    
+
     save(fullfile(paths.results, sprintf('fit_results_%s.mat', idx_model)), '-struct', 'model_results');
     save(fullfile(paths.results, 'surrogate.mat'), 'surrogate');
+    save(fullfile(paths.results, 'extra.mat'), 'extra');
+
 end
 end
 
