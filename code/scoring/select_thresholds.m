@@ -9,7 +9,7 @@ thresholds.le_window_sl = [15 50];
 bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
 bouts = bouts_formatting(bouts, thresholds);
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le');
-bouts_proc = bouts_proc(bouts_proc.durations >= 0, :);
+bouts_proc = bouts_proc(bouts_proc.durations >= 0.5, :);
 fd_distr_withparam_new(bouts_proc, 'loom', paths, false)
 
 % paths = path_generator('bouts_id', id_code, 'imfirst', true);
@@ -21,5 +21,5 @@ thresholds = define_thresholds;
 bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
 bouts = bouts_formatting(bouts, thresholds);
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le');
-bouts_proc = bouts_proc(bouts_proc.durations >= 0, :);
+bouts_proc = bouts_proc(bouts_proc.durations >= 0.5, :);
 fd_distr_withparam_new(bouts_proc, 'loom', paths, false)

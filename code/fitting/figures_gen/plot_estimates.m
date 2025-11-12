@@ -19,7 +19,7 @@ est_std = results.estimates_std(:, ~ismissing(results.estimates_mean));
 fh = figure('color','w', 'Position', [100 100 800 400]);
 
 hold on
-ylimits = [-1, 3.0];
+ylimits = [-1, 4];
 [suffixes, prefixes] = extract_dep(est_means);
 
 % Replace 'intercept' with '0' in the suffixes
@@ -60,6 +60,7 @@ xticks(xx);
 xticklabels(result); set(ax.XAxis, 'TickLabelInterpreter', 'latex', 'FontSize', 24);
 
 if export
+    paths.fig = results.fig_path;
     exporter(fh, paths, 'estimates.pdf')
 end
 

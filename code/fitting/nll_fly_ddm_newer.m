@@ -1,4 +1,4 @@
-function [nll, f, fd, F] = nll_fly_ddm_newer(params, bouts, points, model_num, iid, plot_flag, extra)
+function [nll, f, fd] = nll_fly_ddm_newer(params, bouts, points, model_num, iid, plot_flag, extra)
 
 % fd = freeze_durations
 % y1 = average_motion post to the freeze onset
@@ -18,38 +18,35 @@ tok = regexp(model_num, pattern, 'tokens');
 if strcmp(plot_flag, 'p')
 
     tbl = table();
-    tbl.durations_s = [0:1/60:(points.censoring + 1/60)]';
+    tbl.durations_s = [1/60:1/60:(points.censoring + 1/60)]';
     fd = tbl.durations_s;
     f = zeros(height(tbl.durations_s), 1);
-    F = zeros(height(tbl.durations_s), 1);
-    G = zeros(height(tbl.durations_s), 1);
 
-    figure
     hold on
-    for idx_bout = 1:height(bouts)
 
-        tbl.sm = bouts.sm(idx_bout)*ones(height(tbl),1);
-        tbl.smp = bouts.smp(idx_bout)*ones(height(tbl),1);
-        tbl.fs = bouts.fs(idx_bout)*ones(height(tbl),1);
-        tbl.ln = bouts.ln(idx_bout)*ones(height(tbl),1);
-        tbl.ls = bouts.ls(idx_bout)*ones(height(tbl),1);
-        tbl.intercept = bouts.intercept(idx_bout)*ones(height(tbl),1);
-
-        ec.soc_mot_array = extra.soc_mot_array(idx_bout, :);
-        g = comp_loglikelihood(params, tbl, points, model_func, iid, tok, ec);
-        %[~, G] = comp_loglikelihood(params, tbl, points, model_func, iid, tok, extra);
-
-        F = F + G;
-        f = f + exp(g);
-        %plot(exp(g))
-        %drawnow
-        fprintf('bouts %d: sum(f): = %d \n', idx_bout, sum(exp(g)))
-        %trapz(tbl.durations_s(tbl.durations_s > points.truncation & tbl.durations_s <= points.censoring), f(tbl.durations_s > points.truncation &  tbl.durations_s <= points.censoring));
-    end
+%     for idx_bout = 1:height(bouts)
+% 
+%         tbl.sm = bouts.sm(idx_bout) * ones(height(tbl),1);
+%         tbl.smp = bouts.smp(idx_bout) * ones(height(tbl),1);
+%         tbl.fs = bouts.fs(idx_bout) * ones(height(tbl),1);
+%         tbl.ln = bouts.ln(idx_bout) * ones(height(tbl),1);
+%         tbl.ls = bouts.ls(idx_bout) * ones(height(tbl),1);
+%         tbl.intercept = bouts.intercept(idx_bout) * ones(height(tbl),1);
+% 
+%         ec.soc_mot_array = extra.soc_mot_array(idx_bout, :);
+%         g = comp_loglikelihood(params, tbl, points, model_func, iid, tok, ec);
+% 
+%         if ~isempty(points.truncation)
+%             fprintf('bouts %d: sum(f): = %d \n', idx_bout, sum(exp(g(fd >= points.truncation + 0.003 & fd <= points.censoring + 1/60))))
+%         else
+%             fprintf('bouts %d: sum(f): = %d \n', idx_bout, sum(exp(g(fd > 0 & fd <= points.censoring + 1/60))))
+%         end
+% 
+%         f = f + exp(g);
+% 
+%     end
 
     f = f ./ height(bouts);
-    F = F ./ height(bouts);
-    %trapz(tbl.durations_s(tbl.durations_s > points.truncation & tbl.durations_s <= points.censoring), f(tbl.durations_s > points.truncation & tbl.durations_s <= points.censoring)) + f(end)
     nll = [];
 else
 
@@ -94,13 +91,15 @@ end
 lbl = lbl(~isnan(gt));
 gt_table = array2table(x, 'VariableNames', lbl);
 
-if isfield(extra, 'soc_mot_array')
-    if size(extra.soc_mot_array, 1) == 1
-        y.sm = repmat(extra.soc_mot_array, height(y), 1);
-    else
-        y.sm = extra.soc_mot_array;
-    end
+if strcmp('ed', tok{1}) || strcmp('ded', tok{1})
+    if isfield(extra, 'soc_mot_array')
+        if size(extra.soc_mot_array, 1) == 1
+            y.sm = repmat(extra.soc_mot_array, height(y), 1);
+        else
+            y.sm = extra.soc_mot_array;
+        end
 
+    end
 end
 
 out = evaluate_model(model, gt_table, y);
@@ -239,8 +238,8 @@ if strcmp('iid', iid)
 
         fs = 60;
 
-        below = bif.durations_s <  out.tndt;
-        bet   = bif.durations_s >= out.tndt & bif.durations_s <= points.censoring;
+        below = bif.durations_s <=  out.tndt;
+        bet   = bif.durations_s > out.tndt & bif.durations_s <= points.censoring;
         abo   = bif.durations_s >  points.censoring;
 
         [pdf, cdf] = pdf_cdf({'ed'});
@@ -259,7 +258,7 @@ if strcmp('iid', iid)
         g(bet) = f(ts(bet), bet) ./ trunc_factor(bet);
         g(abo) = F(points.censoring, abo) ./ trunc_factor(abo);
 
-        g      = max(g, 1e-12);
+        g      = max(g, epsN);
         log_g  = log(g);
 
 %         log_g = g;
@@ -324,6 +323,36 @@ if strcmp('iid', iid)
 %         log_marginal = max_ll + log(sum(exp(log_weighted - max_ll)));
 % 
 %         log_g = log_marginal;
+
+    elseif  strcmp('ded', tok{1})
+
+        fs = 60;
+
+        below = bif.durations_s <  out.tndt;
+        bet   = bif.durations_s >= out.tndt & bif.durations_s <= points.censoring;
+        abo   = bif.durations_s >  points.censoring;
+
+        [pdf, cdf] = pdf_cdf({'ed'});
+
+        f = @(ts, inds) out.pmix(inds)' .* pdf.ed(ts, out.theta1(inds), out.mu1(inds, :), out.tndt(inds), fs) + ...
+            (1 - out.pmix(inds))' .* pdf.ed(ts, out.theta2(inds), out.mu2(inds, :), out.tndt(inds), fs);
+        F = @(ts, inds) out.pmix(inds)' .* cdf.ed(ts, out.theta1(inds), out.mu1(inds, :), out.tndt(inds), fs) + ...
+            (1 - out.pmix(inds))' .* cdf.ed(ts, out.theta2(inds), out.mu2(inds, :), out.tndt(inds), fs);
+
+        epsN = 1e-12;
+
+        if ~isempty(points.truncation)
+            trunc_factor = @(inds) max(F(points.truncation, inds), epsN) ;
+        else
+            trunc_factor = @(inds) ones(size(ts(inds)))';
+        end
+
+        g(bet) = f(ts(bet), bet) ./ trunc_factor(bet);
+        g(abo) = F(points.censoring, abo) ./ trunc_factor(abo);
+
+        g      = max(g, 1e-12);
+        log_g  = log(g);
+
     end
 end
 

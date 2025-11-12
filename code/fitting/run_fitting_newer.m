@@ -164,7 +164,8 @@ if export_results
     paths.fig = fullfile(paths.fig, idx_model);
     paths.results = fullfile(paths.results, idx_model);
     create_output_dirs(paths);
-    model_results.bouts_path = paths.results;
+    model_results.bouts_path = paths.results; model_results.fig_path = paths.fig;
+
     model_results.motion_cache_path = fullfile(paths.dataset, 'motion_cache.mat');
 
     save(fullfile(paths.results, sprintf('fit_results_%s.mat', idx_model)), '-struct', 'model_results');

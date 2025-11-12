@@ -29,7 +29,7 @@ model.mu = struct( ...
     'predictors', {{ ...
     struct('name', 'sm'), ...
     struct('name', 'intercept')}}, ...
-    'ground_truth', [3 0], ...
+    'ground_truth', [0 0], ...
     'link', link_linear ...
     );
 
@@ -41,7 +41,7 @@ model.theta = struct(...
     struct('name', 'ls'), ...
     struct('name', 'intercept') ...
     }}, ...
-    'ground_truth', [0.2 0.5 -0.4 1.0], ...
+    'ground_truth', [0.2 0.5 -0.4 0.3], ...
     'link', link_linear ...
     );
 
@@ -115,7 +115,7 @@ for idx_trials = 1:sim_params.n_trials
 
     % Simulate RT from full DDM
     [rt.ed(idx_trials), traj_ed] = extrema_detection_new('mu_t', mu_tv, 'theta', theta_s, ...
-        'z', sim_params.z, 'dt', sim_params.dt, 'T', sim_params.T, 'ndt', tndt_s);% samples_sec(idx_trials));
+        'z', sim_params.z, 'dt', sim_params.dt, 'T', sim_params.T, 'ndt', tndt_s); % samples_sec(idx_trials));
 
     if idx_trials <= 311 && idx_trials >= 300
         nexttile
@@ -127,17 +127,15 @@ toc
 rt.ed(rt.ed > points.censoring) = sim_params.T + sim_params.dt;
 rt.ed(isnan(rt.ed)) = sim_params.T + sim_params.dt; 
 points.censoring = sim_params.T;
-points.truncation = [];
+points.truncation = 0;
 
-%
 fh = figure('color', 'w', 'Position', [100, 100, 600, 300]);
 tiledlayout(1, 1, 'TileSpacing', 'compact', 'Padding', 'loose')
 nexttile
 hold on
-histogram(rt.ed, 0:1/10:sim_params.T + sim_params.dt * 3, 'EdgeColor', 'none', 'Normalization', 'pdf')
+histogram(rt.ed, 1/120:1/20:sim_params.T + sim_params.dt * 3, 'EdgeColor', 'none', 'Normalization', 'pdf')
 apply_generic(gca)
-xlabel('Duration (s)'); ax.YAxis.Visible = 'off'; 
-
+ylabel('Density'); xlabel('Duration (s)'); ax.YAxis.Visible = 'off';
 exporter(fh, paths, 'Durations.pdf')
 
 extra.soc_mot_array = cell2mat(sm_raw)';
@@ -153,123 +151,124 @@ bouts_proc.intercept = ones(height(y),1);
 
 model_2_fit = 'ed5';
 model_results = run_fitting_newer(bouts_proc, points, model_2_fit, paths, 'export', true, 'extra', extra, 'ground_truth', gt_table, 'bads_display', true, 'pass_ndt', true, 'n_bads', 2);
-plot_estimates('results', model_results, 'export', false, 'paths', paths)
+plot_estimates('results', model_results, 'export', true, 'paths', paths)
 bouts_proc.sm = bouts_proc.avg_sm_freeze_norm;
 bouts_proc.smp = bouts_proc.avg_sm_freeze_norm;
 bouts_proc.fs = bouts_proc.avg_fs_freeze_norm;
 bouts_proc.ln = bouts_proc.nloom_norm;
 bouts_proc.ls = bouts_proc.sloom_norm;
 bouts_proc.intercept = ones(height(bouts_proc), 1);
-plot_fit('results', model_results, 'conditions', false)
+plot_fit('results', model_results, 'conditions', false, 'export', true, 'censored_inset', true, 'bin_size', 1, 'gt', true)
+plot_fit('results', model_results, 'conditions', true, 'export', true, 'bin_size', 10, 'censored_inset', true)
 
 %%
-
-n_samples = 300;  % number of samples from q(x)
-p_ndt_accum = zeros(1, 31);
-samples = vbmc_rnd(model_results.vp, n_samples);
-model_func = str2func(strcat('model_', model_2_fit));
-
-for s = 1:n_samples
-    x_s = samples(s,:);  % depends on how your VI is implemented
-    [~, p_ndt_s, ndt_values] = ndt_loglik(x_s, extra, model_func, points, bouts_proc);
-    p_ndt_accum = p_ndt_accum + p_ndt_s;
-end
-
-p_ndt_vi = p_ndt_accum / n_samples;
-[~, idx] = max(p_ndt_vi);
-ndt = ndt_values(idx);
-
-
-function [log_g, p_ndt_given_data, ndt_values] = ndt_loglik(x, extra, model_func, points, bouts_individual_fly)
-
-bif = bouts_individual_fly;
-
-ts = bif.durations_s;
-y = table;
-y.sm = bif.sm;
-y.smp = bif.smp;
-y.fs = bif.fs;
-y.ln = bif.ln;
-y.ls = bif.ls;
-y.intercept = bif.intercept;
-
-model = model_func();
-[gt, lbl] = get_ground_truth_vector(model);
-lbl = lbl(~isnan(gt));
-gt_table = array2table(x, 'VariableNames', lbl);
-out = evaluate_model(model, gt_table, y);
-
-if ~isfield(model, 'tndt')
-    out.tndt = zeros(size(out, 1), 1);
-end
-
-% assess freeze duration categories
-bet = bif.durations_s <= points.censoring;
-abo = bif.durations_s > points.censoring;
-
-g = zeros(size(ts));
-
-fs = 60;
-
-if size(extra.soc_mot_array, 1) == 1
-    out.mu = repmat(extra.soc_mot_array, height(out.theta), 1) .* x(1) .* (1/fs);
-else
-    out.mu = extra.soc_mot_array .* x(1) .* (1/fs);
-end
-
-n_ndt = 31;
-ndt_values = (0:(n_ndt-1)) / fs; % convert frames to seconds
-ndt_prior = ones(1, n_ndt) / n_ndt;
-
-[pdf, cdf] = pdf_cdf({'ed'});
-
-n_trials = length(ts);
-log_liks = zeros(n_trials, n_ndt);
-
-for i = 1:n_ndt
-
-    g = zeros(n_trials, 1);      % or eps, depending on your convention
-
-    current_ndt = ndt_values(i);
-
-    out.tndt = current_ndt *  ones(length(out.theta), 1);
-
-    below = bif.durations_s <  out.tndt;
-    bet   = bif.durations_s >= out.tndt & bif.durations_s <= points.censoring;
-    abo   = bif.durations_s >  points.censoring;
-
-    f = @(ts, inds) pdf.ed(ts, out.theta(inds), out.mu(inds, :), out.tndt(inds), fs);
-    F = @(ts, inds) cdf.ed(ts, out.theta(inds), out.mu(inds, :), out.tndt(inds), fs);
-
-    if ~isempty(points.truncation)
-        trunc_factor = @(inds) 1 - F(points.truncation, inds);
-    else
-        trunc_factor = @(inds) ones(size(ts(inds)))';
-    end
-
-    g(bet) = f(ts(bet), bet) ./ trunc_factor(bet);
-    g(abo) = F(points.censoring, abo) ./ trunc_factor(abo);
-
-    pdf_vals = g;
-    log_liks(:, i) = log(pdf_vals(:) + 1e-10);
-end
-
-% at the end:
-ll_per_ndt   = sum(log_liks, 1);
-log_prior    = log(ndt_prior);
-log_weighted = log_prior + ll_per_ndt;
-
-max_ll       = max(log_weighted);
-log_marginal = max_ll + log(sum(exp(log_weighted - max_ll)));
-
-log_g = log_marginal;
-
-% posterior over ndt:
-log_p_ndt_given_data = log_weighted - log_marginal;
-p_ndt_given_data = exp(log_p_ndt_given_data);     % [1 x n_ndt]
-% ndt_values you already defined above (0:(n_ndt-1))/fs
-
-end
+% 
+% n_samples = 300;  % number of samples from q(x)
+% p_ndt_accum = zeros(1, 31);
+% samples = vbmc_rnd(model_results.vp, n_samples);
+% model_func = str2func(strcat('model_', model_2_fit));
+% 
+% for s = 1:n_samples
+%     x_s = samples(s,:);  % depends on how your VI is implemented
+%     [~, p_ndt_s, ndt_values] = ndt_loglik(x_s, extra, model_func, points, bouts_proc);
+%     p_ndt_accum = p_ndt_accum + p_ndt_s;
+% end
+% 
+% p_ndt_vi = p_ndt_accum / n_samples;
+% [~, idx] = max(p_ndt_vi);
+% ndt = ndt_values(idx);
+% 
+% 
+% function [log_g, p_ndt_given_data, ndt_values] = ndt_loglik(x, extra, model_func, points, bouts_individual_fly)
+% 
+% bif = bouts_individual_fly;
+% 
+% ts = bif.durations_s;
+% y = table;
+% y.sm = bif.sm;
+% y.smp = bif.smp;
+% y.fs = bif.fs;
+% y.ln = bif.ln;
+% y.ls = bif.ls;
+% y.intercept = bif.intercept;
+% 
+% model = model_func();
+% [gt, lbl] = get_ground_truth_vector(model);
+% lbl = lbl(~isnan(gt));
+% gt_table = array2table(x, 'VariableNames', lbl);
+% out = evaluate_model(model, gt_table, y);
+% 
+% if ~isfield(model, 'tndt')
+%     out.tndt = zeros(size(out, 1), 1);
+% end
+% 
+% % assess freeze duration categories
+% bet = bif.durations_s <= points.censoring;
+% abo = bif.durations_s > points.censoring;
+% 
+% g = zeros(size(ts));
+% 
+% fs = 60;
+% 
+% if size(extra.soc_mot_array, 1) == 1
+%     out.mu = repmat(extra.soc_mot_array, height(out.theta), 1) .* x(1) .* (1/fs);
+% else
+%     out.mu = extra.soc_mot_array .* x(1) .* (1/fs);
+% end
+% 
+% n_ndt = 31;
+% ndt_values = (0:(n_ndt-1)) / fs; % convert frames to seconds
+% ndt_prior = ones(1, n_ndt) / n_ndt;
+% 
+% [pdf, cdf] = pdf_cdf({'ed'});
+% 
+% n_trials = length(ts);
+% log_liks = zeros(n_trials, n_ndt);
+% 
+% for i = 1:n_ndt
+% 
+%     g = zeros(n_trials, 1);      % or eps, depending on your convention
+% 
+%     current_ndt = ndt_values(i);
+% 
+%     out.tndt = current_ndt *  ones(length(out.theta), 1);
+% 
+%     below = bif.durations_s <  out.tndt;
+%     bet   = bif.durations_s >= out.tndt & bif.durations_s <= points.censoring;
+%     abo   = bif.durations_s >  points.censoring;
+% 
+%     f = @(ts, inds) pdf.ed(ts, out.theta(inds), out.mu(inds, :), out.tndt(inds), fs);
+%     F = @(ts, inds) cdf.ed(ts, out.theta(inds), out.mu(inds, :), out.tndt(inds), fs);
+% 
+%     if ~isempty(points.truncation)
+%         trunc_factor = @(inds) 1 - F(points.truncation, inds);
+%     else
+%         trunc_factor = @(inds) ones(size(ts(inds)))';
+%     end
+% 
+%     g(bet) = f(ts(bet), bet) ./ trunc_factor(bet);
+%     g(abo) = F(points.censoring, abo) ./ trunc_factor(abo);
+% 
+%     pdf_vals = g;
+%     log_liks(:, i) = log(pdf_vals(:) + 1e-10);
+% end
+% 
+% % at the end:
+% ll_per_ndt   = sum(log_liks, 1);
+% log_prior    = log(ndt_prior);
+% log_weighted = log_prior + ll_per_ndt;
+% 
+% max_ll       = max(log_weighted);
+% log_marginal = max_ll + log(sum(exp(log_weighted - max_ll)));
+% 
+% log_g = log_marginal;
+% 
+% % posterior over ndt:
+% log_p_ndt_given_data = log_weighted - log_marginal;
+% p_ndt_given_data = exp(log_p_ndt_given_data);     % [1 x n_ndt]
+% % ndt_values you already defined above (0:(n_ndt-1))/fs
+% 
+% end
 
 % %%
 % 

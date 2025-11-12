@@ -11,9 +11,9 @@ motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le');
 points.censoring = 10.5;
-points.truncation = 0.3;
+points.truncation = 0.35;
 
-%%  Now we added our vector column to the bouts table
+%  Now we added our vector column to the bouts table
 
 chunk_len = points.censoring * 60;
 
@@ -27,8 +27,8 @@ end
 
 soc_mot_array = cell2mat(sm_raw)';
 extra.soc_mot_array = soc_mot_array;
-model_results = run_fitting_newer_bads_only(bouts_proc, points, 'ed5', paths, 'export', true, 'extra', extra);
+model_results = run_fitting_newer(bouts_proc, points, 'ded2', paths, 'export', true, 'bads_display', true, 'pass_ndt', true, 'n_bads', 7, 'extra', extra);
 model_results.estimates_mean  
-plot_fit('results', model_results, 'conditions', false)
-plot_fit('results', model_results, 'conditions', true)
+plot_fit('results', model_results, 'conditions', false, 'export', true, 'bin_size', 1, 'censored_inset', true)
+plot_fit('results', model_results, 'conditions', true, 'export', true, 'bin_size', 10 )
 plot_estimates('results', model_results, 'export', true, 'paths', paths)

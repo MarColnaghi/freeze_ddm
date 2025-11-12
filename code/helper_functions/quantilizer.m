@@ -1,4 +1,4 @@
-function bouts = quantilizer(bouts, varargin)
+function [bouts_sloom, mask] = quantilizer(bouts, varargin)
 
 % Parse inputs
 opt = inputParser;
@@ -19,23 +19,32 @@ else
 end
 
 % Select Loom
-bouts = bouts(bouts.sloom_norm == idx_loom_speeds,:);
+mask_sloom = bouts.sloom_norm == idx_loom_speeds;
+bouts_sloom = bouts(mask_sloom, :);
+first_mask = find(mask_sloom);
 
 % Compute quantiles and discretize
-thr_sm = quantile(bouts.avg_sm_freeze_norm, linspace(0, 1, quant.sm + 1));
-quant_sm = discretize(bouts.avg_sm_freeze_norm, thr_sm);
+thr_sm = quantile(bouts_sloom.avg_sm_freeze_norm, linspace(0, 1, quant.sm + 1));
+quant_sm = discretize(bouts_sloom.avg_sm_freeze_norm, thr_sm);
 
-thr_fs = quantile(bouts.avg_fs_1s_norm, linspace(0, 1, quant.fs + 1));
-quant_fs = discretize(bouts.avg_fs_1s_norm, thr_fs);
+thr_fs = quantile(bouts_sloom.avg_fs_1s_norm, linspace(0, 1, quant.fs + 1));
+quant_fs = discretize(bouts_sloom.avg_fs_1s_norm, thr_fs);
 
 % Final selection
 if isfield(idx_quanti, 'ln')
     thr_ln = 0:5:20;
-    quant_ln = discretize(bouts.nloom, thr_ln);
-    bouts = bouts(quant_sm == idx_motion & ...
-                  quant_fs == idx_speeds & ...
-                  quant_ln == idx_nloom,:);
+    quant_ln = discretize(bouts_sloom.nloom, thr_ln);
+    bouts_sloom = bouts_sloom(quant_sm == idx_motion & ...
+        quant_fs == idx_speeds & ...
+        quant_ln == idx_nloom, :);
+
+    mask = first_mask(quant_sm == idx_motion & ...
+        quant_fs == idx_speeds & ...
+        quant_ln == idx_nloom);
 else
-    bouts = bouts(quant_sm == idx_motion & ...
-                  quant_fs == idx_speeds,:);
+    bouts_sloom = bouts_sloom(quant_sm == idx_motion & ...
+        quant_fs == idx_speeds, :);
+
+    mask = first_mask(quant_sm == idx_motion & ...
+        quant_fs == idx_speeds);
 end

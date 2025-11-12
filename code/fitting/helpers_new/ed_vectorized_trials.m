@@ -32,12 +32,14 @@ function result = ed_vectorized_trials(ts, theta, mu, fs, output_type)
     end
     
     % Time to frames (discrete)
-    frames = floor(ts * fs);
+    frames = ceil(ts * fs);
     % frames = ts * fs;
 
     % Clip frames to valid range
+    frames = max(0, min(n_frames, frames));
+    too_early  = frames < 1;
     frames = max(1, min(n_frames, frames));
-    
+
     % Compute all survival probabilities
     surv_probs = normcdf(theta - mu, 0, sqrt(1/fs));
     
@@ -53,6 +55,8 @@ function result = ed_vectorized_trials(ts, theta, mu, fs, output_type)
         survival_prob_at_t = cum_surv(linear_idx);
         cdf = survival_prob_at_t;
         cdf = cdf(:)'; % row vector
+        cdf(too_early) = 1;
+
     end
     
     % Compute PDF
@@ -71,10 +75,12 @@ function result = ed_vectorized_trials(ts, theta, mu, fs, output_type)
         
         % Crossing probability at the specific frame for each trial
         cross_prob = 1 - normcdf(theta - mu_at_frames, 0, sqrt(1/fs));
-        
+
         % Final probability [n_trials × 1]
         pdf = cross_prob .* survival_prob;
         pdf = pdf(:)'; % row vector
+        pdf(too_early) = 0;
+
     end
     
     % Return based on output_type
