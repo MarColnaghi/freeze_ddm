@@ -24,27 +24,28 @@ if strcmp(plot_flag, 'p')
 
     hold on
 
-%     for idx_bout = 1:height(bouts)
-% 
-%         tbl.sm = bouts.sm(idx_bout) * ones(height(tbl),1);
-%         tbl.smp = bouts.smp(idx_bout) * ones(height(tbl),1);
-%         tbl.fs = bouts.fs(idx_bout) * ones(height(tbl),1);
-%         tbl.ln = bouts.ln(idx_bout) * ones(height(tbl),1);
-%         tbl.ls = bouts.ls(idx_bout) * ones(height(tbl),1);
-%         tbl.intercept = bouts.intercept(idx_bout) * ones(height(tbl),1);
-% 
-%         ec.soc_mot_array = extra.soc_mot_array(idx_bout, :);
-%         g = comp_loglikelihood(params, tbl, points, model_func, iid, tok, ec);
-% 
-%         if ~isempty(points.truncation)
-%             fprintf('bouts %d: sum(f): = %d \n', idx_bout, sum(exp(g(fd >= points.truncation + 0.003 & fd <= points.censoring + 1/60))))
-%         else
-%             fprintf('bouts %d: sum(f): = %d \n', idx_bout, sum(exp(g(fd > 0 & fd <= points.censoring + 1/60))))
-%         end
-% 
-%         f = f + exp(g);
-% 
-%     end
+    for idx_bout = 1:height(bouts)
+
+        tbl.sm = bouts.sm(idx_bout) * ones(height(tbl),1);
+        tbl.smp = bouts.smp(idx_bout) * ones(height(tbl),1);
+        tbl.fs = bouts.fs(idx_bout) * ones(height(tbl),1);
+        tbl.ln = bouts.ln(idx_bout) * ones(height(tbl),1);
+        tbl.ls = bouts.ls(idx_bout) * ones(height(tbl),1);
+        tbl.intercept = bouts.intercept(idx_bout) * ones(height(tbl),1);
+
+        
+        ec.soc_mot_array = extra.soc_mot_array(idx_bout, :);
+        g = comp_loglikelihood(params, tbl, points, model_func, iid, tok, ec);
+
+        if ~isempty(points.truncation)
+            fprintf('bouts %d: sum(f): = %d \n', idx_bout, sum(exp(g(fd >= points.truncation + 0.003 & fd <= points.censoring + 1/60))))
+        else
+            fprintf('bouts %d: sum(f): = %d \n', idx_bout, sum(exp(g(fd > 0 & fd <= points.censoring + 1/60))))
+        end
+
+        f = f + exp(g);
+
+    end
 
     f = f ./ height(bouts);
     nll = [];
