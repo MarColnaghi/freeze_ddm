@@ -11,12 +11,12 @@ thresholds.le_window_sl = [15 50];
 bouts = bouts_formatting(bouts, thresholds);
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le');
 points.censoring = 10.5;
-points.truncation = 0.4;
-link_logistic = @(x) 1./(1 + exp(-x));     % log link for bound height
+points.truncation = min(bouts_proc.durations_s);
+link_logistic = @(x) 1./(1 + exp(-x));
 
 motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 
-model_2_fit = 'dddm0';
+model_2_fit = 'ded0';
 
 kde_estimates = importdata(fullfile('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/fitting_freezes/bsl/kde_spontaneous', id_code, 'kde_estimates_bsl.mat'));
 [~,idx] = unique(kde_estimates.Fkde, 'last');
@@ -33,7 +33,7 @@ for idx_trials = 1:height(bouts_proc)
 
 end
 
-soc_mot_array = cell2mat(sm_raw)';
+extra.soc_mot_array = cell2mat(sm_raw)';
 
 %  Now we added our vector column to the bouts table
 fh = figure('Position', [100 100 500 400], 'Color', 'w');
@@ -42,13 +42,13 @@ tiledlayout(2, 1, 'TileSpacing', 'loose')
 nexttile
 histogram(bouts_proc.avg_fs_1s_norm, 0:0.05:4, 'FaceColor', col.vars.fs(round(end/2), :), 'EdgeColor', 'none')
 fs_quant = prctile(bouts_proc.avg_fs_1s_norm, [0, 25, 50, 75, 100]); fs_quant(1) = 0; fs_quant(end) = 2; 
-fs_quant = [0 0.45 0.8 1.2 2.2]; 
+fs_quant = [0 0.45 0.7 1.1 2.2]; 
 xline(fs_quant);
 apply_generic(gca)
 nexttile
 histogram(bouts_proc.avg_sm_freeze_norm, 0:0.05:4, 'FaceColor', col.vars.sm(round(end/2), :), 'EdgeColor', 'none');
 sm_quant = prctile(bouts_proc.avg_sm_freeze_norm, [0, 25, 50, 75, 100]); sm_quant(1) = 0; sm_quant(end) = 2; 
-sm_quant = [0,.2, 0.45, 0.75, 1.65]; 
+sm_quant = [0, .2, 0.45, 0.8, 1.85]; 
 xline(sm_quant);
 apply_generic(gca)
 
@@ -133,6 +133,8 @@ for idx_quantiles = 1:n_quantiles
     for idx_ln = unique(bouts_proc.sloom_norm)'
 
         mask = bouts_proc.sloom_norm == idx_ln & bouts_proc.avg_fs_1s_norm >= fs_quant(idx_quantiles) & bouts_proc.avg_fs_1s_norm < fs_quant(idx_quantiles + 1);
+        ec.soc_mot_array = extra.soc_mot_array(mask, :);
+        
         bouts_quant = bouts_proc(mask, :);
 
         x_fs(idx_quantiles, idx_ln) = median(bouts_quant.avg_fs_1s_norm);
@@ -141,14 +143,17 @@ for idx_quantiles = 1:n_quantiles
         % extra = [];
         % extra.soc_mot_array = soc_mot_array(mask, :);
 
-        model_results = run_fitting_newer_bads_only(bouts_quant, points, model_2_fit, paths, 'export', false, 'extra', extra);
+        model_results = run_fitting_newer(bouts_quant, points, model_2_fit, paths, 'export', false, 'extra', ec);
         est = table2array(model_results.estimates_mean);
+
         estimates(idx_quantiles, idx_ln, :) = est(~isnan(est));
 
     end
 end
 
-estimates( :, :, 5) = link_logistic(estimates( :, :, 5));
+estimates(:, :, 5) = link_logistic(estimates( :, :, 5));
+estimates(3, :, [1 2 3 4]) = estimates(3, :, [3 4 1 2])
+estimates(3, :, 5) = 1 - estimates(3, :, 5)
 
 fh = figure('color','w','Position',[100,100, 700, 320]);
 tiledlayout(1, n_params, 'TileSpacing', 'loose', 'Padding', 'compact')
@@ -162,7 +167,7 @@ for idx_params = 1:size(estimates, 3)
     axis square
 
     xlim([0 2])
-    xticks(mean(x_sm, 2))
+    xticks(mean(x_fs, 2))
     xticklabels([1 2 3 4])
 
     if idx_params == 1
@@ -176,6 +181,8 @@ for idx_params = 1:size(estimates, 3)
     elseif idx_params == 4
         ylim([0 0.2])
 
+    elseif idx_params == 5
+        ylim([0 1])
     end
     
     apply_generic(gca)

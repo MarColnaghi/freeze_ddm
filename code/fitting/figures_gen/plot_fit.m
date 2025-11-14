@@ -6,6 +6,8 @@ addParameter(opt, 'freezes', []);
 addParameter(opt, 'results', []);
 addParameter(opt, 'bin_size', 5);
 addParameter(opt, 'conditions', false);
+addParameter(opt, 'type', 'continuous');
+
 addParameter(opt, 'censored_inset', false);
 addParameter(opt, 'gt', false);
 addParameter(opt, 'export', false);
@@ -22,6 +24,7 @@ paths = opt.Results.paths;
 censored_inset = opt.Results.censored_inset;
 bin_size = opt.Results.bin_size;
 gt_plot = opt.Results.gt;
+type = opt.Results.type;
 
 fs = 60;
 bin_size_in_seconds = bin_size/fs;
@@ -48,9 +51,20 @@ if ~conditions
     fh = figure('Position', [100 100 800 500], 'Color', 'w');
     hold on
     histogram(freezes.durations_s, 1/120:bin_size_in_seconds:12, 'Normalization', 'pdf', 'FaceColor', 'r', 'EdgeColor', 'none')
-    fd_ds = [mean(reshape(fd(1:end - 1), bin_size, []), 1) fd(end)]; f_ds = [sum(reshape(f(1:end - 1), bin_size, []), 1) f(end)];
-    plot(fd_ds, f_ds ./ bin_size_in_seconds, 'k--', 'LineWidth', 2)    
-    if gt_plot
+    fd_ds = [mean(reshape(fd(1:end - 1), bin_size, []), 1) fd(end)]; % f_ds = [sum(reshape(f(1:end - 1), bin_size, []), 1) f(end)];
+    %plot(fd_ds, f_ds , 'k--', 'LineWidth', 2)
+
+    if strcmp('discrete', type)
+        f_ds = [sum(reshape(f(1:end - 1), bin_size, []), 1) f(end)];
+        plot(fd_ds, f_ds ./ bin_size_in_seconds, 'k--', 'LineWidth', 2)
+
+    else
+        f_ds = [mean(reshape(f(1:end - 1), bin_size, []), 1) f(end) ./ bin_size_in_seconds];
+        plot(fd_ds, f_ds, 'k--', 'LineWidth', 2)
+
+    end
+
+    if gt_plot % This has to be fixed
         [~, f, fd] = nll_fly_ddm_newer(gt, freezes, results.points, results.fitted_model, 'iid', 'p', extra);
         fd_ds = [mean(reshape(fd(1:end - 1), bin_size, []), 1) fd(end)]; f_ds = [sum(reshape(f(1:end - 1), bin_size, []), 1) f(end)];
         plot(fd_ds, f_ds ./ bin_size_in_seconds, 'b--', 'LineWidth', 2)
@@ -61,16 +75,21 @@ if ~conditions
     ylabel('pdf')
     xlim([-0.1 11.1])
     ylim([-0.001 0.501])
-    
+
     if censored_inset
-        ax_inset = axes('Position',[0.6 0.5 0.1 0.3]); hold on;
+        ax_inset = axes('Position', [0.6 0.5 0.1 0.3]); hold on;
         h_ins_h = histogram(freezes.durations_s, results.points.censoring+1e-2:bin_size_in_seconds:12, 'Normalization', 'pdf', 'FaceColor', 'r', 'EdgeColor', 'none');
         [~, idx] = find(h_ins_h.Values > 0);
-        censored_x = (h_ins_h.BinEdges(idx) + h_ins_h.BinEdges(idx + 1)) ./ 2;
+        censored_x = results.points.censoring;
+
+        if any(idx)
+            height = h_ins_h.Values(idx);
+        else
+            height = nan;
+        end
         xlim([censored_x - 0.1 censored_x + 0.1])
-        ylim([h_ins_h.Values(idx) - 0.5 h_ins_h.Values(idx) + 0.5])
-        plot(censored_x, f_ds(end) ./ bin_size_in_seconds, 'ko', 'LineWidth', 2)
-        xticks(censored_x); xticklabels('cens'); xtickangle(0); 
+        scatter(results.points.censoring, f_ds(end), 240, '_', 'k', 'LineWidth', 2)
+        xticks(results.points.censoring); xticklabels('cens'); xtickangle(0);
         apply_generic(ax_inset)
     end
 
@@ -92,8 +111,17 @@ else
                 [~, f, fd] = nll_fly_ddm_newer(est_params, freezes_quant, results.points, results.fitted_model, 'iid', 'p', ec);
 
                 histogram(freezes_quant.durations_s, 1/120:bin_size/fs:12, 'Normalization', 'pdf', 'FaceColor', 'r', 'EdgeColor', 'none')
-                fd_ds = [mean(reshape(fd(1:end - 1), bin_size, []), 1) fd(end)]; f_ds = [sum(reshape(f(1:end - 1), bin_size, []), 1) f(end)];
-                plot(fd_ds, f_ds ./ bin_size_in_seconds, 'k--', 'LineWidth', 2)
+                fd_ds = [mean(reshape(fd(1:end - 1), bin_size, []), 1) fd(end)];
+
+                if strcmp('discrete', type)
+                    f_ds = [sum(reshape(f(1:end - 1), bin_size, []), 1) f(end)];
+                    plot(fd_ds, f_ds ./ bin_size_in_seconds, 'k--', 'LineWidth', 2)
+
+                else
+                    f_ds = [mean(reshape(f(1:end - 1), bin_size, []), 1) f(end) ./ bin_size_in_seconds];
+                    plot(fd_ds, f_ds, 'k--', 'LineWidth', 2)
+
+                end
 
                 %
                 %                 est_params_first = est_params;
@@ -123,19 +151,24 @@ else
                 ax_inset(i) = axes('Position', inset_pos);  % Create inset axes with adjusted position
                 hold(ax_inset(i), 'on');
                 set(gca,'box','on')
-                h_ins_h = histogram(freezes.durations_s, results.points.censoring+1e-2:bin_size_in_seconds:12, 'Normalization', 'pdf', 'FaceColor', 'r', 'EdgeColor', 'none');
+                h_ins_h = histogram(freezes_quant.durations_s, results.points.censoring + 0.002:bin_size_in_seconds:12, 'Normalization', 'pdf', 'FaceColor', 'r', 'EdgeColor', 'none');
                 [~, idx] = find(h_ins_h.Values > 0);
-                censored_x = (h_ins_h.BinEdges(idx) + h_ins_h.BinEdges(idx + 1)) ./ 2;
+                censored_x = results.points.censoring;
+
+                if any(idx)
+                    height(i) = h_ins_h.Values(idx);
+                else
+                    height(i) = nan;
+                end
                 xlim([censored_x - 0.1 censored_x + 0.1])
-                height(i) = h_ins_h.Values(idx);
-                plot(censored_x, f_ds(end) ./ bin_size_in_seconds, 'ko', 'LineWidth', 2)
-                xticks(censored_x); xticklabels('cens'); xtickangle(0);
+                scatter(results.points.censoring, f_ds(end), 240, '_', 'k', 'LineWidth', 2)
+                xticks(results.points.censoring); xticklabels('cens'); xtickangle(0);
                 apply_generic(ax_inset(i))
                 hold(ax_inset(i), 'off');
                 
 
-
             end
+            drawnow
         end
     end
     linkaxes(ax)

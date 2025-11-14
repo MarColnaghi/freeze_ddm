@@ -41,7 +41,7 @@ model.theta = struct(...
     struct('name', 'ls'), ...
     struct('name', 'intercept') ...
     }}, ...
-    'ground_truth', [0.2 0.5 -0.4 0.3], ...
+    'ground_truth', [0 -0.05 0.1 0.1], ...
     'link', link_linear ...
     );
 
@@ -50,7 +50,7 @@ model.tndt = struct( ...
     'predictors', {{ ...
     struct('name', 'intercept') ...
     }}, ...
-    'ground_truth', 0.150, ...
+    'ground_truth', 0, ...
     'link', link_linear ...
     );
 
@@ -108,7 +108,7 @@ for idx_trials = 1:sim_params.n_trials
     sm_raw{idx_trials} = sum_motion(ons:ons + chunk_len - 1);
     sm_chunk = sm_raw{idx_trials};
 
-    mu_tv = gt_table.mu_sm .* sm_chunk + gt_table.mu_intercept;
+    mu_tv = gt_table.mu_sm .* sm_chunk;
     mu_st = ncomp_vars.mu(idx_trials);
     theta_s = ncomp_vars.theta(idx_trials);
     tndt_s = ncomp_vars.tndt(idx_trials);
@@ -127,7 +127,7 @@ toc
 rt.ed(rt.ed > points.censoring) = sim_params.T + sim_params.dt;
 rt.ed(isnan(rt.ed)) = sim_params.T + sim_params.dt; 
 points.censoring = sim_params.T;
-points.truncation = 0;
+points.truncation = min(rt.ed);
 
 fh = figure('color', 'w', 'Position', [100, 100, 600, 300]);
 tiledlayout(1, 1, 'TileSpacing', 'compact', 'Padding', 'loose')
@@ -149,8 +149,8 @@ bouts_proc.ls = bouts_proc.sloom_norm;
 bouts_proc.ln = bouts_proc.nloom_norm;
 bouts_proc.intercept = ones(height(y),1);
 
-model_2_fit = 'ed5';
-model_results = run_fitting_newer(bouts_proc, points, model_2_fit, paths, 'export', true, 'extra', extra, 'ground_truth', gt_table, 'bads_display', true, 'pass_ndt', true, 'n_bads', 2);
+model_2_fit = 'exp1';
+model_results = run_fitting_newer(bouts_proc, points, model_2_fit, paths, 'export', true, 'extra', extra, 'ground_truth', gt_table, 'bads_display', true, 'pass_ndt', false, 'n_bads', 1);
 plot_estimates('results', model_results, 'export', true, 'paths', paths)
 bouts_proc.sm = bouts_proc.avg_sm_freeze_norm;
 bouts_proc.smp = bouts_proc.avg_sm_freeze_norm;
@@ -158,8 +158,8 @@ bouts_proc.fs = bouts_proc.avg_fs_freeze_norm;
 bouts_proc.ln = bouts_proc.nloom_norm;
 bouts_proc.ls = bouts_proc.sloom_norm;
 bouts_proc.intercept = ones(height(bouts_proc), 1);
-plot_fit('results', model_results, 'conditions', false, 'export', true, 'censored_inset', true, 'bin_size', 1, 'gt', true)
-plot_fit('results', model_results, 'conditions', true, 'export', true, 'bin_size', 10, 'censored_inset', true)
+plot_fit('results', model_results, 'conditions', false, 'export', true, 'censored_inset', true, 'bin_size', 1, 'gt', false, 'type', 'continuous')
+plot_fit('results', model_results, 'conditions', true, 'export', true, 'bin_size', 3, 'censored_inset', true, 'type', 'continuous')
 
 %%
 % 

@@ -17,37 +17,47 @@ tok = regexp(model_num, pattern, 'tokens');
 
 if strcmp(plot_flag, 'p')
 
-    tbl = table();
-    tbl.durations_s = [1/60:1/60:(points.censoring + 1/60)]';
-    fd = tbl.durations_s;
-    f = zeros(height(tbl.durations_s), 1);
+    
+    fd = [1/60:1/60:(points.censoring + 1/60)]';
+    num_times = height(fd);
+    num_bouts = height(bouts);
 
+    tbl = table();
+    tbl.durations_s = fd;
+    tbl.sm = zeros(num_times, 1);
+    tbl.smp = zeros(num_times, 1);
+    tbl.fs = zeros(num_times, 1);
+    tbl.ln = zeros(num_times, 1);
+    tbl.ls = zeros(num_times, 1);
+    tbl.intercept = zeros(num_times, 1);
+    
+    f = zeros(num_times, 1);
+    
     hold on
 
-    for idx_bout = 1:height(bouts)
+    for idx_bout = 1:num_bouts
 
-        tbl.sm = bouts.sm(idx_bout) * ones(height(tbl),1);
-        tbl.smp = bouts.smp(idx_bout) * ones(height(tbl),1);
-        tbl.fs = bouts.fs(idx_bout) * ones(height(tbl),1);
-        tbl.ln = bouts.ln(idx_bout) * ones(height(tbl),1);
-        tbl.ls = bouts.ls(idx_bout) * ones(height(tbl),1);
-        tbl.intercept = bouts.intercept(idx_bout) * ones(height(tbl),1);
+        tbl.sm(:) = bouts.sm(idx_bout);
+        tbl.smp(:) = bouts.smp(idx_bout);
+        tbl.fs(:) = bouts.fs(idx_bout);
+        tbl.ln(:) = bouts.ln(idx_bout);
+        tbl.ls(:) = bouts.ls(idx_bout);
+        tbl.intercept(:) = bouts.intercept(idx_bout);
 
-        
         ec.soc_mot_array = extra.soc_mot_array(idx_bout, :);
         g = comp_loglikelihood(params, tbl, points, model_func, iid, tok, ec);
 
         if ~isempty(points.truncation)
-            fprintf('bouts %d: sum(f): = %d \n', idx_bout, sum(exp(g(fd >= points.truncation + 0.003 & fd <= points.censoring + 1/60))))
+            fprintf('bouts %d: sum(f): = %d \n', idx_bout, trapz(fd(fd >= points.truncation & fd <= points.censoring + 1/60) , exp(g(fd >= points.truncation & fd <= points.censoring + 1/60))))
         else
-            fprintf('bouts %d: sum(f): = %d \n', idx_bout, sum(exp(g(fd > 0 & fd <= points.censoring + 1/60))))
+            fprintf('bouts %d: sum(f): = %d \n', idx_bout, trapz(exp(g(fd > 0 & fd <= points.censoring + 1/60))))
         end
 
         f = f + exp(g);
 
     end
 
-    f = f ./ height(bouts);
+    f = f ./ num_bouts;
     nll = [];
 else
 
@@ -232,7 +242,8 @@ if strcmp('iid', iid)
         g(bet) = f(ts(bet), bet) ./ trunc_factor(bet);
         g(abo) = (1 - F(points.censoring, abo)) ./ trunc_factor(abo);
 
-        g      = max(g, 1e-5);
+        epsN = 1e-12;
+        g      = max(g, epsN);
         log_g  = log(g);
 
     elseif  strcmp('ed', tok{1})

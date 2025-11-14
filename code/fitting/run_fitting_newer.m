@@ -96,7 +96,14 @@ if ~isempty(ground_truth)
     if width(ground_truth) == width(array2table(estimates, 'VariableNames', lbl))
         ground_truth = [ground_truth; array2table(estimates, 'VariableNames', lbl)];
     else
+        try
         ground_truth = outerjoin(ground_truth, array2table(estimates, 'VariableNames', lbl), 'MergeKeys', true);
+        catch
+            disp('not sharing any parameter')
+            temp = array2table(estimates, 'VariableNames', lbl);
+            temp.(ground_truth.Properties.VariableNames{1}) = nan;
+            ground_truth = outerjoin(ground_truth, temp, 'MergeKeys', true);
+        end
     end
     plc_hold = ground_truth;
     plc_hold(:, all(ismissing(plc_hold))) = [];
