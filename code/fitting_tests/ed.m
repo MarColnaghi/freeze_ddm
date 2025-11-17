@@ -36,12 +36,12 @@ model.mu = struct( ...
 % For theta 1
 model.theta = struct(...
     'predictors', {{ ...
+    struct('name', 'sm'), ...
     struct('name', 'fs'), ...
-    struct('name', 'ln'), ...
     struct('name', 'ls'), ...
     struct('name', 'intercept') ...
     }}, ...
-    'ground_truth', [0 -0.05 0.1 0.1], ...
+    'ground_truth', [-0.25 0.1 0.12 0.25], ...
     'link', link_linear ...
     );
 
@@ -50,7 +50,7 @@ model.tndt = struct( ...
     'predictors', {{ ...
     struct('name', 'intercept') ...
     }}, ...
-    'ground_truth', 0, ...
+    'ground_truth', 0.1, ...
     'link', link_linear ...
     );
 
@@ -105,7 +105,7 @@ for idx_trials = 1:sim_params.n_trials
     ons = bouts_proc.onsets(idx_trials);
 
     sum_motion = motion_cache(bouts_proc.fly(idx_trials));
-    sm_raw{idx_trials} = sum_motion(ons:ons + chunk_len - 1);
+    sm_raw{idx_trials} = sum_motion(ons:ons + chunk_len - 1 ./ 10x);
     sm_chunk = sm_raw{idx_trials};
 
     mu_tv = gt_table.mu_sm .* sm_chunk;
@@ -114,7 +114,7 @@ for idx_trials = 1:sim_params.n_trials
     tndt_s = ncomp_vars.tndt(idx_trials);
 
     % Simulate RT from full DDM
-    [rt.ed(idx_trials), traj_ed] = extrema_detection_new('mu_t', mu_tv, 'theta', theta_s, ...
+    [rt.ed(idx_trials), traj_ed] = extrema_detection_new('mu', mu_st, 'theta', theta_s, ...
         'z', sim_params.z, 'dt', sim_params.dt, 'T', sim_params.T, 'ndt', tndt_s); % samples_sec(idx_trials));
 
     if idx_trials <= 311 && idx_trials >= 300
@@ -127,7 +127,7 @@ toc
 rt.ed(rt.ed > points.censoring) = sim_params.T + sim_params.dt;
 rt.ed(isnan(rt.ed)) = sim_params.T + sim_params.dt; 
 points.censoring = sim_params.T;
-points.truncation = min(rt.ed);
+points.truncation = 0.3;
 
 fh = figure('color', 'w', 'Position', [100, 100, 600, 300]);
 tiledlayout(1, 1, 'TileSpacing', 'compact', 'Padding', 'loose')
@@ -149,8 +149,8 @@ bouts_proc.ls = bouts_proc.sloom_norm;
 bouts_proc.ln = bouts_proc.nloom_norm;
 bouts_proc.intercept = ones(height(y),1);
 
-model_2_fit = 'exp1';
-model_results = run_fitting_newer(bouts_proc, points, model_2_fit, paths, 'export', true, 'extra', extra, 'ground_truth', gt_table, 'bads_display', true, 'pass_ndt', false, 'n_bads', 1);
+model_2_fit = 'simed1';
+model_results = run_fitting_newer(bouts_proc, points, model_2_fit, paths, 'export', true,  'ground_truth', gt_table, 'bads_display', true, 'pass_ndt', true, 'n_bads', 5, 'extra', extra);
 plot_estimates('results', model_results, 'export', true, 'paths', paths)
 bouts_proc.sm = bouts_proc.avg_sm_freeze_norm;
 bouts_proc.smp = bouts_proc.avg_sm_freeze_norm;
@@ -158,8 +158,8 @@ bouts_proc.fs = bouts_proc.avg_fs_freeze_norm;
 bouts_proc.ln = bouts_proc.nloom_norm;
 bouts_proc.ls = bouts_proc.sloom_norm;
 bouts_proc.intercept = ones(height(bouts_proc), 1);
-plot_fit('results', model_results, 'conditions', false, 'export', true, 'censored_inset', true, 'bin_size', 1, 'gt', false, 'type', 'continuous')
-plot_fit('results', model_results, 'conditions', true, 'export', true, 'bin_size', 3, 'censored_inset', true, 'type', 'continuous')
+fh = plot_fit('results', model_results, 'conditions', false, 'export', true, 'censored_inset', true, 'bin_size', 1, 'gt', false, 'type', 'discrete');
+fh = plot_fit('results', model_results, 'conditions', true, 'export', true, 'bin_size', 5, 'censored_inset', true, 'type', 'discrete');
 
 %%
 % 

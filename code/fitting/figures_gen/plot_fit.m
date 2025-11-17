@@ -1,4 +1,4 @@
-function [fd, f] = plot_fit(varargin)
+function [fh, fd, f] = plot_fit(varargin)
 
 opt = inputParser;
 addParameter(opt, 'extra', []);
@@ -38,7 +38,6 @@ if isempty(opt.Results.extra)
 end
 
 est_params = table2array(results.estimates_mean(:, ~ismissing(results.estimates_mean)));
-gt = table2array(results.ground_truth(1,~ismissing(results.estimates_mean)));
 
 results.fitted_model = sprintf('model_%s', results.fitted_model);
 if ~isempty(results.points.censoring)
@@ -56,7 +55,8 @@ if ~conditions
 
     if strcmp('discrete', type)
         f_ds = [sum(reshape(f(1:end - 1), bin_size, []), 1) f(end)];
-        plot(fd_ds, f_ds ./ bin_size_in_seconds, 'k--', 'LineWidth', 2)
+        f_ds = f_ds ./ bin_size_in_seconds;
+        plot(fd_ds, f_ds, 'k--', 'LineWidth', 2)
 
     else
         f_ds = [mean(reshape(f(1:end - 1), bin_size, []), 1) f(end) ./ bin_size_in_seconds];
@@ -65,6 +65,8 @@ if ~conditions
     end
 
     if gt_plot % This has to be fixed
+        gt = table2array(results.ground_truth(1,~ismissing(results.estimates_mean)));
+
         [~, f, fd] = nll_fly_ddm_newer(gt, freezes, results.points, results.fitted_model, 'iid', 'p', extra);
         fd_ds = [mean(reshape(fd(1:end - 1), bin_size, []), 1) fd(end)]; f_ds = [sum(reshape(f(1:end - 1), bin_size, []), 1) f(end)];
         plot(fd_ds, f_ds ./ bin_size_in_seconds, 'b--', 'LineWidth', 2)
@@ -115,7 +117,8 @@ else
 
                 if strcmp('discrete', type)
                     f_ds = [sum(reshape(f(1:end - 1), bin_size, []), 1) f(end)];
-                    plot(fd_ds, f_ds ./ bin_size_in_seconds, 'k--', 'LineWidth', 2)
+                    f_ds = f_ds ./ bin_size_in_seconds;
+                    plot(fd_ds, f_ds, 'k--', 'LineWidth', 2)
 
                 else
                     f_ds = [mean(reshape(f(1:end - 1), bin_size, []), 1) f(end) ./ bin_size_in_seconds];

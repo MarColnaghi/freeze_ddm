@@ -8,7 +8,7 @@ opt = inputParser;
 addParameter(opt, 'extra', []);
 addParameter(opt, 'export', false);
 addParameter(opt, 'bads_display', false);
-addParameter(opt, 'pass_ndt', true);
+addParameter(opt, 'pass_ndt', false);
 
 addParameter(opt, 'ground_truth', []);
 addParameter(opt, 'only_bads', false);
@@ -173,7 +173,7 @@ if export_results
     create_output_dirs(paths);
     model_results.bouts_path = paths.results; model_results.fig_path = paths.fig;
 
-    model_results.motion_cache_path = fullfile(paths.dataset, 'motion_cache.mat');
+    model_results.motion_cache_path = fullfile(paths.cache_path, 'motion_cache.mat');
 
     save(fullfile(paths.results, sprintf('fit_results_%s.mat', idx_model)), '-struct', 'model_results');
     save(fullfile(paths.results, 'surrogate.mat'), 'surrogate');

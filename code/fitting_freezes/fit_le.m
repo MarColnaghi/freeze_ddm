@@ -21,14 +21,14 @@ for idx_trials = 1:height(bouts_proc)
 
     ons = bouts_proc.onsets(idx_trials);
     sum_motion = motion_cache(bouts_proc.fly(idx_trials));
-    sm_raw{idx_trials} = sum_motion(ons:ons + chunk_len - 1);
+    sm_raw{idx_trials} = sum_motion(ons:ons + chunk_len - 1) ./ 10;
 
 end
 
 soc_mot_array = cell2mat(sm_raw)';
 extra.soc_mot_array = soc_mot_array;
-model_results = run_fitting_newer(bouts_proc, points, 'ded2', paths, 'export', true, 'bads_display', true, 'pass_ndt', true, 'n_bads', 7, 'extra', extra);
+model_results = run_fitting_newer(bouts_proc, points, 'ded2', paths, 'export', true, 'bads_display', true, 'pass_ndt', true, 'n_bads', 3, 'extra', extra);
 model_results.estimates_mean  
-plot_fit('results', model_results, 'conditions', false, 'export', true, 'bin_size', 1, 'censored_inset', true)
-plot_fit('results', model_results, 'conditions', true, 'export', true, 'bin_size', 10 )
-plot_estimates('results', model_results, 'export', true, 'paths', paths)
+fh = plot_fit('results', model_results, 'conditions', false, 'export', true, 'bin_size', 3, 'censored_inset', true, 'type', 'discrete');
+fh_conditions = plot_fit('results', model_results, 'conditions', true, 'export', true, 'bin_size', 5 , 'type', 'discrete');
+plot_estimates('results', model_results, 'export', true, 'paths', paths, 'ylimits', [-0.5 4])

@@ -6,7 +6,7 @@ threshold_imm = 3; threshold_mob = 3; threshold_pc = 4; id_code = sprintf('imm%d
 paths = path_generator('folder', 'fitting_tests/dddm', 'bouts_id', id_code);
 load(fullfile(paths.dataset, 'bouts.mat'));
 kde_estimates = importdata(fullfile('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/fitting_freezes/bsl/kde_spontaneous', id_code, 'kde_estimates_bsl.mat'));
-[~,idx] = unique(kde_estimates.Fkde, 'last');
+[~, idx] = unique(kde_estimates.Fkde, 'last');
 Fkde = kde_estimates.Fkde(idx); xkde = kde_estimates.xkde(idx); fkde = kde_estimates.fkde(idx); 
 
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le');

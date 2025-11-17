@@ -27,7 +27,7 @@ model.mu = struct( ...
     'predictors', {{ ...
     struct('name', 'sm') ...
     }}, ...
-    'ground_truth', 2.2, ...
+    'ground_truth', 3.6, ...
     'link', link_linear ...
     );
 
@@ -36,7 +36,7 @@ model.theta = struct(...
     'predictors', {{ ...
     struct('name', 'intercept') ...
     }}, ...
-    'ground_truth', 0.39, ...
+    'ground_truth', 0.32, ...
     'link', link_linear ...
     );
 
@@ -110,7 +110,7 @@ for idx_trials = 1:sim_params.n_trials
 
     % Simulate RT from full DDM
     [rt.ed(idx_trials), traj_ed] = extrema_detection_new('mu_t', mu_tv, 'theta', theta_s, ...
-        'z', sim_params.z, 'dt', sim_params.dt, 'T', sim_params.T, 'ndt', samples_sec(idx_trials)); % samples_sec(idx_trials));
+        'z', sim_params.z, 'dt', sim_params.dt, 'T', sim_params.T, 'ndt', tndt_s);%, samples_sec(idx_trials)); % samples_sec(idx_trials));
 
     t_of_cross = round(rt.ed(idx_trials) * 1/sim_params.dt);
 
@@ -119,7 +119,7 @@ for idx_trials = 1:sim_params.n_trials
 end
 
 toc
-timelock_sm{isnan(rt.ed)} = {};
+% timelock_sm{isnan(rt.ed)} = [];
 rt.ed(rt.ed > points.censoring) = nan;
 rt.ed(isnan(rt.ed)) = nan;
 points.censoring = sim_params.T;
@@ -129,3 +129,13 @@ fh = figure('color', 'w', 'Position', [100, 100, 600, 300]);
 [sorted_len, sort_idx] = sort(cellfun(@length, timelock_sm), 'descend');
 aligned_mat = padder_for_imagesc(timelock_sm(sort_idx), sorted_len, 'offset');
 fh = plot_sta_sm(aligned_mat, 'direction', 'offset', 'clim', [0 1], 'center', 'mean');
+
+
+fh = figure('color', 'w', 'Position', [100, 100, 600, 300]);
+tiledlayout(1, 1, 'TileSpacing', 'compact', 'Padding', 'loose')
+nexttile
+hold on
+histogram(rt.ed, 1/120:1/20:sim_params.T + sim_params.dt * 3, 'EdgeColor', 'none', 'Normalization', 'pdf')
+apply_generic(gca)
+ylabel('Density'); xlabel('Duration (s)'); ax.YAxis.Visible = 'off';
+exporter(fh, paths, 'Durations.pdf')

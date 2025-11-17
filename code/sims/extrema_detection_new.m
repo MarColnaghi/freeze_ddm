@@ -1,4 +1,4 @@
-function [rt, traj, t, det_cum, sto_cum] = extrema_detection_new(varargin)
+    function [rt, traj, t, det_cum, sto_cum] = extrema_detection_new(varargin)
 
 %
 %   [rt, traj, t] = extrema_detection_new('mu', val, 'mu_t', vec, ...)

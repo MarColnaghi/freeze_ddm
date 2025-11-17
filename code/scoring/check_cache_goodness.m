@@ -53,7 +53,7 @@ for idx_bout_solution = 1:2
     dur = bouts_fly.durations;
     dur(dur <= 0 | isnan(dur)) = 0;
     base_val = double(bouts_fly.type);
-    base_val(bouts_fly.le == true & bouts_fly.type == true & bouts_fly.frozen_start == false & bouts_fly.durations >= 30) = 2;
+    base_val(bouts_fly.le == true & bouts_fly.type == true & bouts_fly.frozen_start == false & bouts_fly.durations >= 12) = 2;
 
     ts_all = repelem(base_val, dur);
 
