@@ -45,9 +45,9 @@ apply_generic(gca)
 
 for idx_theta = 0.3
 
-    bouts = y(1,:);
+    bouts = y([1 1 1],:);
     params = [0 idx_theta 0];
-    ec.soc_mot_array = extra.soc_mot_array(1, :);
+    ec.soc_mot_array = extra.soc_mot_array([1 1 1], :);
     [nll, f, fd] = nll_fly_ddm_newer(params, bouts, points, 'model_ed0', 'iid', 'p', ec);
 
     plot(fd, f, 'LineWidth', 3, 'DisplayName', sprintf('\\theta: %.2f', idx_theta))

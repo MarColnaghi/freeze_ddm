@@ -230,11 +230,12 @@ for idx_param = param_list
 
     disp('-------')
 
-end
-if export
+    if export
     figure_title = sprintf('fd_%s_%s', param, moment);
-    exporter(fh, paths, [figure_title, '.png'])
     exporter(fh, paths, [figure_title, '.pdf'])
+    end
+    
 end
+
 end
 
