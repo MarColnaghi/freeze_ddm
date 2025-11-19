@@ -105,7 +105,7 @@ for idx_trials = 1:sim_params.n_trials
     ons = bouts_proc.onsets(idx_trials);
 
     sum_motion = motion_cache(bouts_proc.fly(idx_trials));
-    sm_raw{idx_trials} = sum_motion(ons:ons + chunk_len - 1 ./ 10x);
+    sm_raw{idx_trials} = sum_motion(ons:ons + chunk_len - 1) ./ 10;
     sm_chunk = sm_raw{idx_trials};
 
     mu_tv = gt_table.mu_sm .* sm_chunk;
@@ -127,7 +127,7 @@ toc
 rt.ed(rt.ed > points.censoring) = sim_params.T + sim_params.dt;
 rt.ed(isnan(rt.ed)) = sim_params.T + sim_params.dt; 
 points.censoring = sim_params.T;
-points.truncation = 0.3;
+points.truncation = [];
 
 fh = figure('color', 'w', 'Position', [100, 100, 600, 300]);
 tiledlayout(1, 1, 'TileSpacing', 'compact', 'Padding', 'loose')
@@ -149,8 +149,8 @@ bouts_proc.ls = bouts_proc.sloom_norm;
 bouts_proc.ln = bouts_proc.nloom_norm;
 bouts_proc.intercept = ones(height(y),1);
 
-model_2_fit = 'simed1';
-model_results = run_fitting_newer(bouts_proc, points, model_2_fit, paths, 'export', true,  'ground_truth', gt_table, 'bads_display', true, 'pass_ndt', true, 'n_bads', 5, 'extra', extra);
+model_2_fit = 'ed5';
+model_results = run_fitting_newer(bouts_proc, points, model_2_fit, paths, 'export', true,  'ground_truth', gt_table, 'bads_display', true, 'pass_ndt', true, 'n_bads', 3, 'extra', extra);
 plot_estimates('results', model_results, 'export', true, 'paths', paths)
 bouts_proc.sm = bouts_proc.avg_sm_freeze_norm;
 bouts_proc.smp = bouts_proc.avg_sm_freeze_norm;

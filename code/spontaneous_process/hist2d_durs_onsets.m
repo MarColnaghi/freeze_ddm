@@ -42,7 +42,7 @@ else
     disp('input provided')
     time_window = thresholds.time_window;
     
-    clamp = true;
+    clamp = false;
     bouts_with_loom = false;
     zoom =  zoom_flag;
     limits = [0 100];
@@ -123,10 +123,10 @@ for idx_slooms = [unique(bouts.sloom)]'
     switch plot_style
         case 'bar3'
             thresholds.sp_window = [];
-            ax.XLabel.Rotation = 300;
-            ax.XLabel.Position(1:2) = [250 -225];
-            ax.YLabel.Rotation = 7;
-            ax.YLabel.Position(1:2) = [675 210];
+          %  ax.XLabel.Rotation = 300;
+          %  ax.XLabel.Position(1:2) = [250 -225];
+           % ax.YLabel.Rotation = 7;
+          %  ax.YLabel.Position(1:2) = [675 210];
             if ~zoom
                 view(80, 50)
             else
@@ -148,7 +148,7 @@ for idx_slooms = [unique(bouts.sloom)]'
 
     % Set Axis Ticks
     if ~zoom
-        xticks(0:100:600)
+        xticks(0:100:900)
     else
         xticks([0 60])
     end
@@ -171,11 +171,11 @@ for idx_slooms = [unique(bouts.sloom)]'
         case 'loom'
             if idx_slooms == 25
                 lp = surf(x, y, z, 'FaceColor', col.vars.sloom(3,:), 'FaceAlpha', 0.3, 'EdgeColor', 'none', 'LineWidth', 1.5);
-                surf(z, y, x, 'FaceColor', col.vars.sloom(3,:), 'FaceAlpha', 0.3, 'EdgeColor', 'none', 'LineWidth', 1.5);
+               surf(z, y, x, 'FaceColor', col.vars.sloom(3,:), 'FaceAlpha', 0.3, 'EdgeColor', 'none', 'LineWidth', 1.5);
                 text(0, 15, z_label_pos, {'Slow', 'Loom'}, 'FontSize', 18, 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'center', 'Rotation', ax.YLabel.Rotation)
             elseif idx_slooms == 50
                 lp = surf(x, y, z, 'FaceColor', col.vars.sloom(5,:), 'FaceAlpha', 0.3, 'EdgeColor', 'none', 'LineWidth', 1.5);
-                surf(z, y, x, 'FaceColor', col.vars.sloom(5,:), 'FaceAlpha', 0.3, 'EdgeColor', 'none', 'LineWidth', 1.5);
+               surf(z, y, x, 'FaceColor', col.vars.sloom(5,:), 'FaceAlpha', 0.3, 'EdgeColor', 'none', 'LineWidth', 1.5);
                 text(0, 15, z_label_pos, {'Fast', 'Loom'}, 'FontSize', 18, 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'center', 'Rotation', ax.YLabel.Rotation)
 
             end
@@ -192,8 +192,8 @@ for idx_slooms = [unique(bouts.sloom)]'
             y_off = meshgrid(linspace(thresholds.le_window_sl(2), thresholds.le_window_sl(2), 2))';
 
             z = [0 900; 0 900];
-            surf(x, y_ons, z, 'FaceColor', 'k', 'FaceAlpha', 0.05, 'EdgeColor', 'k', 'LineWidth', 1.5);
-            surf(x, y_off, z, 'FaceColor', 'k', 'FaceAlpha', 0.05, 'EdgeColor', 'k', 'LineWidth', 1.5);
+           % surf(x, y_ons, z, 'FaceColor', 'k', 'FaceAlpha', 0.05, 'EdgeColor', 'k', 'LineWidth', 1.5);
+           % surf(x, y_off, z, 'FaceColor', 'k', 'FaceAlpha', 0.05, 'EdgeColor', 'k', 'LineWidth', 1.5);
 
         elseif idx_slooms == 50
             x = [0 0; 900 900];
@@ -201,8 +201,8 @@ for idx_slooms = [unique(bouts.sloom)]'
             y_off = meshgrid(linspace(thresholds.le_window_fl(2), thresholds.le_window_fl(2), 2))';
 
             z = [0 900; 0 900];
-            surf(x, y_ons, z, 'FaceColor', 'k', 'FaceAlpha', 0.05, 'EdgeColor', 'k', 'LineWidth', 1.5);
-            surf(x, y_off, z, 'FaceColor', 'k', 'FaceAlpha', 0.05, 'EdgeColor', 'k', 'LineWidth', 1.5);
+           % surf(x, y_ons, z, 'FaceColor', 'k', 'FaceAlpha', 0.05, 'EdgeColor', 'k', 'LineWidth', 1.5);
+           % surf(x, y_off, z, 'FaceColor', 'k', 'FaceAlpha', 0.05, 'EdgeColor', 'k', 'LineWidth', 1.5);
 
         end
     %end
@@ -224,6 +224,6 @@ for idx_slooms = [unique(bouts.sloom)]'
         figure_title = sprintf('%s_%s_%s_sloom%d_z%d', plot_style, str, type, idx_slooms, zoom_flag);
 
         exporter(ax, paths, [figure_title, '.png'])
-        exporter(ax, paths, [figure_title, '.pdf'])
+       % exporter(ax, paths, [figure_title, '.pdf'])
     end
 end

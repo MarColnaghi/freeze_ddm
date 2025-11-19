@@ -36,23 +36,28 @@ end
 
 soc_mot_array = cell2mat(sm_raw)';
 extra.soc_mot_array = soc_mot_array;
-
+%%
 fh = figure('color', 'w', 'Position', [100, 100, 800, 300]);
 tiledlayout(1, 1, 'TileSpacing', 'compact', 'Padding', 'loose')
 nexttile
 hold on
 apply_generic(gca)
+idx_trial = 44;
+i = 0.1;
+for idx_theta = [0.05, 0.1, 0.20, 0.6]
 
-for idx_theta = 0.3
+    i = i + 1;
+    bouts = y(idx_trial,:);
+    params = [5 idx_theta 0];
+    ec.soc_mot_array = extra.soc_mot_array(idx_trial, :);
+    [nll, f, fd] = nll_fly_ddm_newer(params, bouts, points, 'model_ed1', 'iid', 'p', ec);
 
-    bouts = y([1 1 1],:);
-    params = [0 idx_theta 0];
-    ec.soc_mot_array = extra.soc_mot_array([1 1 1], :);
-    [nll, f, fd] = nll_fly_ddm_newer(params, bouts, points, 'model_ed0', 'iid', 'p', ec);
-
-    plot(fd, f, 'LineWidth', 3, 'DisplayName', sprintf('\\theta: %.2f', idx_theta))
+    plot(fd, f + 0.1 * i, 'LineWidth', 1, 'DisplayName', sprintf('\\theta: %.2f', idx_theta))
 end
 
+imagesc(fd, -0.55, ec.soc_mot_array)
+ylim([-0.1 1])
+%%
 xlim([0 1])
 ylim([0 0.5])
 xlabel('Freeze Duration (s)')
