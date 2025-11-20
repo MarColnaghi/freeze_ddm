@@ -27,7 +27,7 @@ end
 
 soc_mot_array = cell2mat(sm_raw)';
 extra.soc_mot_array = soc_mot_array;
-model_results = run_fitting_newer(bouts_proc, points, 'dddm2', paths, 'export', true, 'bads_display', true, 'pass_ndt', false, 'n_bads', 3, 'extra', []);
+model_results = run_fitting_newer(bouts_proc, points, 'ed5', paths, 'export', true, 'bads_display', true, 'pass_ndt', true, 'n_bads', 5, 'extra', extra);
 model_results.estimates_mean  
 fh = plot_fit('results', model_results, 'conditions', false, 'export', true, 'bin_size', 3, 'censored_inset', true, 'type', 'discrete');
 fh_conditions = plot_fit('results', model_results, 'conditions', true, 'export', true, 'bin_size', 5 , 'type', 'discrete');

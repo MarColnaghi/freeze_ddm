@@ -49,7 +49,7 @@ if ~conditions
     [~, f, fd] = nll_fly_ddm_newer(est_params, freezes, results.points, results.fitted_model, 'iid', 'p', extra);
     fh = figure('Position', [100 100 800 500], 'Color', 'w');
     hold on
-    histogram(freezes.durations_s, 1/120:bin_size_in_seconds:12, 'Normalization', 'pdf', 'FaceColor', 'r', 'EdgeColor', 'none')
+    hh = histogram(freezes.durations_s, 1/120:bin_size_in_seconds:12, 'Normalization', 'pdf', 'FaceColor', 'r', 'EdgeColor', 'none');
     fd_ds = [mean(reshape(fd(1:end - 1), bin_size, []), 1) fd(end)]; % f_ds = [sum(reshape(f(1:end - 1), bin_size, []), 1) f(end)];
     %plot(fd_ds, f_ds , 'k--', 'LineWidth', 2)
 
@@ -57,7 +57,7 @@ if ~conditions
         f_ds = [sum(reshape(f(1:end - 1), bin_size, []), 1) f(end)];
         f_ds = f_ds ./ bin_size_in_seconds;
         plot(fd_ds, f_ds, 'k--', 'LineWidth', 2)
-
+        trapz(fd_ds(results.points.truncation <=  fd_ds), f_ds(results.points.truncation <= fd_ds))
     else
         f_ds = [mean(reshape(f(1:end - 1), bin_size, []), 1) f(end) ./ bin_size_in_seconds];
         plot(fd_ds, f_ds, 'k--', 'LineWidth', 2)

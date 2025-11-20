@@ -118,34 +118,45 @@ for idx_trials = 333%:sim_params.n_trials
 end
 
 
-fh = figure('color', 'w', 'Position', [100, 100, 400, 300]);
+fh = figure('color', 'w', 'Position', [100, 100, 600, 300]);
 tiledlayout(1, 1, 'TileSpacing', 'compact', 'Padding', 'loose')
 nexttile
 hold on
+ax = gca;
+
 apply_generic(gca)
-plot(0:length(traj_st) - 1, traj_st, 'b-', 'LineWidth', 1.4)
+plot(0:length(traj_st) - 1, traj_st, 'LineWidth', 2, 'Color', col.timevarying_sm)
+%plot(1:length(find(~isnan(traj_ed))), mu_tv(1:length(find(~isnan(traj_ed)))) .* sim_params.dt, 'Marker', '_', 'LineStyle', 'none');
 
 imagesc(1:length(mu_tv), -1.5, mu_tv')
+text(-6.5, -1.15, {'soc.', 'mot.'}, 'Rotation', 90, 'FontSize', 22, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle')
 colormap(cbrewer2('Reds'))
 
 xlim([0 70]);
 ylim([-1.3 1.3])
 yline(x(2), 'k-',  'LineWidth', 2.5)
-yticks([])
-xlabel('samples');
+yticks([]); xticks([]);
+xlabel('');
+ax.XAxis.Visible = 'off';
+
 exporter(fh, paths, 'int.pdf')
 
-fh = figure('color', 'w', 'Position', [100, 100, 400, 300]);
+fh = figure('color', 'w', 'Position', [100, 100, 600, 300]);
 tiledlayout(1, 1, 'TileSpacing', 'compact', 'Padding', 'loose')
 nexttile
 hold on
 apply_generic(gca)
-plot(0:length(traj_ed) - 1, traj_ed, 'ro', 'LineWidth', 1.4)
-imagesc(1:length(mu_tv), -1.5, mu_tv')
+ax = gca;
+plot(1:length(find(~isnan(traj_ed))), mu_tv(1:length(find(~isnan(traj_ed)))) .* 30 .* sim_params.dt, 'Marker', '_', 'LineStyle', 'none', 'MarkerSize', 12, 'MarkerEdgeColor', 'k');
+plot(0:length(traj_ed) - 1, traj_ed, 'o', 'LineWidth', 1.4, 'Color', col.extremadetection, 'MarkerSize', 7);
+imagesc(1:length(mu_tv), -1.5, mu_tv' .* sim_params.dt)
 colormap(cbrewer2('Reds'))
 xlim([0 70]);
 ylim([-1.3 1.3])
 yline(x(2), 'k-',  'LineWidth', 2.5)
-yticks([])
-xlabel('samples');
+yticks([]); xticks([]);
+xlabel('');
+ax.XAxis.Visible = 'off';
+text(-6.5, -1.15, {'soc.', 'mot.'}, 'Rotation', 90, 'FontSize', 22, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle')
+
 exporter(fh, paths, 'ed.pdf')
