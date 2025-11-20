@@ -7,8 +7,8 @@ opt = inputParser;
 addParameter(opt, 'type', 'immobility');
 addParameter(opt, 'period', 'loom');
 addParameter(opt, 'window', '');
-addParameter(opt, 'nloom', '');
-addParameter(opt, 'sloom', '');
+addParameter(opt, 'nloom', []);
+addParameter(opt, 'sloom', []);
 addParameter(opt, 'min_dur', 0);
 parse(opt, varargin{:});
 
@@ -25,9 +25,11 @@ end
 if strcmp(opt.Results.period, 'bsl')
     temp = temp(temp.period == 0, :);
     temp = temp(temp.nloom < 21, :);
-    
+    temp = temp(temp.frozen_start == 0, :);
+
 elseif strcmp(opt.Results.period, 'loom')
     temp = temp(temp.period == 1, :);
+    temp = temp(temp.frozen_start == 0, :);
 end
 
 % Select Window: le or not?
@@ -35,8 +37,16 @@ if strcmp(opt.Results.window, 'le')
     temp = temp(temp.le == 1, :);
 end
 
+% Select Loom Number
+if ~isempty(opt.Results.nloom)
+    temp = temp(temp.nloom == [opt.Results.nloom], :);
+end
+
+if ~isempty(opt.Results.sloom)
+    temp = temp(temp.sloom == [opt.Results.sloom], :);
+end
+
 % Additional filters
-temp = temp(temp.frozen_start == 0, :);
 temp = temp(temp.durations >= opt.Results.min_dur, :);
 
 % Rescale all the Variables
