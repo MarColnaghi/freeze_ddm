@@ -65,7 +65,7 @@ speed_max = 2; % outliers
 
 % Threshold the Dataset
 
-% temp = temp(temp.avg_sm_freeze_norm <= motion_max & temp.avg_fs_1s_norm <= speed_max, :);
+temp = temp(temp.avg_sm_freeze_norm <= motion_max & temp.avg_fs_1s_norm <= speed_max, :);
 
 
 end

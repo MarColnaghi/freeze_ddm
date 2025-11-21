@@ -1,7 +1,7 @@
-function col = cmapper(string, extra)
+function col = cmapper(string, quantiles)
 
 if nargin < 2
-    extra.quantiles = [];
+    quantiles = [];
 end
 
 col.fits = [cbrewer2('Set2',3); cbrewer2('Dark2',3)];
@@ -17,35 +17,35 @@ col.models.double = '#BFABCB';
 col.models.singlecont = '#06A77D';
 col.vars.intercept = [1 1 1];
 
-col.vars.ln = cbrewer2('Purples', extra.quantiles + 1);
-col.vars.ls = cbrewer2('Blues', extra.quantiles + 1);
-col.vars.sm = cbrewer2('Reds', extra.quantiles + 1);
-col.vars.sm_post = cbrewer2('Reds', extra.quantiles + 1);
-col.vars.sm_pre = cbrewer2('Oranges', extra.quantiles + 1);
-col.vars.fs = cbrewer2('Greens', extra.quantiles + 1);
-col.vars.nloom1 = cbrewer2('Purples', extra.quantiles + 1);
-col.vars.sloom1 = cbrewer2('Blues', extra.quantiles + 1);
-col.vars.am_post1 = cbrewer2('Reds', extra.quantiles + 1);
-col.vars.am_pre1 = cbrewer2('Oranges', extra.quantiles + 1);
-col.vars.n_mov_flies1 = cbrewer2('Greys', extra.quantiles + 1);
-col.vars.sf1 = cbrewer2('Greens', extra.quantiles + 1);
-col.vars.nloom = cbrewer2('Purples', extra.quantiles + 1);
-col.vars.sloom = cbrewer2('Blues', extra.quantiles + 1);
-col.vars.am_post = cbrewer2('Reds', extra.quantiles + 1);
-col.vars.avg_sm = cbrewer2('Reds', extra.quantiles + 1);
-col.vars.sm = cbrewer2('Reds', extra.quantiles + 1);
-col.vars.smp = cbrewer2('Oranges', extra.quantiles + 1);
+col.vars.ln = cbrewer2('Purples', quantiles + 1);
+col.vars.ls = cbrewer2('Blues', quantiles + 1);
+col.vars.sm = cbrewer2('Reds', quantiles + 1);
+col.vars.sm_post = cbrewer2('Reds', quantiles + 1);
+col.vars.sm_pre = cbrewer2('Oranges', quantiles + 1);
+col.vars.fs = cbrewer2('Greens', quantiles + 1);
+col.vars.nloom1 = cbrewer2('Purples', quantiles + 1);
+col.vars.sloom1 = cbrewer2('Blues', quantiles + 1);
+col.vars.am_post1 = cbrewer2('Reds', quantiles + 1);
+col.vars.am_pre1 = cbrewer2('Oranges', quantiles + 1);
+col.vars.n_mov_flies1 = cbrewer2('Greys', quantiles + 1);
+col.vars.sf1 = cbrewer2('Greens', quantiles + 1);
+col.vars.nloom = cbrewer2('Purples', quantiles + 1);
+col.vars.sloom = cbrewer2('Blues', quantiles + 1);
+col.vars.am_post = cbrewer2('Reds', quantiles + 1);
+col.vars.avg_sm = cbrewer2('Reds', quantiles + 1);
+col.vars.sm = cbrewer2('Reds', quantiles + 1);
+col.vars.smp = cbrewer2('Oranges', quantiles + 1);
 
-col.vars.onsets_loomaligned = cbrewer2('Oranges', extra.quantiles + 1);
+col.vars.onsets_loomaligned = cbrewer2('Oranges', quantiles + 1);
 
-col.vars.moving_flies = cbrewer2('Greys', extra.quantiles + 1);
-col.vars.sf = cbrewer2('Greens', extra.quantiles + 1);
-col.vars.avg_sm_freeze_norm = cbrewer2('Reds', extra.quantiles + 1);
-col.vars.avg_fs_freeze_norm = cbrewer2('Greens', extra.quantiles + 1);
-col.vars.onset_loomaligned = cbrewer2('Oranges', extra.quantiles + 1);
-col.vars.onsets_loomaligned_norm = cbrewer2('Oranges', extra.quantiles + 1);
+col.vars.moving_flies = cbrewer2('Greys', quantiles + 1);
+col.vars.sf = cbrewer2('Greens', quantiles + 1);
+col.vars.avg_sm_freeze_norm = cbrewer2('Reds', quantiles + 1);
+col.vars.avg_fs_freeze_norm = cbrewer2('Greens', quantiles + 1);
+col.vars.onset_loomaligned = cbrewer2('Oranges', quantiles + 1);
+col.vars.onsets_loomaligned_norm = cbrewer2('Oranges', quantiles + 1);
 
-col.vars.avg_fs_1s_norm = cbrewer2('Greens', extra.quantiles + 1);
+col.vars.avg_fs_1s_norm = cbrewer2('Greens', quantiles + 1);
 col.visual_aid.spontaneous = '#D664BE';
 col.visual_aid.mu = '#EE4266';
 col.visual_aid.theta = '#007FFF';
