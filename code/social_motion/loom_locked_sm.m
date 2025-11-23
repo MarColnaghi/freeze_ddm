@@ -4,6 +4,7 @@ motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 pixel_cache = importdata(fullfile(paths.cache_path, 'pixel_cache.mat'));
 loom_cache = importdata(fullfile(paths.cache_path, 'loom_cache.mat'));
 bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
+thresholds = define_thresholds;
 
 window = [-300 300];
 offsets = (window(1) : window(2));
@@ -46,9 +47,37 @@ for idx_sloom = unique(sloom)'
         apply_generic(gca, 'no_y', true, 'ylims', [-2 45])
         xline(0, 'LineWidth', 2); xtickangle(0);
         xticks(sort([window, 0]))
+
+        if idx_sloom == 25
+            xline(thresholds.le_window_sl, 'k--');
+        elseif idx_sloom == 50
+            xline(thresholds.le_window_fl, 'k--');
+
+        end
     end
 end
 
+
+%%
+bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', 'sloom', 50);
+quantile_sm = quantile(bouts_proc.avg_sm_freeze_norm, 0/10);
+bouts_temp = bouts_proc(bouts_proc.avg_sm_freeze_norm >= quantile_sm, :);
+figure
+hold on
+for idx_bouts = 1:height(bouts_temp)
+    fly_id = bouts_temp.fly(idx_bouts);
+    sm_fly = motion_cache(fly_id);
+
+    ons = bouts_temp.onsets(idx_bouts);
+    off = bouts_temp.ends(idx_bouts) - 1;
+    sm_freeze = sm_fly(ons:off);
+    z(idx_bouts) = mean(sm_freeze);
+    %plot(-length(sm_freeze) + 1:0, sm_freeze)
+
+end
+
+figure 
+histogram(bouts_temp.durations_s)
 %% Plot the freezes
 
 figure
@@ -68,3 +97,4 @@ scatter3(bouts_proc.durations, bouts_proc.nloom_norm, bouts_proc.avg_sm_freeze_n
 xlim([0 1200])
 
 %%
+
