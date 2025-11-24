@@ -47,7 +47,7 @@ model_out = eval(model_str);
 
 %% Objective Function
 surrogate.sm = surrogate.avg_sm_freeze_norm;
-surrogate.smp = surrogate.avg_sm_freeze_norm;
+surrogate.smp = surrogate.avg_sm_pre_norm;
 surrogate.fs = surrogate.avg_fs_1s_norm;
 surrogate.ln = surrogate.nloom_norm;
 surrogate.ls = surrogate.sloom_norm;

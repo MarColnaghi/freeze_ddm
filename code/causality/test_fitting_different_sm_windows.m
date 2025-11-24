@@ -5,7 +5,7 @@ clearvars
 % Load the table first. We will take advantage of an already existing
 % dataset.
 threshold_imm = 2; threshold_mob = 2; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
-paths = path_generator('folder', 'fitting_freezes/le', 'bouts_id', id_code, 'imfirst', false);
+paths = path_generator('folder', 'causality/fitting_freezes', 'bouts_id', id_code, 'imfirst', false);
 bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
 motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 
@@ -17,6 +17,7 @@ points.truncation = 0.5;
 
 chunk_len = points.censoring * 60;
 sm_ts = nan(height(bouts_proc), chunk_len);
+sm_raw = cell(1 - height(bouts_proc));
 
 for idx_trials = 1:height(bouts_proc)
 
@@ -25,16 +26,17 @@ for idx_trials = 1:height(bouts_proc)
     sum_motion = motion_cache(bouts_proc.fly(idx_trials));
     sm_raw{idx_trials} = sum_motion(ons:ons + chunk_len - 1) ./ 10;
 
-    sm_ts(idx_trials, :) = sum_motion(ons - 630:ons - 1);
+    sm_ts(idx_trials, :) = sum_motion(ons - 630:ons - 1) ./ 10;
 
 end
 
-%%
+backframes = 60;
+bouts_proc.avg_sm_pre_norm = mean(sm_ts(:, end - backframes:end), 2);
 soc_mot_array = cell2mat(sm_raw)';
 extra.soc_mot_array = soc_mot_array;
-model_results = run_fitting_newer(bouts_proc, points, 'ed5', paths, 'export', false, 'bads_display', true, 'pass_ndt', true, 'n_bads', 5, 'extra', extra);
+model_results = run_fitting_newer(bouts_proc, points, 'dddm2', paths, 'export', true, 'bads_display', true, 'pass_ndt', false, 'n_bads', 5, 'extra', extra);
 
 
 fh = plot_fit('results', model_results, 'conditions', false, 'export', true, 'bin_size', 3, 'censored_inset', true, 'type', 'discrete');
-fh_conditions = plot_fit('results', model_results, 'conditions', true, 'export', true, 'bin_size', 5 , 'type', 'discrete');
+fh_conditions = plot_fit('results', model_results, 'conditions', true, 'export', true, 'bin_size', 10 , 'type', 'continuous');
 plot_estimates('results', model_results, 'export', true, 'paths', paths, 'ylimits', [-1 4])

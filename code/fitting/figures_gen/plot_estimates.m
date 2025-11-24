@@ -12,8 +12,8 @@ export = opt.Results.export;
 paths = opt.Results.paths;
 ylimits = opt.Results.ylimits;
 
-extra.quantiles = 0;
-col = cmapper([], extra);
+quantiles = 0;
+col = cmapper([], quantiles);
 
 results = opt.Results.results;
 est_means = results.estimates_mean(:, ~ismissing(results.estimates_mean));
