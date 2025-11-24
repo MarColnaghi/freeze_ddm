@@ -30,13 +30,13 @@ for idx_trials = 1:height(bouts_proc)
 
 end
 
-backframes = 60;
+backframes = 120;
 bouts_proc.avg_sm_pre_norm = mean(sm_ts(:, end - backframes:end), 2);
 soc_mot_array = cell2mat(sm_raw)';
 extra.soc_mot_array = soc_mot_array;
 model_results = run_fitting_newer(bouts_proc, points, 'dddm2', paths, 'export', true, 'bads_display', true, 'pass_ndt', false, 'n_bads', 5, 'extra', extra);
 
 
-fh = plot_fit('results', model_results, 'conditions', false, 'export', true, 'bin_size', 3, 'censored_inset', true, 'type', 'discrete');
+fh = plot_fit('results', model_results, 'conditions', false, 'export', true, 'bin_size', 3, 'censored_inset', true, 'type', 'continuous');
 fh_conditions = plot_fit('results', model_results, 'conditions', true, 'export', true, 'bin_size', 10 , 'type', 'continuous');
 plot_estimates('results', model_results, 'export', true, 'paths', paths, 'ylimits', [-1 4])

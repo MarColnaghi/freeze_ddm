@@ -35,6 +35,8 @@ if strcmp(plot_flag, 'p')
     
     hold on
 
+    ec = extra;
+
     for idx_bout = 1:num_bouts
 
         tbl.sm(:) = bouts.sm(idx_bout);
@@ -46,8 +48,6 @@ if strcmp(plot_flag, 'p')
 
         if strcmp('ed', tok{1}) || strcmp('ded', tok{1})
             ec.soc_mot_array = extra.soc_mot_array(idx_bout, :);
-        else
-            ec = [];
         end
         g = comp_loglikelihood(params, tbl, points, model_func, iid, tok, ec);
 

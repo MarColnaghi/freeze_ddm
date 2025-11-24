@@ -109,7 +109,9 @@ else
 
                 [freezes_quant, mask] = quantilizer(freezes, 'idx_quanti', struct('sm', idx_sm, 'ls', idx_ls, 'fs', idx_fs));
                 ec = extra;
-                ec.soc_mot_array = extra.soc_mot_array(mask, :);
+                if isfield(extra, 'soc_mot_array')
+                    ec.soc_mot_array = extra.soc_mot_array(mask, :);
+                end
                 [~, f, fd] = nll_fly_ddm_newer(est_params, freezes_quant, results.points, results.fitted_model, 'iid', 'p', ec);
 
                 histogram(freezes_quant.durations_s, 1/120:bin_size/fs:12, 'Normalization', 'pdf', 'FaceColor', 'r', 'EdgeColor', 'none')
@@ -142,7 +144,7 @@ else
                 %                 plot(fd_ds, f_ds, 'b--', 'LineWidth', 1)
 
 
-                
+
                 ax(i) = gca;
                 apply_generic(gca)
                 xlim([-0.1 11.1])
@@ -168,7 +170,7 @@ else
                 xticks(results.points.censoring); xticklabels('cens'); xtickangle(0);
                 apply_generic(ax_inset(i))
                 hold(ax_inset(i), 'off');
-                
+
 
             end
             drawnow

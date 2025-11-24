@@ -11,8 +11,8 @@ col = cmapper();
 fh = figure('color','w','Position',[100, 100, 600, 400]);
 
 x = 0:1/120:120;
-[ f, xk ] = ksdensity(bouts_proc.durations_s, x, 'Function','pdf', 'Support','positive', 'Bandwidth', 1/7);
-[ F, ~  ] = ksdensity(bouts_proc.durations_s, x, 'Function','cdf', 'Support','positive', 'Bandwidth', 1/7);
+[ f, xk ] = ksdensity(bouts_proc.durations_s, x, 'Function', 'pdf');
+[ F, ~  ] = ksdensity(bouts_proc.durations_s, x, 'Function', 'cdf');
 
 % t0 = points.truncation;
 % F_t0 = interp1(xk, F, t0, 'linear', 'extrap');      % CDF at truncation

@@ -46,8 +46,15 @@ model_out = eval(model_str);
 [LB, PLB, PUB, UB] = extract_bounds_from_model(model_out);
 
 %% Objective Function
+
 surrogate.sm = surrogate.avg_sm_freeze_norm;
-surrogate.smp = surrogate.avg_sm_pre_norm;
+
+if isfield(surrogate, 'avg_sm_pre_norm')
+    surrogate.smp = surrogate.avg_sm_pre_norm;
+else
+    surrogate.smp = surrogate.avg_sm_freeze_norm;
+end
+
 surrogate.fs = surrogate.avg_fs_1s_norm;
 surrogate.ln = surrogate.nloom_norm;
 surrogate.ls = surrogate.sloom_norm;
