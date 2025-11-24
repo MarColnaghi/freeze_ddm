@@ -5,7 +5,7 @@ pixel_cache = importdata(fullfile(paths.cache_path, 'pixel_cache.mat'));
 loom_cache = importdata(fullfile(paths.cache_path, 'loom_cache.mat'));
 motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 thresholds = define_thresholds;
-fly_id = 12;
+fly_id = 722;
 fly_pc = ~pixel_cache(fly_id);
 fly_loom = loom_cache(fly_id);
 loom_frames = find(diff(fly_loom) == 1) + 1;
@@ -53,7 +53,7 @@ for idx_bout_solution = 1:2
     dur = bouts_fly.durations;
     dur(dur <= 0 | isnan(dur)) = 0;
     base_val = double(bouts_fly.type);
-    base_val(bouts_fly.le == true & bouts_fly.type == true & bouts_fly.frozen_start == false & bouts_fly.durations >= 12) = 2;
+    base_val(bouts_fly.le == true & bouts_fly.type == true & bouts_fly.frozen_start == false & bouts_fly.durations >= 0) = 2;
 
     ts_all = repelem(base_val, dur);
 

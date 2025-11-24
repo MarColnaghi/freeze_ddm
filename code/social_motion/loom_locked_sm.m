@@ -78,6 +78,7 @@ end
 
 figure 
 histogram(bouts_temp.durations_s)
+
 %% Plot the freezes
 
 figure
