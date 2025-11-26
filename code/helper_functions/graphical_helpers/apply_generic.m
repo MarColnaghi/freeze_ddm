@@ -6,10 +6,15 @@ addParameter(opt, 'tick_length', 0.015);
 addParameter(opt, 'line_width', 3);
 addParameter(opt, 'no_xticks', false); 
 addParameter(opt, 'no_yticks', false); 
+addParameter(opt, 'no_xlabels', false); 
+addParameter(opt, 'no_ylabels', false); 
+
 addParameter(opt, 'no_x', false); 
 addParameter(opt, 'no_y', false); 
 addParameter(opt, 'xlims', []); 
 addParameter(opt, 'ylims', []); 
+addParameter(opt, 'xticks', []); 
+addParameter(opt, 'yticks', []); 
 
 parse(opt, varargin{:});
 
@@ -18,10 +23,14 @@ tick_length = opt.Results.tick_length;
 line_width = opt.Results.line_width;
 no_xticks = opt.Results.no_xticks;
 no_yticks = opt.Results.no_yticks;
+no_xlabels = opt.Results.no_xlabels;
+no_ylabels = opt.Results.no_ylabels;
 no_xaxis = opt.Results.no_x;
 no_yaxis = opt.Results.no_y;
 xlims = opt.Results.xlims;
 ylims = opt.Results.ylims;
+xthicks = opt.Results.xticks;
+ythicks = opt.Results.yticks;
 
 ax.XAxis.FontSize = fontsize;
 ax.ZAxis.FontSize = fontsize;
@@ -38,12 +47,28 @@ if ~isempty(ylims)
     ylim(ylims)
 end
 
+if ~isempty(xthicks)
+    xticks(xthicks)
+end
+
+if ~isempty(ythicks)
+    yticks(ythicks)
+end
+
 if no_xticks
     xticks([]);
 end
 
 if no_yticks
     yticks([]);
+end
+
+if no_xlabels
+    xticklabels({});
+end
+
+if no_ylabels
+    yticklabels({});
 end
 
 if no_xaxis

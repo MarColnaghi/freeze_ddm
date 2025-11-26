@@ -85,3 +85,7 @@ col.extremadetection ='#DF2CC7';
 col.closedform = '#AF8BD1';
 col.bsl = 'k';
 
+col.period.bsl = col.processes.contam;
+col.period.loom = '#778EE4';
+temp = cbrewer2('Blues', 3);
+col.loomspeed = temp;

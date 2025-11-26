@@ -39,7 +39,7 @@ end
 
 % Select Loom Number
 if ~isempty(opt.Results.nloom)
-    temp = temp(temp.nloom == [opt.Results.nloom], :);
+    temp = temp(ismember(temp.nloom, [opt.Results.nloom]), :);
 end
 
 if ~isempty(opt.Results.sloom)

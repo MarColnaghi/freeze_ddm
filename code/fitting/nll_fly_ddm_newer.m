@@ -206,11 +206,11 @@ if strcmp('iid', iid)
         cdf.ddm = @(ts, mu, theta, ndt) guard_ddm(cdf_ddm_raw, ts, mu, theta, ndt);
 
         % Mixers
-        f_kde = @(ts, inds, extra) (1 - out.pmix(inds)) .* pdf.kde(ts, extra);
-        F_kde = @(t,  inds, extra) (1 - out.pmix(inds)) .* cdf.kde(t,  extra);
+        f_kde = @(ts, inds, extra) (out.pmix(inds)) .* pdf.kde(ts, extra);
+        F_kde = @(t,  inds, extra) (out.pmix(inds)) .* cdf.kde(t,  extra);
 
-        f_ddm = @(ts, inds) out.pmix(inds) .* pdf.ddm(ts, out.mu(inds), out.theta(inds), out.tndt(inds));
-        F_ddm = @(t,  inds) out.pmix(inds) .* cdf.ddm(t,  out.mu(inds), out.theta(inds), out.tndt(inds));
+        f_ddm = @(ts, inds) (1 - out.pmix(inds)) .* pdf.ddm(ts, out.mu(inds), out.theta(inds), out.tndt(inds));
+        F_ddm = @(t,  inds) (1 - out.pmix(inds)) .* cdf.ddm(t,  out.mu(inds), out.theta(inds), out.tndt(inds));
 
         f = @(ts, inds, extra) f_ddm(ts, inds) + f_kde(ts, inds, extra);
         F = @(t,  inds, extra) F_ddm(t,  inds) + F_kde(t,  inds, extra);
