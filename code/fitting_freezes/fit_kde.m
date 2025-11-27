@@ -10,7 +10,7 @@ points.truncation = min(bouts_proc.durations_s);
 col = cmapper();
 fh = figure('color','w','Position',[100, 100, 600, 400]);
 
-x = 0:1/120:120;
+x = 0:1/60:120;
 [ f, xk ] = ksdensity(bouts_proc.durations_s, x, 'Function', 'pdf');
 [ F, ~  ] = ksdensity(bouts_proc.durations_s, x, 'Function', 'cdf');
 

@@ -1,4 +1,4 @@
-function [fh, fd, f] = plot_fit(varargin)
+function [fh, fd, f] = kde_fit(varargin)
 
 opt = inputParser;
 addParameter(opt, 'extra', []);
@@ -26,6 +26,11 @@ bin_size = opt.Results.bin_size;
 gt_plot = opt.Results.gt;
 type = opt.Results.type;
 
+dx = .01;
+xbin = (0:dx:dx*(ceil(10/dx)+10))';
+xxi     = (0:10:10000)/1000;
+h       = .05;
+
 fs = 60;
 bin_size_in_seconds = bin_size/fs;
 
@@ -46,10 +51,17 @@ end
 
 if ~conditions
 
-    [~, f, fd] = nll_fly_ddm_newer(est_params, freezes, results.points, results.fitted_model, 'iid', 'p', extra);
     fh = figure('Position', [100 100 800 500], 'Color', 'w');
     hold on
-    hh = histogram(freezes.durations_s, 1/120:bin_size_in_seconds:12, 'Normalization', 'pdf', 'FaceColor', 'r', 'EdgeColor', 'none');
+    RTs{1,1} = freezes.durations_s;
+    RTs{2,1} = freezes.durations_s;
+    RTD = kreg_single(RTs, RTs, xxi, xbin, h, min(freezes.durations_s), 1000);
+
+    fill_between(xxi, RTD{1,2} + RTD{2,2}, RTD{1,2} - RTD{3,2}, [], 'FaceColor', 'r', 'FaceAlpha', 0.4,'LineStyle', 'none')
+    plot(xxi, RTD{1,2}, 'Color', 'k', 'LineWidth' , 3)
+    
+    [~, f, fd] = nll_fly_ddm_newer(est_params, freezes, results.points, results.fitted_model, 'iid', 'p', extra);
+
     fd_ds = [mean(reshape(fd(1:end - 1), bin_size, []), 1) fd(end)]; % f_ds = [sum(reshape(f(1:end - 1), bin_size, []), 1) f(end)];
     %plot(fd_ds, f_ds , 'k--', 'LineWidth', 2)
 
