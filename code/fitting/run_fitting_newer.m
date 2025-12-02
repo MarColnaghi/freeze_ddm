@@ -49,7 +49,7 @@ model_out = eval(model_str);
 
 surrogate.sm = surrogate.avg_sm_freeze_norm;
 
-if isfield(surrogate, 'avg_sm_pre_norm')
+if ismember('avg_sm_pre_norm', surrogate.Properties.VariableNames)
     surrogate.smp = surrogate.avg_sm_pre_norm;
 else
     surrogate.smp = surrogate.avg_sm_freeze_norm;

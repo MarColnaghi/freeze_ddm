@@ -60,12 +60,11 @@ model.theta2 = struct( ...
 
 model.pmix = struct( ...
     'predictors', {{ ...
-    struct('name', 'fs') ...
-    struct('name', 'ln') ...
     struct('name', 'smp'), ...
+    struct('name', 'fs') ...
     struct('name', 'ls') ...
     }}, ...
-    'ground_truth', [-1.0 0.8 2.0 -0.4], ...
+    'ground_truth', [2.0 -1.0 -0.4], ...
     'link', link_logistic ...
     );
 
@@ -100,8 +99,8 @@ sim_params.eval_trials = sim_params.n_trials;
 sim_params.num_sims = 20000;
 
 % Censoring/Truncation
-points.truncation = [];
-points.censoring = sim_params.T;
+points.truncation = 0;
+points.censoring = 10.5;
 
 % Initialize outputs
 rt = table;
@@ -169,7 +168,7 @@ xlabel('|t_{simul} - t_{sampled}| (s)'); ylabel('pdf')
 
 rt.st(isnan(rt.st)) = sim_params.T + 1; 
 points.censoring = sim_params.T;
-points.truncation = 0.7;
+points.truncation = 0;
 
 %  Now we added our vector column to the bouts table.
 bouts_proc.durations_s = rt.st;
@@ -187,7 +186,7 @@ bouts_proc.intercept = ones(height(y),1);
 % plot_estimates('results', model_results)
 
 %%
-model_results = run_fitting_newer(bouts_proc, points, 'dddm2', paths, 'export', true, 'extra', [], 'ground_truth', gt_table);
+model_results = run_fitting_newer(bouts_proc, points, 'dddm3', paths, 'export', true, 'extra', [], 'ground_truth', gt_table);
 %plot_fit('freezes', bouts_proc, 'results', model_results)
 %plot_fit('results', model_results, 'conditions', true)
 
