@@ -81,7 +81,7 @@ for idx_window = 1:4
     hold on
     plot([-10 30], [-10 30], 'k--', 'LineWidth', 1)
     current_window = windows(idx_window);
-    scatter(bouts_temp.avg_sm, avg_sm_window.(sprintf('avg_sm_%d', -current_window)),  size, bouts_temp.moving_flies, 'o', 'filled', 'MarkerFaceAlpha', .4)
+    scatter(bouts_temp.avg_sm, avg_sm_window.(sprintf('avg_sm_%d', -current_window)),  size, bouts_temp.durations_s, 'o', 'filled', 'MarkerFaceAlpha', .35)
     deltas(idx_window, :) = avg_sm_window.(sprintf('avg_sm_%d', -current_window)) - bouts_temp.avg_sm;
     axis square
     apply_generic(gca, 'xlim', [-1 21], 'ylim', [-1 21], 'xticks', [0 20], 'yticks', [0 20])
@@ -97,7 +97,7 @@ for idx_window = 1:4
         'LineStyle', 'none', 'FontSize', 18);
 end
 
-colormap(cbrewer2('RdBu'))
+colormap(colorcet('L20'))
 exporter(fh, paths, 'scatters_sm_pre_post.pdf')
 
 %% Plot the corrcoeff
@@ -109,51 +109,52 @@ nexttile
 ax = gca;
 hold on
 
-for idx_sl = [unique(bouts_proc.sloom_norm)]'
+for idx_sl = [unique(bouts.sloom)]'
 
     bouts_proc = data_parser_new(bouts, 'type', 'immobility', ...
-        'period', 'loom', 'window', 'le', 'min_dur', 30, 'nloom', 1:20);
-    bouts_tempe = bouts_proc(bouts_proc.sloom_norm == idx_sl, :);
+        'period', 'loom', 'window', 'le', 'min_dur', 360, 'nloom', 1:20);
+    bouts_proc = bouts_proc(bouts_proc.sloom == idx_sl, :);
 
-    %for idx_mov_flies = 0:4
-%     idx_mov_flies = 0;
-%     bouts_temp = bouts_proc(bouts_proc.moving_flies == idx_mov_flies, :);
+  %  for idx_mov_flies = 0:4
+        %idx_mov_flies = 0;
+   bouts_temp = bouts_proc(bouts_proc.moving_flies == 0, :);
 
-    max_window = 1200;
-    n_bouts = height(bouts_temp);
+        max_window = 1200;
+        n_bouts = height(bouts_temp);
 
-    avg_sm_freeze = nan(n_bouts, 1);
-    avg_sm_pre    = nan(n_bouts, max_window);
+        avg_sm_freeze = nan(n_bouts, 1);
+        avg_sm_pre    = nan(n_bouts, max_window);
 
-    for idx_bouts = 1:n_bouts
-        fly_id = bouts_temp.fly(idx_bouts);
-        sm_fly = motion_cache(fly_id);
+        for idx_bouts = 1:n_bouts
+            fly_id = bouts_temp.fly(idx_bouts);
+            sm_fly = motion_cache(fly_id);
 
-        ons = bouts_temp.onsets(idx_bouts);
-        off = bouts_temp.ends(idx_bouts) - 1;
+            ons = bouts_temp.onsets(idx_bouts);
+            off = bouts_temp.ends(idx_bouts) - 1;
 
-        sm_freeze = sm_fly(ons:off);
-        avg_sm_freeze(idx_bouts) = mean(sm_freeze);
+            sm_freeze = sm_fly(ons:off);
+            avg_sm_freeze(idx_bouts) = mean(sm_freeze);
 
-        start_idx = max(1, ons - max_window);
-        sm_b4_freeze = sm_fly(start_idx:ons - 1);
+            start_idx = max(1, ons - max_window);
+            sm_b4_freeze = sm_fly(start_idx:ons - 1);
 
-        L = numel(sm_b4_freeze);
-        sm_rev = sm_b4_freeze(end:-1:1);
+            L = numel(sm_b4_freeze);
+            sm_rev = sm_b4_freeze(end:-1:1);
 
-        cs = cumsum(sm_rev);
-        means_all = cs ./ (1:L)';
-        avg_sm_pre(idx_bouts, 1:L) = means_all;
-    end
+            cs = cumsum(sm_rev);
+            means_all = cs ./ (1:L)';
+            avg_sm_pre(idx_bouts, 1:L) = means_all;
+        end
 
 
-    coeffs = corrcoef([avg_sm_freeze avg_sm_pre]);
-    plot(-max_window:1:-1, coeffs(1, end:-1:2), 'LineWidth', 2, 'Color', col.loomspeed(1 + idx_sl, :))
+        coeffs = corrcoef([avg_sm_freeze avg_sm_pre]);
+        plot(-max_window:1:-1, coeffs(1, end:-1:2), 'LineWidth', 2, 'Color', col.loomspeed(1 + idx_sl / 25, :))
 
+   % end
 end
 
 xline(-60, 'k--')
-apply_generic(ax, 'ylim', [0.3 0.7], 'xlim', [-600 0], 'xticks', sort([-600 0]))
+apply_generic(ax, 'ylim', [0.0 0.8], 'xlim', [-600 0], 'xticks', sort([-600 0]))
 
 %%
 

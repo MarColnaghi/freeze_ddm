@@ -52,11 +52,11 @@ if strcmp(plot_flag, 'p')
         g = comp_loglikelihood(params, tbl, points, model_func, iid, tok, ec);
 
         if ~isempty(points.truncation)
-            % fprintf('bouts %d: sum(f): = %d \n', idx_bout, trapz(fd(fd >= points.truncation & fd <= points.censoring) , exp(g(fd >= points.truncation & fd <= points.censoring))) + exp(g(end)))
-            fprintf('bouts %d: sum(f): = %d \n', idx_bout, sum(exp(g(fd > points.truncation & fd <= points.censoring))) + exp(g(end)))
+            fprintf('bouts %d: sum(f): = %d \n', idx_bout, trapz(fd(fd >= points.truncation & fd <= points.censoring) , exp(g(fd >= points.truncation & fd <= points.censoring))) + exp(g(end)))
+            % fprintf('bouts %d: sum(f): = %d \n', idx_bout, trapz(exp(g(fd > points.truncation & fd <= points.censoring))) + exp(g(end)))
 
         else
-            fprintf('bouts %d: sum(f): = %d \n', idx_bout, trapz(exp(g(fd > 0 & fd <= points.censoring))) + exp(g(end)))
+            fprintf('bouts %d: sum(f): = %d \n', idx_bout, trapz(exp(g(fd > 0 & fd <= points.censoring)))) + exp(g(end));
         end
 
         f = f + exp(g);
@@ -348,7 +348,6 @@ if strcmp('iid', iid)
         pmix2 = @(inds) out.pmix_sum(inds) .* (1 - out.pmix_ratio(inds));
         pmix3 = @(inds) 1 - pmix1(inds) - pmix2(inds);
 
-
         % pdf and cdf (UNtruncated) for the two components
         [pdf, cdf] = pdf_cdf({'ddm','exp'});
 
@@ -358,16 +357,66 @@ if strcmp('iid', iid)
         pdf.ddm = @(ts, mu, theta, ndt) guard_ddm(pdf_ddm_raw, ts, mu, theta, ndt);
         cdf.ddm = @(ts, mu, theta, ndt) guard_ddm(cdf_ddm_raw, ts, mu, theta, ndt);
 
-        f_exp = @(ts, inds) (pmix1(inds)) .* pdf.exp(ts, out.lambda(inds));
-        F_exp = @(ts, inds) (pmix1(inds)) .* cdf.exp(ts, out.lambda(inds));
+        f_exp = @(ts, inds) (pmix1(inds)) .* pdf.exp(ts, extra);
+        F_exp = @(ts, inds) (pmix1(inds)) .* cdf.exp(ts, extra);
 
         f_ddm = @(ts, inds) (pmix2(inds)) .* pdf.ddm(ts, out.mu1(inds), out.theta1(inds), out.tndt(inds)) + ...
             (pmix3(inds)) .* pdf.ddm(ts, out.mu2(inds), out.theta2(inds), out.tndt(inds));
         F_ddm = @(t,  inds) (pmix2(inds)) .* cdf.ddm(t,  out.mu1(inds), out.theta1(inds), out.tndt(inds)) + ...
-            (pmix3(inds)) .* pdf.ddm(ts, out.mu2(inds), out.theta2(inds), out.tndt(inds));
+            (pmix3(inds)) .* cdf.ddm(t, out.mu2(inds), out.theta2(inds), out.tndt(inds));
 
-        f = @(ts, inds, extra) f_ddm(ts, inds) + f_exp(ts, inds, extra);
-        F = @(t,  inds, extra) F_ddm(t,  inds) + F_exp(t,  inds, extra);
+        f = @(ts, inds) f_ddm(ts, inds) + f_exp(ts, inds);
+        F = @(t,  inds) F_ddm(t,  inds) + F_exp(t,  inds);
+
+        t0   = points.truncation;
+        C    = points.censoring;
+        epsN = 1e-12;
+
+        % One consistent truncation factor: 1 - F_mix(t0) per index
+        trunc_factor = @(inds) max(1 - F(t0, inds), epsN);
+
+        % Likelihoods
+        g          = nan(size(bif.durations_s));
+        g(below)   = f_exp(ts(below), below) ./ trunc_factor(below);
+        g(bet)     = f(ts(bet),   bet)     ./ trunc_factor(bet);
+        g(abo)     = (1 - F(C, abo))         ./ trunc_factor(abo);
+
+        g      = max(g, 1e-5);
+        log_g  = log(g);
+    
+    elseif  strcmp('kdddm', tok{1})
+
+        below = bif.durations_s <  out.tndt;
+        bet   = bif.durations_s >= out.tndt & bif.durations_s <= points.censoring;
+        abo   = bif.durations_s >  points.censoring;
+
+        pmix1 = @(inds) out.pmix_sum(inds) .* out.pmix_ratio(inds);
+        pmix2 = @(inds) out.pmix_sum(inds) .* (1 - out.pmix_ratio(inds));
+        pmix3 = @(inds) 1 - pmix1(inds) - pmix2(inds);
+
+        % pdf and cdf (UNtruncated) for the two components
+        [pdf, cdf] = pdf_cdf({'ddm','kde'});
+
+        pdf_ddm_raw = pdf.ddm;
+        cdf_ddm_raw = cdf.ddm;
+
+        pdf.ddm = @(ts, mu, theta, ndt) guard_ddm(pdf_ddm_raw, ts, mu, theta, ndt);
+        cdf.ddm = @(ts, mu, theta, ndt) guard_ddm(cdf_ddm_raw, ts, mu, theta, ndt);
+
+        pdf.ddm = @(ts, mu, theta, ndt) guard_ddm(pdf_ddm_raw, ts, mu, theta, ndt);
+        cdf.ddm = @(ts, mu, theta, ndt) guard_ddm(cdf_ddm_raw, ts, mu, theta, ndt);
+
+        % Mixers
+        f_kde = @(ts, inds, extra) (pmix1(inds)) .* pdf.kde(ts, extra);
+        F_kde = @(t,  inds, extra) (pmix1(inds)) .* cdf.kde(t,  extra);
+
+        f_ddm = @(ts, inds) (pmix2(inds)) .* pdf.ddm(ts, out.mu1(inds), out.theta1(inds), out.tndt(inds)) + ...
+            (pmix3(inds)) .* pdf.ddm(ts, out.mu2(inds), out.theta2(inds), out.tndt(inds));
+        F_ddm = @(t,  inds) (pmix2(inds)) .* cdf.ddm(t,  out.mu1(inds), out.theta1(inds), out.tndt(inds)) + ...
+            (pmix3(inds)) .* cdf.ddm(t, out.mu2(inds), out.theta2(inds), out.tndt(inds));
+
+        f = @(ts, inds, extra) f_ddm(ts, inds) + f_kde(ts, inds, extra);
+        F = @(t,  inds, extra) F_ddm(t,  inds) + F_kde(t,  inds, extra);
 
         t0   = points.truncation;
         C    = points.censoring;
@@ -378,12 +427,14 @@ if strcmp('iid', iid)
 
         % Likelihoods
         g          = nan(size(bif.durations_s));
-        g(below)   = f_exp(ts(below), below, extra) ./ trunc_factor(below);
+        g(below)   = f_kde(ts(below), below, extra) ./ trunc_factor(below);
         g(bet)     = f(ts(bet),   bet,   extra)     ./ trunc_factor(bet);
         g(abo)     = (1 - F(C, abo, extra))         ./ trunc_factor(abo);
 
+
         g      = max(g, 1e-5);
         log_g  = log(g);
+
     end
 end
 
