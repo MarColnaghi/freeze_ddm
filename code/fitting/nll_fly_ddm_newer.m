@@ -399,11 +399,12 @@ if strcmp('iid', iid)
             pmix1 = @(inds) out.pmix_sum(inds) .* out.pmix_ratio(inds);
             pmix2 = @(inds) out.pmix_sum(inds) .* (1 - out.pmix_ratio(inds));
             pmix3 = @(inds) 1 - pmix1(inds) - pmix2(inds);
+            
         elseif any(ismember('pmix_contaminant', out.Properties.VariableNames))
             pmix1 = @(inds) out.pmix_contaminant(inds);
-            pmix_remaining = 1 - pmix1;
-            pmix2 = @(inds) pmix_remaining .* out.pmix_ratio(inds);
-            pmix3 = @(inds) pmix_remaining .* (1 - out.pmix_ratio(inds));
+            pmix_remaining = @(inds) 1 - pmix1(inds);
+            pmix2 = @(inds) pmix_remaining(inds) .* out.pmix_ratio(inds);
+            pmix3 = @(inds) pmix_remaining(inds) .* (1 - out.pmix_ratio(inds));
         end
 
         % pdf and cdf (UNtruncated) for the two components

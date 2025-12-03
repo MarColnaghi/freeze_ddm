@@ -46,8 +46,8 @@ model_results = run_fitting_newer(bouts_proc, points, 'kdddm2', paths, 'export',
 
 %%
 
-fh = plot_fit('results', model_results, 'conditions', false, 'export', true, 'bin_size', 3, 'censored_inset', true, 'type', 'continuous');
+fh = plot_fit('results', model_results, 'conditions', false, 'export', true, 'bin_size', 1, 'censored_inset', true, 'type', 'continuous');
 fh_conditions = plot_fit('results', model_results, 'conditions', true, 'export', true, 'bin_size', 3 , 'type', 'continuous');
-plot_estimates('results', model_results, 'export', true, 'ylimits', [-1 4])
+plot_estimates('results', model_results, 'export', true, 'ylimits', [-2 4])
 
 %fh = kde_fit('results', model_results, 'conditions', false, 'export', true, 'bin_size', 3, 'censored_inset', true, 'type', 'continuous');

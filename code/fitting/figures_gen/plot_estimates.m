@@ -72,4 +72,4 @@ function [suffixes, prefixes] = extract_dep(results)
 params = results.Properties.VariableNames;
 parts_str = cellfun(@(s) split(s, '_'), params, 'UniformOutput', false);
 suffixes = cellfun(@(parts) parts{end}, parts_str, 'UniformOutput', false);
-prefixes = cellfun(@(concat) parts{1:end-1}, parts_str, 'UniformOutput', false);
+prefixes = cellfun(@(concat) concat{1:end-1}, parts_str, 'UniformOutput', false);

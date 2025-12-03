@@ -21,3 +21,4 @@ points.truncation = min(bouts_proc.durations_s);
 
 model_results = run_fitting_newer(bouts_proc, points, 'exp0', paths, 'export', true, 'extra', []);
 plot_fit('results', model_results, 'conditions', false, 'bin_size', 1)
+
