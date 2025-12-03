@@ -1,4 +1,4 @@
-function model = model_kdddm1()
+function model = model_kdddm2()
 % Explicit spec with one block per model component
 
 
