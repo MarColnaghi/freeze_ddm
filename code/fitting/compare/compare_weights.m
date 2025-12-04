@@ -69,7 +69,8 @@ for idx_models = 1:length(model_list)
                         pmix_remaining = 1 - pmix.c;
                         pmix.s = pmix_remaining .* out.pmix_ratio;
                         pmix.l = pmix_remaining .* (1 - out.pmix_ratio);
-
+                        plot(1, pmix{1,1}, 'o', 'MarkerFaceColor', col.Set3(idx_models + 2, :),...
+                            'MarkerEdgeColor', 'none', 'MarkerSize', 8);
                     end
 
                 end
@@ -79,16 +80,21 @@ for idx_models = 1:length(model_list)
                 offsets = linspace(-width, +width, length(model_list));
                 xx = base + offsets(idx_models);
                 %
-                hand = plot(xx, pmix.Variables, 'o', 'MarkerFaceColor', col.Set3(idx_models + 2, :),...
-                    'MarkerEdgeColor', 'none', 'MarkerSize', 1);
+%                 hand = plot(xx, pmix.Variables, 'o', 'MarkerFaceColor', col.Set3(idx_models + 2, :),...
+%                     'MarkerEdgeColor', 'none', 'MarkerSize', 1);
 
-%                 hand = scatter(xx, pmix.Variables, 5, 'o', 'MarkerFaceColor', col.Set3(idx_models + 2, :),...
-%                     'MarkerEdgeColor', 'none', 'MarkerFaceColor', 0.02);
+                hand = scatter(xx, pmix.Variables, 8, 'o', 'MarkerFaceColor', col.Set3(idx_models + 2, :),...
+                    'MarkerEdgeColor', 'none', 'MarkerFaceAlpha', 0.02);
 
                 apply_generic(ax(i), 'xlim', [0.5 3.5], 'ylim', [-0.02 1.02], 'xticks', base,  ...
                     'yticks', [0 1],  ...
                     'tick_length', 0.03)
+
                 xticklabels({'Cont', 'Shrt', 'Long'});
+                ax(i).XTickLabels{1} = sprintf('\\color[rgb]{%f,%f,%f}%s', hex2rgb(col.processes.contam), ax(i).XTickLabel{1});
+                ax(i).XTickLabels{2} = sprintf('\\color[rgb]{%f,%f,%f}%s', hex2rgb(col.processes.short), ax(i).XTickLabel{2});
+                ax(i).XTickLabels{3} = sprintf('\\color[rgb]{%f,%f,%f}%s', hex2rgb(col.processes.long), ax(i).XTickLabel{3});
+                xtickangle(0)
                 axis square
                 drawnow
             end

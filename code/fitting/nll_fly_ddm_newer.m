@@ -370,7 +370,7 @@ if strcmp('iid', iid)
             (pmix3(inds)) .* cdf.ddm(ts, out.mu2(inds), out.theta2(inds), out.tndt(inds));
 
         f = @(ts, inds) f_ddm(ts, inds) + f_exp(ts, inds);
-        F = @(ts, inds) F_ddm(ts,  inds) + F_exp(ts,  inds);
+        F = @(ts, inds) F_ddm(ts, inds) + F_exp(ts,  inds);
 
         t0   = points.truncation;
         C    = points.censoring;
@@ -382,7 +382,7 @@ if strcmp('iid', iid)
 
         % Likelihoods
         g          = nan(size(bif.durations_s));
-        g(below)   = f_exp(ts(below), below) ./ trunc_factor_exp(below);
+        g(below)   = f_exp(ts(below), below) ./ trunc_factor(below);
         g(bet)     = f(ts(bet),   bet)     ./ trunc_factor(bet);
         g(abo)     = (1 - F(C, abo))         ./ trunc_factor(abo);
 
@@ -399,7 +399,7 @@ if strcmp('iid', iid)
             pmix1 = @(inds) out.pmix_sum(inds) .* out.pmix_ratio(inds);
             pmix2 = @(inds) out.pmix_sum(inds) .* (1 - out.pmix_ratio(inds));
             pmix3 = @(inds) 1 - pmix1(inds) - pmix2(inds);
-            
+
         elseif any(ismember('pmix_contaminant', out.Properties.VariableNames))
             pmix1 = @(inds) out.pmix_contaminant(inds);
             pmix_remaining = @(inds) 1 - pmix1(inds);

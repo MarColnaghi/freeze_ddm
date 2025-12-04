@@ -112,12 +112,12 @@ hold on
 for idx_sl = [unique(bouts.sloom)]'
 
     bouts_proc = data_parser_new(bouts, 'type', 'immobility', ...
-        'period', 'loom', 'window', 'le', 'min_dur', 360, 'nloom', 1:20);
-    bouts_proc = bouts_proc(bouts_proc.sloom == idx_sl, :);
+        'period', 'loom', 'window', 'le', 'min_dur', 18, 'nloom', 1:20);
+    bouts_temp = bouts_proc(bouts_proc.sloom == idx_sl, :);
 
   %  for idx_mov_flies = 0:4
         %idx_mov_flies = 0;
-   bouts_temp = bouts_proc(bouts_proc.moving_flies == 0, :);
+   %bouts_temp = bouts_proc(bouts_proc.moving_flies == 0, :);
 
         max_window = 1200;
         n_bouts = height(bouts_temp);
@@ -154,7 +154,8 @@ for idx_sl = [unique(bouts.sloom)]'
 end
 
 xline(-60, 'k--')
-apply_generic(ax, 'ylim', [0.0 0.8], 'xlim', [-600 0], 'xticks', sort([-600 0]))
+apply_generic(ax, 'ylim', [0.3 0.7], 'xlim', [-600, 0], 'xticks', sort([-600:100:0]))
+exporter(fh, paths, 'corr_timeshifts.pdf')
 
 %%
 
@@ -205,8 +206,8 @@ for idx_sl = [unique(bouts_proc.sloom_norm)]'
 end
 
 xline(-60, 'k--')
-apply_generic(ax, 'ylim', [0.3 0.7], 'xlim', [-600 0], 'xticks', sort([-600 0]))
-
+apply_generic(ax, 'ylim', [0.3 0.7], 'xlim', [-600:100:0], 'xticks', sort([-600:100:0]))
+exporter(fh, paths, 'corr_timeshifts.pdf')
 
 
 %%
