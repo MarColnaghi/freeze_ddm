@@ -42,7 +42,7 @@ extra.soc_mot_array = soc_mot_array;
 results_bsl = importdata('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/fitting_freezes/bsl/exp0/run07/fit_results_exp0.mat');
 lambda_est = table2array(results_bsl.estimates_mean);
 extra.lambda = lambda_est(~isnan(lambda_est));
-model_results = run_fitting_newer(bouts_proc, points, 'kdddm2', paths, 'export', true, 'bads_display', true, 'pass_ndt', false, 'n_bads', 5, 'extra', extra);
+model_results = run_fitting_newer(bouts_proc, points, 'ded2', paths, 'export', true, 'bads_display', true, 'pass_ndt', true, 'n_bads', 5, 'extra', extra);
 
 %%
 

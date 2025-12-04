@@ -1,4 +1,4 @@
-function plot_estimates(varargin)
+function fh = plot_estimates(varargin);
 
 opt = inputParser;
 addParameter(opt, 'results', []);

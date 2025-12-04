@@ -13,6 +13,8 @@ bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'win
 points.censoring = 10.5;
 points.truncation = 0.3;
 
+window_type = 'loom_onset';
+
 %  Now we added our vector column to the bouts table
 
 chunk_len = points.censoring * 60;
@@ -21,7 +23,12 @@ sm_raw = cell(1 - height(bouts_proc));
 
 for idx_trials = 1:height(bouts_proc)
 
-    ons = bouts_proc.onsets(idx_trials);
+    if strcmp(window_type, 'loom_onset')
+        ons = bouts_proc.loom_ts(idx_trials);
+    elseif strcmp(window_type, 'freeze_onset')
+        ons = bouts_proc.onsets(idx_trials);
+    end
+
     off = bouts_proc.ends(idx_trials) - 1;
     sum_motion = motion_cache(bouts_proc.fly(idx_trials));
     sm_raw{idx_trials} = sum_motion(ons:ons + chunk_len - 1) ./ 10;
@@ -34,7 +41,7 @@ model = 'dddm2';
 paths = path_generator('folder', sprintf('causality/fitting_windows/%s', model), 'bouts_id', id_code, 'imfirst', false);
 create_output_dirs(paths);
 
-for idx_backframes = [600]
+for idx_backframes = [30 60 180 300 600]
 
     backframes = idx_backframes;
 
