@@ -17,23 +17,27 @@ window_type = 'loom_onset';
 
 %  Now we added our vector column to the bouts table
 
+edge_l = -630;
+edge_r = 240;
+
 chunk_len = points.censoring * 60;
-sm_ts = nan(height(bouts_proc), chunk_len);
+sm_ts = nan(height(bouts_proc), abs(edge_l) + abs(edge_r));
 sm_raw = cell(1 - height(bouts_proc));
 
 for idx_trials = 1:height(bouts_proc)
 
     if strcmp(window_type, 'loom_onset')
         ons = bouts_proc.loom_ts(idx_trials);
+    
     elseif strcmp(window_type, 'freeze_onset')
         ons = bouts_proc.onsets(idx_trials);
     end
 
-    off = bouts_proc.ends(idx_trials) - 1;
+    off = bouts_proc.ends(idx_trials);
     sum_motion = motion_cache(bouts_proc.fly(idx_trials));
     sm_raw{idx_trials} = sum_motion(ons:ons + chunk_len - 1) ./ 10;
 
-    sm_ts(idx_trials, :) = sum_motion(ons - 630:ons - 1) ./ 10;
+    sm_ts(idx_trials, :) = sum_motion(ons + edge_l : ons + edge_r - 1) ./ 10;
 
 end
 
@@ -41,7 +45,7 @@ model = 'dddm2';
 paths = path_generator('folder', sprintf('causality/fitting_windows/%s', model), 'bouts_id', id_code, 'imfirst', false);
 create_output_dirs(paths);
 
-for idx_backframes = [30 60 180 300 600]
+for idx_backframes = [180 300 510 570 630 640 650 660 690 720 840]
 
     backframes = idx_backframes;
 
@@ -50,9 +54,12 @@ for idx_backframes = [30 60 180 300 600]
     paths_backframe.results = fullfile(paths.results, num2str(backframes));
     paths_backframe.fig = fullfile(paths.fig, num2str(backframes));
 
-    bouts_proc.avg_sm_pre_norm = mean(sm_ts(:, end - backframes:end), 2);
+    bouts_proc.avg_sm_pre_norm = mean(sm_ts(:, backframes:backframes + 60 - 1), 2);
+
+    %bouts_proc.avg_sm_pre_norm = mean(sm_ts(:, end - backframes:end), 2);
     soc_mot_array = cell2mat(sm_raw)';
     extra.soc_mot_array = soc_mot_array;
+    
     model_results = run_fitting_newer(bouts_proc, points, model, paths, 'export', false,...
         'bads_display', false, 'pass_ndt', false, 'n_bads', 2, 'extra', extra);
 

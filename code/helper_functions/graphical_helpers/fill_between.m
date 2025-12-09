@@ -1,4 +1,4 @@
-function [y1handle, y2handle, h] = fill_between(x, y1, y2, where, varargin)
+function [h] = fill_between(x, y1, y2, where, varargin)
 % function originally written by Ben Vincent, July 2014. Inspired by a
 % function of the same name available in the Matplotlib Python library.
 % Save current axes so it can't change during runtime

@@ -14,7 +14,7 @@ t = tiledlayout(1, 1, 'TileSpacing', 'loose', 'Padding', 'loose');
 mkrsize = 220;
 nexttile
 
-for idx_run = 1:2
+for idx_run = 4
     run_str = sprintf('run0%d', idx_run);
 
     str_folder = fullfile('causality/fitting_windows', model_str, run_str);
@@ -50,4 +50,4 @@ xlabel('Integration Windows (frames)')
 ylabel('ELBO')
 xline(0, 'k-', 'LineWidth',3)
 
-exporter(fh, paths, 'elbo_fitted_models.pdf')
+%exporter(fh, paths, 'elbo_fitted_models.pdf')
