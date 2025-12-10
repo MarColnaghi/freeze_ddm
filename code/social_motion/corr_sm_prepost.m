@@ -113,11 +113,10 @@ for idx_sl = [unique(bouts.sloom)]'
 
     bouts_proc = data_parser_new(bouts, 'type', 'immobility', ...
         'period', 'loom', 'window', 'le', 'min_dur', 18, 'nloom', 1:20);
-    bouts_temp = bouts_proc(bouts_proc.sloom == idx_sl, :);
+    bouts_proc = bouts_proc(bouts_proc.sloom == idx_sl, :);
 
-  %  for idx_mov_flies = 0:4
-        %idx_mov_flies = 0;
-   %bouts_temp = bouts_proc(bouts_proc.moving_flies == 0, :);
+    for idx_mov_flies = 0:4
+        bouts_temp = bouts_proc(bouts_proc.moving_flies == 0, :);
 
         max_window = 1200;
         n_bouts = height(bouts_temp);
@@ -150,7 +149,7 @@ for idx_sl = [unique(bouts.sloom)]'
         coeffs = corrcoef([avg_sm_freeze avg_sm_pre]);
         plot(-max_window:1:-1, coeffs(1, end:-1:2), 'LineWidth', 2, 'Color', col.loomspeed(1 + idx_sl / 25, :))
 
-   % end
+   end
 end
 
 xline(-60, 'k--')

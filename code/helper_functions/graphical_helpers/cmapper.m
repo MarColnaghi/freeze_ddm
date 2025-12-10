@@ -4,9 +4,13 @@ if nargin < 2
     quantiles = [];
 end
 
-col.fits = [cbrewer2('Set2',3); cbrewer2('Dark2',3)];
-col.fits = col.fits([1,4,2,5,3,6],:);
+col.empirical.col = [cbrewer2('Set2',3); cbrewer2('Dark2',3)];
+col.empirical.col = col.empirical.col([1,4,2,5,3,6],:);
+
+col.empirical.gray = repmat([0.7 0.7 0.7], 6, 1);
+
 col.pmix_map = 'L17';
+
 col.single_proc = '#E69665';
 col.double_proc = '#CE55C2';
 col.triple_proc =  '#F1A208';
