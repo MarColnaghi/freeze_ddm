@@ -9,9 +9,9 @@ paths = path_generator('folder', 'fitting_freezes/le', 'bouts_id', id_code, 'imf
 bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
 motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 
-bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le');
+bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', 'nloom', 2:20);
 points.censoring = 10.5;
-points.truncation = 0.3;
+points.truncation = 0;
 
 kde_estimates = importdata(fullfile('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/fitting_freezes/bsl/kde_spontaneous', id_code, 'kde_estimates_bsl.mat'));
 [~, idx] = unique(kde_estimates.Fkde, 'last');
@@ -44,12 +44,16 @@ lambda_est = table2array(results_bsl.estimates_mean);
 extra.lambda = lambda_est(~isnan(lambda_est));
 
 %%
-model_results = run_fitting_newer(bouts_proc, points, 'ded2', paths, 'export', true, 'bads_display', true, 'pass_ndt', true, 'n_bads', 5, 'extra', extra);
+model_results = run_fitting_newer(bouts_proc, points, 'kdddm2', paths, 'export', true, 'bads_display', true, 'pass_ndt', false, 'n_bads', 5, 'extra', extra);
 
 %%
 
-fh = plot_fit('results', model_results, 'conditions', false, 'export', true, 'bin_size', 1, 'censored_inset', true, 'type', 'continuous');
-fh_conditions = plot_fit('results', model_results, 'conditions', true, 'export', true, 'bin_size', 3 , 'type', 'discrete', 'extra', extra);
+% fh = plot_fit('results', model_results, 'conditions', false, 'export', true, 'bin_size', 1, 'censored_inset', true, 'type', 'continuous');
+% fh_conditions = plot_fit('results', model_results, 'conditions', true, 'export', true, 'bin_size', 3 , 'type', 'discrete', 'extra', extra);
+
 plot_estimates('results', model_results, 'export', true, 'ylimits', [-2 5])
+[fh, ax, ax_inset] = fd_conditions('results', model_results, 'no_y', true);
+overlay_fits(fh, ax, ax_inset, 'results', model_results, 'export', true, 'extra', extra)
+
 
 %fh = kde_fit('results', model_results, 'conditions', false, 'export', true, 'bin_size', 3, 'censored_inset', true, 'type', 'continuous');

@@ -46,12 +46,12 @@ end
 
 results.fitted_model = sprintf('model_%s', results.fitted_model);
 if ~isempty(results.points.censoring)
-    freezes.durations_s(freezes.durations_s > results.points.censoring) = results.points.censoring + 1/60;
+    freezes.durations_s(freezes.durations_s > results.points.censoring) = results.points.censoring + 1;
     freezes = freezes(freezes.durations_s >= results.points.truncation, :);
 
 end
 
-fh = figure('Position', [100 100 1250 580], 'Color', 'w');
+fh = figure('Position', [100 100 1570 580], 'Color', 'w');
 t = tiledlayout(3, 4, 'TileSpacing', 'compact', 'Padding', 'compact');
 % ax_inset = struct;
 % ax = struct();
@@ -82,8 +82,8 @@ for idx_sm = 1:3
             % fill_between(xxi, RTD{1,2} + RTD{2,2}, RTD{1,2} - RTD{3,2}, [], 'FaceColor', 'r', 'FaceAlpha', 0.4, 'LineStyle', 'none')
             % plot(xxi, RTD{1,2}, 'Color', 'k', 'LineWidth', 2)
 
-            histogram(freezes_quant.durations_s, min(freezes.durations_s) - 1/120:bin_size_in_seconds:600, 'Normalization', 'pdf', 'EdgeColor', 'none', 'FaceColor',  col.empirical.(color)( 2*(idx_sm - 1) + idx_fs, :), 'FaceAlpha', 0.3)
-            plot(xxi, ks, 'Color', col.empirical.(color)( 2*(idx_sm - 1) + idx_fs, :), 'LineWidth' , 2)
+            histogram(freezes_quant.durations_s, min(freezes.durations_s) - 1/120:bin_size_in_seconds:900, 'Normalization', 'pdf', 'EdgeColor', 'none', 'FaceColor',  col.empirical.(color)( 2*(idx_sm - 1) + idx_fs, :), 'FaceAlpha', 0.25)
+            plot(xxi, ks, 'Color', col.empirical.(color)( 2*(idx_sm - 1) + idx_fs, :), 'LineWidth' , 2.2)
 
             %             hp = plot([-.3 -.3], [0 1], 'k-', 'LineWidth', 2, 'Clipping', 'off');
             %             text(-0.52, 0, '0', 'HorizontalAlignment', 'right', 'VerticalAlignment', 'middle', 'FontSize', 18)
@@ -105,12 +105,17 @@ for idx_sm = 1:3
                 apply_generic(ax_inset(i), 'ylim', [0 0.3], 'xlim', [censored_x - 0.025 censored_x + 0.025], 'yticks', [0 0.3], 'xticks', censored_x, ...
                     'tick_length', 0.05, 'line_width', 2, 'no_x', true, 'font_size', 18);
 
-
+                if i > 1
+                    yticklabels({})
+                end
             end
 
             axes(ax(i));
             scatter(censored_x, censored_density, 32, 'filled', 'MarkerFaceColor', col.empirical.(color)( 2*(idx_sm - 1) + idx_fs, :), 'MarkerEdgeColor', 'none');
             apply_generic(ax(i), 'xlim', [-0.1 10.6], 'ylim', [-0.05 2.05], 'no_y', no_y, 'font_size', 20, 'line_width', 2.2, 'yticks', [0 1], 'xticks', [results.points.truncation 10])
+            if i > 1
+                xticklabels({})
+            end
             drawnow
             
         end

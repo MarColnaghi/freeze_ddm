@@ -14,7 +14,7 @@ t = tiledlayout(1, 1, 'TileSpacing', 'loose', 'Padding', 'loose');
 mkrsize = 220;
 nexttile
 
-for idx_run = 1:3
+for idx_run = 3
     run_str = sprintf('run0%d', idx_run);
 
     str_folder = fullfile('causality/fitting_windows', model_str, run_str);

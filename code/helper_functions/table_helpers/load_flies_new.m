@@ -48,7 +48,7 @@ bouts.avg_sm = zeros(0); % average focal fly velocity between loom start and fre
 bouts.avg_fs = zeros(0); % average focal fly velocity between one second before loom until loom
 bouts.avg_fs_1s = zeros(0); % average focal fly velocity between one second before loom until loom
 bouts.avg_pc = zeros(0); % average focal fly velocity between one second before freeze until freeze
-
+bouts.jumping_flies = zeros(0);
 bouts.filename = zeros(0);
 
 soc_mot = table();
@@ -121,7 +121,7 @@ for dataset = 1
                 end
 
                 loom_frames = Fly1.frame(Fly1.looming_bout==1);
-                loom_starts = loom_frames([true;diff(loom_frames)>2])+1;
+                loom_starts = loom_frames([true; diff(loom_frames)>2])+1;
                 loom_ends = loom_frames([diff(loom_frames)>1;true])+1;
                 loom_durs = repmat(loom_ends - loom_starts, 2, 1);
 
@@ -185,7 +185,7 @@ for dataset = 1
                     'UniformOutput', false);
 
                 z.avg_fs_1s = nan(length(run_lengths), 1);
-                z.avg_fs_1s(onsets >= 61, :) = compute_means(Fly1.velocity(1:end), onsets(onsets >= 61, :) - 60, onsets(onsets >= 61, :));
+                z.avg_fs_1s(onsets >= 61, :) = compute_means(Fly1.velocity(1:end), onsets(onsets >= 61, :) - 60, onsets(onsets >= 61, :) - 1);
                 z.avg_fs = compute_means(Fly1.velocity(1:end), run_ends - run_lengths, run_ends - 1);
                 z.avg_pc = compute_means(Fly1.pixelchange(1:end), run_ends - run_lengths, run_ends - 1);
 
@@ -201,6 +201,14 @@ for dataset = 1
                 z.loom_ts = loom_ts_previous;
                 z.loom_ts_n = loom_ts_next;
                 z.loom_durs = repelem(loom_durs, histcounts(nloom, 0.5:1:40.5));
+
+                jumps = nan(4, height(Fly1));
+
+                for idx_surr_fly = 1:4
+                    jumps(idx_surr_fly, :) = movmean(Fly1.(sprintf('speed_sur_fly_%d',idx_surr_fly)), 10) > 20;
+                end
+
+                z.jump_flies = interp1(1:height(Fly1), sum(jumps), onsets);
 
                 soc_mot = [soc_mot; l];
                 bouts = [bouts; z];
