@@ -20,10 +20,10 @@ edge_r = 240;
 ts = edge_l:(edge_r - 1);
 total_length = length(ts);
 
-windows.anchor = 'freeze_onset';
-windows.reference = 'fixed_length';
-windows.points = [-600 -300 -60 -30 0 5 10 15 20 25 30 35 180];
-windows.length = 30;
+windows.anchor = 'loom_onset';
+windows.reference = 'cumulative';
+windows.points = [-600 -300 -60 -30 -10 10 20 30 40 50 60 120 180 240 300];
+windows.length = 'cumul';
 
 chunk_len = points.censoring * 60 - 1;
 sm_window = nan(height(bouts_proc), total_length);
@@ -47,23 +47,27 @@ for idx_trials = 1:height(bouts_proc)
 end
 
 model = 'dddm2';
-paths = path_generator('folder', sprintf('causality/fitting_windows/%s', model), 'bouts_id', id_code, 'imfirst', false);
-create_output_dirs(paths);
+paths = path_generator('folder', sprintf('causality/fitting_windows/%s/%s', model, windows.reference), 'bouts_id', id_code, 'imfirst', false);
+create_output_dirs(paths, windows);
 
 for idx_backframes = windows.points
 
     backframes = abs(edge_l - idx_backframes) + 1;
 
-    mkdir(fullfile(paths.fig, num2str(backframes)));
-    mkdir(fullfile(paths.results, num2str(backframes)));
-    paths_backframe.results = fullfile(paths.results, num2str(backframes));
-    paths_backframe.fig = fullfile(paths.fig, num2str(backframes));
+    mkdir(fullfile(paths.fig, num2str(idx_backframes)));
+    mkdir(fullfile(paths.results, num2str(idx_backframes)));
+    paths_backframe.results = fullfile(paths.results, num2str(idx_backframes));
+    paths_backframe.fig = fullfile(paths.fig, num2str(idx_backframes));
 
     if strcmp(windows.reference, 'fixed_length')
-        bouts_proc.avg_sm_pre_norm = mean(sm_window(:, backframes:backframes + windows.length - 1), 2);
+        bouts_proc.avg_sm_pre_norm = mean(sm_window(:, backframes:backframes + str2double(windows.length) - 1), 2);
 
-    elseif strcmp(windows.reference, 'relative')
-
+    elseif strcmp(windows.reference, 'cumulative')
+        if backframes <= abs(edge_l)
+            bouts_proc.avg_sm_pre_norm = mean(sm_window(:, backframes:abs(edge_l)), 2);
+        elseif backframes > abs(edge_l)
+            bouts_proc.avg_sm_pre_norm = mean(sm_window(:, abs(edge_l) + 1:backframes), 2);
+        end
     end
 
     %bouts_proc.avg_sm_pre_norm = mean(sm_ts(:, end - backframes:end), 2);
@@ -73,9 +77,7 @@ for idx_backframes = windows.points
     model_results = run_fitting_newer(bouts_proc, points, model, paths, 'export', false,...
         'bads_display', false, 'pass_ndt', false, 'n_bads', 2, 'extra', extra);
 
-
     model_results.bouts_path = paths_backframe.results; model_results.paths = paths.fig;
-
     model_results.motion_cache_path = fullfile(paths.cache_path, 'motion_cache.mat');
 
     save(fullfile(paths_backframe.results, sprintf('fit_results_%s.mat', model)), '-struct', 'model_results');
@@ -91,7 +93,7 @@ end
 % 
 
 
-function create_output_dirs(paths)
+function create_output_dirs(paths, windows)
     % Ensure base directories exist
     if ~exist(paths.fig, 'dir'), mkdir(paths.fig); end
     if ~exist(paths.results, 'dir'), mkdir(paths.results); end
@@ -115,7 +117,7 @@ function create_output_dirs(paths)
         next_run = max(run_nums) + 1;
     end
 
-    run_name = sprintf('run%02d', next_run);
+    run_name = sprintf('run%02d_size%s_anchor-%s', next_run, windows.length, windows.anchor);
     paths.results = fullfile(paths.results, run_name);
     mkdir(paths.results);
 

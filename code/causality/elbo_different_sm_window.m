@@ -7,19 +7,39 @@ clearvars
 threshold_imm = 2; threshold_mob = 2; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
 model_str = 'dddm2';
 col.Set3 = cbrewer2('Set3', 5);
-    
 
-fh = figure('Position', [100 100 900 600], 'Color', 'w');
-t = tiledlayout(1, 1, 'TileSpacing', 'loose', 'Padding', 'loose');
+windows.anchor = 'loom_onset';
+windows.reference = 'fixed_length';
+windows.length = '30';
+
+fh = figure('Position', [100 100 920 560], 'Color', 'w');
+t = tiledlayout(3, 1, 'TileSpacing', 'loose', 'Padding', 'loose');
 mkrsize = 220;
+
+model_acausal = importdata('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/fitting_freezes/le/dddm2/run11/fit_results_dddm2.mat');
+elbo_acausal = model_acausal.elbo;
+
+parent_folder = fullfile('model_results/causality/fitting_windows', model_str, windows.reference);
+code_folder = sprintf('*_size%s*', windows.length);
+dir_folder = dir(fullfile(parent_folder, code_folder));
+
 nexttile
 
-for idx_run = 3
-    run_str = sprintf('run0%d', idx_run);
+c = 0;
+for idx_run = 1:length(dir_folder)
+    
+    c = c + 1;
+    str_folder = fullfile(dir_folder(idx_run).folder, dir_folder(idx_run).name);
 
-    str_folder = fullfile('causality/fitting_windows', model_str, run_str);
-    paths = path_generator('folder', str_folder, 'bouts_id', id_code, 'imfirst', false);
-    d = dir(paths.results);
+    extractLabel = @(s) ...
+        regexprep( ...
+        regexprep(extractAfter(s, '-'), '_', ' '), ...
+        '(^|\s)(\w)', '${upper($2)}');
+
+    label = extractLabel(dir_folder(idx_run).name);
+
+    % paths = path_generator('folder', 'causality/fixed_window', 'bouts_id', id_code, 'imfirst', false);
+    d = dir(str_folder);
     d = d(~ismember({d.name}, {'.','..', '.DS_Store'}));
 
     elbos = nan(size(d, 1), 2);
@@ -34,20 +54,29 @@ for idx_run = 3
 
     hold on
 
-    scatter(-get_window_size, elbos(:,1), mkrsize, 'o', 'MarkerFaceColor', col.Set3(2 + idx_run, :), ...
-        'MarkerEdgeColor', 'none')
-    [sorted_window_size, i] = sort(-get_window_size);
-    plot(sorted_window_size, elbos(i,1), 'Color', col.Set3(2 + idx_run, :), 'LineStyle', '--')
+    scatter(get_window_size, elbos(:,1), mkrsize, 'o', 'MarkerFaceColor', col.Set3(3 + c, :), ...
+        'MarkerEdgeColor', 'none', 'DisplayName', sprintf('Aligned to %s', label))
+    [sorted_window_size, i] = sort(get_window_size);
+    plot(sorted_window_size, elbos(i, 1), 'Color', col.Set3(3 + c, :), 'LineStyle', '--', 'HandleVisibility','off')
+    grid on
 end
 
-model_acausal = importdata('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/fitting_freezes/le/dddm2/run09/fit_results_dddm2.mat');
-elbo_acausal = model_acausal.elbo;
 
-scatter(30, elbo_acausal(:,1), mkrsize, 'o', 'MarkerFaceColor', 'k', ...
-        'MarkerEdgeColor', 'none')
-apply_generic(gca, 'xlim', [-610 60], 'xticks', sort([-get_window_size(:); 30]))
-xlabel('Integration Windows (frames)')
+
+% scatter(30, elbo_acausal(:,1), mkrsize, 'o', 'MarkerFaceColor', 'k', ...
+%         'MarkerEdgeColor', 'none')
+
+yline(elbo_acausal(:,1), 'k--', 'DisplayName', 'Freeze Duration', 'LineWidth', 2)
+apply_generic(gca, 'xlim', [-610 190], 'xticks', [-600 -300 -60 0 30 60 120 180])
+
+if stcmp(windows.reference, 'fixed_length')
+    xlabel('Start of Integration Windows (frames)')
+else
+    xlabel('Start/End of Integration Window (frames)')
+end
+
 ylabel('ELBO')
-xline(0, 'k-', 'LineWidth',3)
+legend('Location', 'eastoutside', 'Box', 'off', 'FontSize', 20)
 
-%exporter(fh, paths, 'elbo_fitted_models.pdf')
+figure_label = sprintf('elbos_%s_length%s.pdf', windows.reference, windows.length);
+exporter(fh, paths, figure_label)

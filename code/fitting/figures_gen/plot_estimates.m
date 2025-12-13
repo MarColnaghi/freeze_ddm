@@ -4,38 +4,45 @@ opt = inputParser;
 addParameter(opt, 'results', []);
 addParameter(opt, 'export', false);
 addParameter(opt, 'ylimits', [-1, 4]);
-
+addParameter(opt, 'base', []);
 addParameter(opt, 'paths', []);
 
 parse(opt, varargin{:});
 export = opt.Results.export;
 paths = opt.Results.paths;
 ylimits = opt.Results.ylimits;
+figure_handle = opt.Results.base;
 
-quantiles = 0;
-col = cmapper([], quantiles);
+if isempty(base)
 
-results = opt.Results.results;
-est_means = results.estimates_mean(:, ~ismissing(results.estimates_mean));
-est_std = results.estimates_std(:, ~ismissing(results.estimates_mean));
+    quantiles = 0;
+    col = cmapper([], quantiles);
 
-fh = figure('color','w', 'Position', [100 100 800 400]);
+    results = opt.Results.results;
+    est_means = results.estimates_mean(:, ~ismissing(results.estimates_mean));
+    est_std = results.estimates_std(:, ~ismissing(results.estimates_mean));
 
-hold on
-[suffixes, prefixes] = extract_dep(est_means);
+    fh = figure('color','w', 'Position', [100 100 800 400]);
 
-% Replace 'intercept' with '0' in the suffixes
-suffixes_replaced = suffixes;
-suffixes_replaced(strcmp(suffixes, 'intercept')) = {'0'};
+    hold on
+    [suffixes, prefixes] = extract_dep(est_means);
 
-% Combine using cellfun
-xx = 1:size(suffixes, 2);
+    % Replace 'intercept' with '0' in the suffixes
+    suffixes_replaced = suffixes;
+    suffixes_replaced(strcmp(suffixes, 'intercept')) = {'0'};
 
-result = cellfun(@(pre, suf) ['$$\beta_{' pre '}^{' suf '}$$'], ...
-                 prefixes, suffixes_replaced, 'UniformOutput', false);
-c = arrayfun(@num2str, xx, 'UniformOutput', false);
-result = cellfun(@(suf) ['$$\beta^{' suf '}$$'], ...
-                    c, 'UniformOutput', false);
+    % Combine using cellfun
+    xx = 1:size(suffixes, 2);
+
+    result = cellfun(@(pre, suf) ['$$\beta_{' pre '}^{' suf '}$$'], ...
+        prefixes, suffixes_replaced, 'UniformOutput', false);
+    c = arrayfun(@num2str, xx, 'UniformOutput', false);
+    result = cellfun(@(suf) ['$$\beta^{' suf '}$$'], ...
+        c, 'UniformOutput', false);
+
+else
+    figure(figure_handle)
+end
 
 for idx_param = 1:length(xx)
     fill([xx(idx_param) - 0.3, xx(idx_param) - 0.3, xx(idx_param) + 0.3, xx(idx_param) + 0.3], ...
