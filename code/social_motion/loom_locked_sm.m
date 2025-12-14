@@ -51,15 +51,15 @@ for idx_sloom = unique(sloom)'
         if idx_moving_flies == 0 && idx_sloom == 25
             xlabels = false;
             % xlabel('frames')
-            text(-75, 0, '0', 'HorizontalAlignment', 'right', 'VerticalAlignment', 'middle', 'Clipping', 'off', 'FontSize', 16)
-            text(-75, 10, '10', 'HorizontalAlignment', 'right', 'VerticalAlignment', 'middle', 'Clipping', 'off', 'FontSize', 16)
+           % text(-75, 0, '0', 'HorizontalAlignment', 'right', 'VerticalAlignment', 'middle', 'Clipping', 'off', 'FontSize', 16)
+           % text(-75, 10, '10', 'HorizontalAlignment', 'right', 'VerticalAlignment', 'middle', 'Clipping', 'off', 'FontSize', 16)
 
         end
 
-        plot([-70 -70], [0 10], 'k-', 'LineWidth', 2, 'Clipping', 'off');
+        plot([-70 -70], [0 10], 'k-', 'LineWidth', 2, 'Clipping', 'on');
         colororder(col.vars.ln(end - total_looms:end, :))
 
-        apply_generic(gca, 'no_y', true, 'ylims', [-2 45], 'xlims', [-60 60], ...
+        apply_generic(gca, 'no_y', false, 'ylims', [-2 45], 'xlims', [-60 60], ...
             'no_xlabels', xlabels, 'xticks', [-60 0 180], 'tick_length', 0.04)
 
         % xline(0, 'LineWidth', 2); xtickangle(0);

@@ -5,7 +5,7 @@ col = cmapper();
 paths_out = path_generator('folder', '/spontaneous_process', 'bouts_id', id_code, 'imfirst', false);
 bouts = importdata(fullfile(paths_out.dataset, 'bouts.mat'));
 bouts_spontaneous = data_parser_new(bouts, 'period', 'bsl', 'window', 'le', 'type', 'immobility', 'nloom', 10:20);
-bouts_le = data_parser_new(bouts, 'period', 'loom', 'window', 'le', 'type', 'immobility');
+bouts_le = data_parser_new(bouts, 'period', 'loom', 'window', 'le', 'type', 'immobility', 'nloom', 2:20);
 
 fh = figure('color', 'w', 'Position', [100, 100, 800, 400]);
 hold on
@@ -32,7 +32,7 @@ apply_generic(gca, 'xlim', [-0.03 60.03], 'ylim', [-0.001 0.051])
 histogram(bouts_spontaneous.durations, 'BinMethod', 'integers', 'Normalization', 'probability','EdgeColor','none', 'FaceColor', col.processes.contam)
 histogram(bouts_le.durations, 'BinMethod', 'integers', 'Normalization', 'probability', 'EdgeColor','none', 'FaceColor', col.period.loom)
 
-% exporter(fh, paths_out, 'bsl_vs_loom_distributions.pdf')
+exporter(fh, paths_out, 'bsl_vs_loom_distributions.pdf')
 
 
 %% Conditions

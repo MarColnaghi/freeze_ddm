@@ -22,7 +22,7 @@ total_length = length(ts);
 
 windows.anchor = 'loom_onset';
 windows.reference = 'cumulative';
-windows.points = [-600 -300 -60 -30 -10 10 20 30 40 50 60 120 180 240 300];
+windows.points = [-600 -300 -60 -30 -10 10 20 30 40 50 60 120 180 239];
 windows.length = 'cumul';
 
 chunk_len = points.censoring * 60 - 1;
@@ -65,9 +65,14 @@ for idx_backframes = windows.points
     elseif strcmp(windows.reference, 'cumulative')
         if backframes <= abs(edge_l)
             bouts_proc.avg_sm_pre_norm = mean(sm_window(:, backframes:abs(edge_l)), 2);
+            fprintf('\n from %d to %d', backframes, abs(edge_l))
+
         elseif backframes > abs(edge_l)
             bouts_proc.avg_sm_pre_norm = mean(sm_window(:, abs(edge_l) + 1:backframes), 2);
+            fprintf('\n from %d to %d', abs(edge_l) + 1, backframes)
+
         end
+
     end
 
     %bouts_proc.avg_sm_pre_norm = mean(sm_ts(:, end - backframes:end), 2);

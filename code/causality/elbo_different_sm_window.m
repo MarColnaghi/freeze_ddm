@@ -12,14 +12,14 @@ windows.anchor = 'loom_onset';
 windows.reference = 'fixed_length';
 windows.length = '30';
 
-fh = figure('Position', [100 100 920 560], 'Color', 'w');
-t = tiledlayout(3, 1, 'TileSpacing', 'loose', 'Padding', 'loose');
-mkrsize = 220;
+fh = figure('Position', [100 100 1070 500], 'Color', 'w');
+t = tiledlayout(1, 1, 'TileSpacing', 'loose', 'Padding', 'loose');
+mkrsize = 180;
 
 model_acausal = importdata('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/fitting_freezes/le/dddm2/run11/fit_results_dddm2.mat');
 elbo_acausal = model_acausal.elbo;
 
-parent_folder = fullfile('model_results/causality/fitting_windows', model_str, windows.reference);
+parent_folder = fullfile('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/causality/fitting_windows', model_str, windows.reference);
 code_folder = sprintf('*_size%s*', windows.length);
 dir_folder = dir(fullfile(parent_folder, code_folder));
 
@@ -67,16 +67,24 @@ end
 %         'MarkerEdgeColor', 'none')
 
 yline(elbo_acausal(:,1), 'k--', 'DisplayName', 'Freeze Duration', 'LineWidth', 2)
-apply_generic(gca, 'xlim', [-610 190], 'xticks', [-600 -300 -60 0 30 60 120 180])
+ax = gca;
+apply_generic(ax, 'xlim', [-610 240], 'xticks', [-600 -300 -60 0 30 60 120 180 240], 'ylim', [-10650 -10400])
+ax.GridAlpha = .1;
 
-if stcmp(windows.reference, 'fixed_length')
+if strcmp(windows.reference, 'fixed_length')
     xlabel('Start of Integration Windows (frames)')
 else
     xlabel('Start/End of Integration Window (frames)')
 end
 
 ylabel('ELBO')
-legend('Location', 'eastoutside', 'Box', 'off', 'FontSize', 20)
+legend('Location', 'southeastoutside', 'Box', 'off', 'FontSize', 20)
 
-figure_label = sprintf('elbos_%s_length%s.pdf', windows.reference, windows.length);
+if strcmp(windows.reference, 'fixed_length')
+    figure_label = sprintf('elbos_%s_length%s.pdf', windows.reference, windows.length);
+else
+    figure_label = sprintf('elbos_%s.pdf', windows.reference);
+end
+
+paths = path_generator('folder', fullfile('causality/fitting_windows', model_str, windows.reference));
 exporter(fh, paths, figure_label)

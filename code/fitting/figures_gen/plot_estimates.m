@@ -1,4 +1,4 @@
-function fh = plot_estimates(varargin);
+function fh = plot_estimates(varargin)
 
 opt = inputParser;
 addParameter(opt, 'results', []);
@@ -6,21 +6,26 @@ addParameter(opt, 'export', false);
 addParameter(opt, 'ylimits', [-1, 4]);
 addParameter(opt, 'base', []);
 addParameter(opt, 'paths', []);
+addParameter(opt, 'marker', 'o');
+addParameter(opt, 'label', []);
 
 parse(opt, varargin{:});
 export = opt.Results.export;
 paths = opt.Results.paths;
 ylimits = opt.Results.ylimits;
 figure_handle = opt.Results.base;
+marker = opt.Results.marker;
+label = opt.Results.label;
 
-if isempty(base)
+results = opt.Results.results;
+est_means = results.estimates_mean(:, ~ismissing(results.estimates_mean));
+est_std = results.estimates_std(:, ~ismissing(results.estimates_mean));
+
+
+if isempty(figure_handle)
 
     quantiles = 0;
     col = cmapper([], quantiles);
-
-    results = opt.Results.results;
-    est_means = results.estimates_mean(:, ~ismissing(results.estimates_mean));
-    est_std = results.estimates_std(:, ~ismissing(results.estimates_mean));
 
     fh = figure('color','w', 'Position', [100 100 800 400]);
 
@@ -40,20 +45,30 @@ if isempty(base)
     result = cellfun(@(suf) ['$$\beta^{' suf '}$$'], ...
         c, 'UniformOutput', false);
 
+    for idx_param = 1:length(xx)
+    fill([xx(idx_param) - 0.3, xx(idx_param) - 0.3, xx(idx_param) + 0.3, xx(idx_param) + 0.3], ...
+        [ylimits, fliplr(ylimits)], '','FaceColor', col.vars.(suffixes{idx_param}), 'LineStyle', 'none', 'FaceAlpha', 0.3,'HandleVisibility','off');
+    end
+
+    xticklabels(result);
 else
     figure(figure_handle)
 end
 
-for idx_param = 1:length(xx)
-    fill([xx(idx_param) - 0.3, xx(idx_param) - 0.3, xx(idx_param) + 0.3, xx(idx_param) + 0.3], ...
-        [ylimits, fliplr(ylimits)], '','FaceColor', col.vars.(suffixes{idx_param}), 'LineStyle', 'none', 'FaceAlpha', 0.3,'HandleVisibility','off');
-end
 
 est_means = table2array(est_means);
 est_std = table2array(est_std);
+xx = 1:size(est_means, 2);
 
-errbar(xx, est_means, est_std, 'color','k','Linewidth', 2,'HandleVisibility','off');
-scatter(xx, est_means, 100, 'filled', 'MarkerFaceColor', 'k', 'HandleVisibility','off');
+
+if isempty(figure_handle)
+    errbar(xx, est_means, est_std, 'color','k','Linewidth', 1,'HandleVisibility','off');
+    scatter(xx, est_means, 100, 'Marker', marker, 'MarkerFaceColor', 'k', 'HandleVisibility','off');
+else
+    sh = scatter(xx, est_means, 100, 'Marker', marker, 'MarkerFaceColor', 'none', 'DisplayName', label, 'LineWidth', 1);
+    errbar(xx, est_means, est_std,'Linewidth', 1,'HandleVisibility','off', 'Color', sh.CData);
+end
+
 plot([xx(1) - 1,xx(end) + 1], [0 0], 'k--','HandleVisibility','off');
 
 if isfield(results, 'ground_truth')
@@ -66,7 +81,8 @@ xlim([xx(1) - 1,xx(end) + 1]); ylim(ylimits)
 ax = gca;
 apply_generic(ax)
 xticks(xx);
-xticklabels(result); set(ax.XAxis, 'TickLabelInterpreter', 'latex', 'FontSize', 24);
+set(ax.XAxis, 'TickLabelInterpreter', 'latex', 'FontSize', 24);
+
 
 if export
     paths.fig = results.fig_path;

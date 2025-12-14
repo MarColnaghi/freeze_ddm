@@ -7,9 +7,9 @@ paths = path_generator('folder', 'fitting_tests/dddm', 'bouts_id', id_code);
 load(fullfile(paths.dataset, 'bouts.mat'));
 kde_estimates = importdata(fullfile('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/fitting_freezes/bsl/kde_spontaneous', id_code, 'kde_estimates_bsl.mat'));
 [~, idx] = unique(kde_estimates.Fkde, 'last');
-Fkde = kde_estimates.Fkde(idx); xkde = kde_estimates.xkde(idx); fkde = kde_estimates.fkde(idx); 
+extra.Fkde = kde_estimates.Fkde(idx); extra.xkde = kde_estimates.xkde(idx); extra.fkde = kde_estimates.fkde(idx); 
 
-bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'bsl', 'window', 'le');
+bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'bsl', 'window', 'all', 'nloom', 10:20);
 
 % Only save useful variables in the table
 y = table;
@@ -31,7 +31,7 @@ model.mu = struct( ...
     struct('name', 'sm'), ...
     struct('name', 'intercept') ...
     }}, ...
-    'ground_truth', [0.9 0], ...
+    'ground_truth', [0.9 0.1], ...
     'link', link_linear ...
     );
 
@@ -46,11 +46,9 @@ model.theta = struct( ...
 
 model.pmix = struct( ...
     'predictors', {{ ...
-    struct('name', 'fs') ...
-    struct('name', 'ln') ...
-    struct('name', 'ls') ...
+    struct('name', 'intercept') ...
     }}, ...
-    'ground_truth', [0.8 -0.4 0], ...
+    'ground_truth', [0.8], ...
     'link', link_logistic ...
     );
 
@@ -114,7 +112,7 @@ for idx_trials = 1:sim_params.n_trials
     else
         trial_type(idx_trials) = 2;
         U = rand;
-        rt.st(idx_trials) = interp1(Fkde, xkde, U, 'linear', 'extrap');
+        rt.st(idx_trials) = interp1(extra.Fkde, extra.xkde, U, 'linear', 'extrap');
 
     end
 
@@ -122,28 +120,34 @@ end
 toc
 
 rt = [rt ncomp_vars];
-figure
-histogram(rt.st(trial_type == 1), 1/120:1/20:300)
+
+col = cmapper();
+fh = figure('color','w','Position',[100, 100, 600, 400]);
+tiledlayout(1,2, 'TileSpacing','compact')
 hold on
-histogram(rt.st(trial_type == 2), 1/120:1/20:300)
-xlim([0 10])
+
+histogram(rt.st(trial_type == 1), -1/120:1/60:300, 'Normalization', 'pdf')
+histogram(rt.st(trial_type == 2), -1/120:1/60:300, 'Normalization', 'pdf')
+histogram(bouts_proc.durations_s, -1/120:1/60:300, 'Normalization', 'pdf')
+
+apply_generic(gca, 'xlim', [0 5])
 
 rt.st(isnan(rt.st)) = sim_params.T + 1; 
 points.censoring = sim_params.T;
-points.truncation = 0;
+points.truncation = 0; %min(bouts_proc.durations_s);
+
+plot(extra.xkde, extra.fkde, 'k--')
 
 %  Now we added our vector column to the bouts table.
 bouts_proc.durations_s = rt.st;
 
-extra.Fkde = Fkde;
-extra.fkde = fkde;
-extra.xkde = xkde;
-
-model_results = run_fitting_newer(bouts_proc, points, 'ksddm2', paths, 'export', true, 'extra', extra, 'ground_truth', gt_table);
+model_results = run_fitting_newer(bouts_proc, points, 'ksddm3', paths, 'export', true, 'extra', extra, 'ground_truth', gt_table);
 
 plot_estimates('results', model_results)
-plot_fit('results', model_results, 'extra', extra)
-plot_fit('results', model_results, 'extra', extra, 'conditions', true, 'bin_size', 2)
+% plot_fit('results', model_results, 'extra', extra)
+% plot_fit('results', model_results, 'extra', extra, 'conditions', true, 'bin_size', 2)
+[fh, ax, ax_inset] = fd_conditions('results', model_results, 'no_y', true, 'bin_size', 1);
+overlay_fits(fh, ax, ax_inset, 'results', model_results, 'export', true, 'extra', extra)
 
 
 %%
