@@ -52,9 +52,13 @@ if strcmp(plot_flag, 'p')
         g = comp_loglikelihood(params, tbl, points, model_func, iid, tok, ec);
 
         if ~isempty(points.truncation)
-            fprintf('bouts %d: sum(f): = %d \n', idx_bout, trapz(fd(fd >= points.truncation & fd <= points.censoring) , exp(g(fd >= points.truncation & fd <= points.censoring))) + exp(g(end)))
-            % fprintf('bouts %d: sum(f): = %d \n', idx_bout, trapz(exp(g(fd > points.truncation & fd <= points.censoring))) + exp(g(end)))
-
+            %             if strcmp('ed', tok{1}) || strcmp('ded', tok{1})
+            %                 fprintf('bouts %d: sum(f): = %d \n', idx_bout, sum(exp(g(fd >= points.truncation & fd <= points.censoring))) + exp(g(end)));
+            %
+            %
+            %             else
+            fprintf('bouts %d: sum(f): = %d \n', idx_bout, trapz(fd(fd >= points.truncation & fd <= points.censoring) , exp(g(fd >= points.truncation & fd <= points.censoring))) + exp(g(end)));
+            %             end
         else
             fprintf('bouts %d: sum(f): = %d \n', idx_bout, trapz(exp(g(fd > 0 & fd <= points.censoring)))) + exp(g(end));
         end
@@ -64,6 +68,9 @@ if strcmp(plot_flag, 'p')
     end
 
     f = f ./ num_bouts;
+%     if strcmp('ed', tok{1}) || strcmp('ded', tok{1})
+%         f(1:end-1) = f(1:end-1)* 60;
+%     end
     nll = [];
 else
 
@@ -331,7 +338,7 @@ if strcmp('iid', iid)
             trunc_factor = @(inds) ones(size(ts(inds)))';
         end
 
-        g(bet) = f(ts(bet), bet) ./ trunc_factor(bet);
+        g(bet) = f(ts(bet), bet) ./ trunc_factor(bet)  .* 60;
         g(abo) = F(points.censoring, abo) ./ trunc_factor(abo);
 
         g      = max(g, 1e-12);

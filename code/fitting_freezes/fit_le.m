@@ -11,7 +11,7 @@ motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', 'nloom', 2:20);
 points.censoring = 10.5;
-points.truncation = 0;
+points.truncation = 0.3;
 
 kde_estimates = importdata(fullfile('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/fitting_freezes/bsl/kde_spontaneous', id_code, 'kde_estimates_bsl.mat'));
 [~, idx] = unique(kde_estimates.Fkde, 'last');
@@ -23,28 +23,31 @@ extra.xkde = xkde;
 
 %  Now we added our vector column to the bouts table
 
+total_length = 30;
 chunk_len = points.censoring * 60;
-sm_ts = nan(height(bouts_proc), chunk_len);
+sm_pre = nan(height(bouts_proc), total_length);
 
 for idx_trials = 1:height(bouts_proc)
 
     ons = bouts_proc.onsets(idx_trials);
     off = bouts_proc.ends(idx_trials) - 1;
     sum_motion = motion_cache(bouts_proc.fly(idx_trials));
-    sm_raw{idx_trials} = sum_motion(ons:ons + chunk_len - 1) ./ 10;
+    sm_during{idx_trials} = sum_motion(ons:ons + chunk_len - 1) ./ 10;
 
-    sm_ts(idx_trials, :) = sum_motion(ons - 630:ons - 1);
+    sum_motion = motion_cache(bouts_proc.fly(idx_trials));
 
+    sm_pre(idx_trials, :) = sum_motion(ons - total_length:ons - 1) ./ 10;
 end
 
-soc_mot_array = cell2mat(sm_raw)';
+bouts_proc.avg_sm_pre_norm = mean(sm_pre, 2);
+soc_mot_array = cell2mat(sm_during)';
 extra.soc_mot_array = soc_mot_array;
 results_bsl = importdata('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/fitting_freezes/bsl/exp0/run07/fit_results_exp0.mat');
 lambda_est = table2array(results_bsl.estimates_mean);
 extra.lambda = lambda_est(~isnan(lambda_est));
 
 %%
-model_results = run_fitting_newer(bouts_proc, points, 'kdddm2', paths, 'export', true, 'bads_display', true, 'pass_ndt', false, 'n_bads', 5, 'extra', extra);
+model_results = run_fitting_newer(bouts_proc, points, 'dddm2', paths, 'export', true, 'bads_display', true, 'pass_ndt', true, 'n_bads', 3, 'extra', extra);
 
 %%
 

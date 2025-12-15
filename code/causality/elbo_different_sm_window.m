@@ -6,11 +6,11 @@ clearvars
 % dataset.
 threshold_imm = 2; threshold_mob = 2; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
 model_str = 'dddm2';
-col.Set3 = cbrewer2('Set3', 5);
+col.Set3 = cbrewer2('Set3', 7);
 
-windows.anchor = 'loom_onset';
-windows.reference = 'fixed_length';
-windows.length = '30';
+windows.anchor = 'freeze_onset';
+windows.reference = 'cumulative';
+windows.length = 'cumul';
 
 fh = figure('Position', [100 100 1070 500], 'Color', 'w');
 t = tiledlayout(1, 1, 'TileSpacing', 'loose', 'Padding', 'loose');

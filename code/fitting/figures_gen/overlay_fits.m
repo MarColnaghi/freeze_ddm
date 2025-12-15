@@ -36,11 +36,15 @@ i = 0;
 for idx_sm = 1:3
     for idx_ls = 1:2
         for idx_fs = 1:2
+            
+            ec = extra;
 
             i = i + 1;
             axes(ax(i));
 
-            [freezes_quant, ~] = quantilizer(freezes, 'idx_quanti', struct('sm', idx_sm, 'ls', idx_ls, 'fs', idx_fs));
+            [freezes_quant, mask] = quantilizer(freezes, 'idx_quanti', struct('sm', idx_sm, 'ls', idx_ls, 'fs', idx_fs));
+
+            ec.soc_mot_array = extra.soc_mot_array(mask, :);
 
             [~, f, fd] =  nll_fly_ddm_newer(est_params, freezes_quant, results.points, strcat('model_', results.fitted_model), 'iid', 'p', extra);
 

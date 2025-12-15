@@ -11,7 +11,7 @@ col.Set3 = cbrewer2('Set3', 5);
 windows.anchor = 'freeze_onset';
 windows.reference = 'fixed_length';
 windows.length = '30';
-windows.select_windows = {'-300' ,'-60', '0' ,'10' ,'30' ,'60'};
+windows.select_windows = {'-300' ,'-60', '-30' ,'0' ,'30' ,'60'};
 markers = {'o','+','*','s','d','v','>','h'};
 
 fh = figure('Position', [100 100 920 560], 'Color', 'w');
@@ -22,6 +22,7 @@ model_acausal = importdata('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/fi
 elbo_acausal = model_acausal.elbo;
 
 parent_folder = fullfile('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/causality/fitting_windows', model_str, windows.reference, 'run01_size30_anchor-freeze_onset');
+paths = path_generator('folder', fullfile('causality/fitting_windows', model_str, windows.reference, sprintf('run01_size30_anchor-%s', windows.anchor)));
 d = dir(fullfile(parent_folder));
 d = d(~ismember({d.name}, {'.','..', '.DS_Store'}));
 
@@ -38,4 +39,9 @@ for idx_windows = idx
     plot_estimates('base', fh, 'results', model_results, 'marker', markers{i}, 'label', d(idx_windows).name)
     legend('Location', 'eastoutside', 'box', 'off', 'FontSize', 20)
 
+end
+
+export = true;
+if export
+    exporter(fh, paths, 'estimates_cmpr.pdf')
 end

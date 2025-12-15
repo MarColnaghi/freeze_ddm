@@ -1,4 +1,4 @@
-function [fh, ax, ax_inset] = fd_conditions(varargin)
+function [fh, ax, ax_inset, th] = fd_conditions(varargin)
 
 opt = inputParser;
 addParameter(opt, 'extra', []);
@@ -13,6 +13,7 @@ addParameter(opt, 'censored_inset', true);
 addParameter(opt, 'gt', false);
 addParameter(opt, 'export', false);
 addParameter(opt, 'paths', []);
+addParameter(opt, 'vis', 'off');
 
 parse(opt, varargin{:});
 
@@ -28,6 +29,7 @@ gt_plot = opt.Results.gt;
 type = opt.Results.type;
 color = opt.Results.color;
 no_y = opt.Results.no_y;
+hand_vis = opt.Results.vis;
 
 col = cmapper();
 
@@ -51,7 +53,7 @@ if ~isempty(results.points.censoring)
 
 end
 
-fh = figure('Position', [100 100 1570 580], 'Color', 'w');
+fh = figure('Position', [100 100 1570 900], 'Color', 'w');
 t = tiledlayout(3, 4, 'TileSpacing', 'compact', 'Padding', 'compact');
 % ax_inset = struct;
 % ax = struct();
@@ -77,6 +79,10 @@ for idx_sm = 1:3
             [ks_noc] = ksdensity(freezes_quant.durations_s, xxi, 'BoundaryCorrection', 'reflection', 'Bandwidth', h, 'Support', [min(freezes.durations_s) - 0.001, max(freezes.durations_s) + 0.001 ]);
             [ks] = ksdensity(freezes_quant.durations_s, xxi, 'BoundaryCorrection', 'reflection', 'Bandwidth', h, 'Support', [min(freezes.durations_s) - 0.001, max(freezes.durations_s) + 0.001 ], 'Censoring', censored);
 
+            
+            trapz(xxi, ks_noc)
+            pause(2);
+
             censored_density = abs(trapz(xxi, ks) - trapz(xxi, ks_noc));
 
             % fill_between(xxi, RTD{1,2} + RTD{2,2}, RTD{1,2} - RTD{3,2}, [], 'FaceColor', 'r', 'FaceAlpha', 0.4, 'LineStyle', 'none')
@@ -85,11 +91,11 @@ for idx_sm = 1:3
             histogram(freezes_quant.durations_s, min(freezes.durations_s) - 1/120:bin_size_in_seconds:900, 'Normalization', 'pdf', 'EdgeColor', 'none', 'FaceColor',  col.empirical.(color)( 2*(idx_sm - 1) + idx_fs, :), 'FaceAlpha', 0.25)
             plot(xxi, ks, 'Color', col.empirical.(color)( 2*(idx_sm - 1) + idx_fs, :), 'LineWidth' , 2.2)
 
-            %             hp = plot([-.3 -.3], [0 1], 'k-', 'LineWidth', 2, 'Clipping', 'off');
-            %             text(-0.52, 0, '0', 'HorizontalAlignment', 'right', 'VerticalAlignment', 'middle', 'FontSize', 18)
-            %             text(-0.52, 1, '1', 'HorizontalAlignment', 'right', 'VerticalAlignment', 'middle', 'FontSize', 18)
+            th(i,1) = plot([-.3 -.3], [0 1], 'k-', 'LineWidth', 2, 'Clipping', 'off', 'Visible', hand_vis);
+            th(i,2) = text(-0.52, 0, '0', 'HorizontalAlignment', 'right', 'VerticalAlignment', 'middle', 'FontSize', 18, 'Visible', hand_vis);
+            th(i,3) = text(-0.52, 1, '1', 'HorizontalAlignment', 'right', 'VerticalAlignment', 'middle', 'FontSize', 18, 'Visible', hand_vis);
 
-            
+
             if censored_inset
 
                 inset_pos = ax(i).Position;  % Get the position of the current subplot
@@ -112,7 +118,7 @@ for idx_sm = 1:3
 
             axes(ax(i));
             scatter(censored_x, censored_density, 32, 'filled', 'MarkerFaceColor', col.empirical.(color)( 2*(idx_sm - 1) + idx_fs, :), 'MarkerEdgeColor', 'none');
-            apply_generic(ax(i), 'xlim', [-0.1 10.6], 'ylim', [-0.05 2.05], 'no_y', no_y, 'font_size', 20, 'line_width', 2.2, 'yticks', [0 1], 'xticks', [results.points.truncation 10])
+            apply_generic(ax(i), 'xlim', [-0.1 10.6], 'ylim', [-0.05 2.05], 'no_y', no_y, 'font_size', 20, 'line_width', 2.2, 'yticks', [0 1], 'xticks', [results.points.truncation 10], 'tick_length', 0.025)
             if i > 1
                 xticklabels({})
             end

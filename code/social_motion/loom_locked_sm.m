@@ -86,14 +86,14 @@ for idx_sloom = unique(sloom)'
     end
 end
 
-exporter(fh, paths, 'loom_evoked_sm.pdf')
+% exporter(fh, paths, 'loom_evoked_sm.pdf')
 
 
 
 %% Freeze Onset aligned sm
 
 bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
-bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', 'nloom', 1:20);
+bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', 'nloom', 1:20, 'min_dur', 18);
 
 window = [-300 630];
 offsets = (window(1) : window(2));
@@ -139,7 +139,7 @@ for idx_sloom = unique(sloom)'
         hold on
 
         mask = n_moving_flies == idx_moving_flies & sloom == idx_sloom;
-        sm_loom = squeeze(mean(sm_around_loom(mask, :, :), 1, 'omitnan'));
+        sm_loom = squeeze(std(sm_around_loom(mask, :, :), [], 1, 'omitnan'));
 
         colororder(col.vars.ln(end - total_looms:end, :))
         plot(offsets, sm_loom')
@@ -157,7 +157,7 @@ for idx_sloom = unique(sloom)'
         colororder(col.vars.ln(end - total_looms:end, :))
 
         apply_generic(gca, 'no_y', true, 'ylims', [-2 45], 'xlims', [-60 180], ...
-            'no_xlabels', xlabels, 'xticks', [-60 0 180], 'tick_length', 0.04)
+            'no_xlabels', xlabels, 'xticks', [-60 -30 0 30 60 120 180], 'tick_length', 0.04, 'font_size', 18)
 
         plot([0 0], [-1 31], 'k-.', 'LineWidth', 1); 
         text(1, 34, 'Freeze Onset', 'FontSize', 18)
@@ -185,7 +185,7 @@ for idx_sloom = unique(sloom)'
     end
 end
 
-exporter(fh, paths, 'freeze_onset_sm.pdf')
+exporter(fh, paths, 'freeze_onset_sm_std.pdf')
 
 %%
 

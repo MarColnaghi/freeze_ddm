@@ -1,19 +1,22 @@
+clearvars
 
-col.Set3 = cbrewer2('Set3');
+windows.list = {'cumulative', 'cumulative'};
+windows.anchor = {'freeze_onset', 'freeze_onset'};
+windows.windows = {'-30', '60'};
+
+col.Set3 = {'#D34E8E', '#31D0CA'};
 model_str = 'dddm2';
-results = importdata(fullfile('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/causality/fitting_windows/dddm2/run01/60', sprintf('fit_results_dddm2.mat', model_str)));
-[fh, ax, ax_inset] = fd_conditions('results', results, 'no_y', true, 'color', 'gray');
-selected_windows = {'60'};
+results_pre = importdata(fullfile('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/causality/fitting_windows/dddm2/cumulative/run01_sizecumul_anchor-loom_onset/-30', sprintf('fit_results_%s.mat', model_str)));
+[fh, ax, ax_inset, th] = fd_conditions('results', results_pre, 'no_y', true, 'color', 'gray', 'vis', 'on');
+paths = path_generator('folder', 'causality/fitting_windows');
 
-for idx_run = 1:2
-    run_str = sprintf('run0%d', idx_run);
+for idx_run = 1:length(windows.list)
 
-    str_folder = fullfile('causality/fitting_windows', model_str, run_str);
-    paths = path_generator('folder', str_folder, 'imfirst', false);
-    d = dir(paths.results);
-    d = d(~ismember({d.name}, {'.','..', '.DS_Store'}));windows = [600, 300, 60];
+    path_code = fullfile(paths.results, ...
+        model_str, windows.list{idx_run}, sprintf('run01_sizecumul_anchor-%s', windows.anchor{idx_run}), windows.windows{idx_run});
 
-    freezes = importdata(fullfile(d(1).folder, d(1).name, 'surrogate.mat'));
+    results = importdata(fullfile(path_code, sprintf('fit_results_%s.mat', model_str)));
+    freezes = importdata(fullfile(path_code, sprintf('surrogate.mat')));
 
     freezes.sm = freezes.avg_sm_freeze_norm;
     freezes.smp = freezes.avg_sm_pre_norm;
@@ -23,39 +26,35 @@ for idx_run = 1:2
     freezes.intercept = ones(height(freezes), 1);
     freezes = freezes(freezes.durations_s >= 0.3, :);
 
-    for idx_window = selected_windows
-        window = idx_window{1};
-        idx_folder_list = find(strcmp(window, {d.name}));
-        results = importdata(fullfile(d(idx_folder_list).folder, d(idx_folder_list).name, sprintf('fit_results_%s.mat', model_str)));
-        est_params = table2array(results.estimates_mean(:, ~ismissing(results.estimates_mean)));
 
-        i = 0;
-        for idx_sm = 1:3
-            for idx_ls = 1:2
-                for idx_fs = 1:2
+    est_params = table2array(results.estimates_mean(:, ~ismissing(results.estimates_mean)));
 
-                    i = i + 1;
-                    axes(ax(i));
+    i = 0;
+    for idx_sm = 1:3
+        for idx_ls = 1:2
+            for idx_fs = 1:2
 
-                    [freezes_quant, mask] = quantilizer(freezes, 'idx_quanti', struct('sm', idx_sm, 'ls', idx_ls, 'fs', idx_fs));
+                i = i + 1;
+                axes(ax(i));
 
-                    [~, f, fd] =  nll_fly_ddm_newer(est_params, freezes_quant, results.points, strcat('model_', results.fitted_model), 'iid', 'p', []);
+                [freezes_quant, mask] = quantilizer(freezes, 'idx_quanti', struct('sm', idx_sm, 'ls', idx_ls, 'fs', idx_fs));
 
-                    plot(fd, f, 'LineWidth', 1.25, 'Color', col.Set3(2 + idx_run, :), 'LineStyle', '--')
+                [~, f, fd] =  nll_fly_ddm_newer(est_params, freezes_quant, results.points, strcat('model_', results.fitted_model), 'iid', 'p', []);
 
-                    axes(ax_inset(i));
-                    plot(results.points.censoring, f(end), 'o', 'LineWidth', 1, 'MarkerSize', 5, 'MarkerEdgeColor', col.Set3(2 + idx_run,:));
+                plot(fd, f, 'LineWidth', 1.5, 'Color',  col.Set3{idx_run}, 'LineStyle', '--')
+                plot(results.points.censoring, f(end), 'o', 'LineWidth', 1, 'MarkerSize', 5, 'MarkerEdgeColor', col.Set3{idx_run});
 
-                end
+                axes(ax_inset(i));
+                plot(results.points.censoring, f(end), 'o', 'LineWidth', 1, 'MarkerSize', 5, 'MarkerEdgeColor', col.Set3{idx_run});
+
             end
         end
-
     end
-
 
 end
 
-model_acausal = importdata('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/fitting_freezes/le/dddm2/run09/fit_results_dddm2.mat');
+
+model_acausal = importdata('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/fitting_freezes/le/dddm2/run11/fit_results_dddm2.mat');
 est_params = table2array(model_acausal.estimates_mean(:, ~ismissing(model_acausal.estimates_mean)));
 
 i = 0;
@@ -78,13 +77,34 @@ for idx_sm = 1:3
     end
 end
 
+paths = path_generator('folder', fullfile('causality/fitting_windows', ...
+    model_str, windows.list{idx_run}));
 
+export = true;
 if export
-    paths.fig = results.fig_path;
-    if conditions
-        exporter(fh, paths, 'fits_xcondition.pdf')
-
-    else
-        exporter(fh, paths, 'fits.pdf')
-    end
+    exporter(fh, paths, 'fits_xcondition_cmpr.pdf')
 end
+
+xl = [0.1 1.5];
+yl = [0 3.5];
+axes(ax(i));
+xlim(xl); ylim(yl);
+
+for idx_tiles = 1:size(th, 1)
+    th(idx_tiles, 1).Visible = 'off';
+    th(idx_tiles, 2).Visible = 'off';
+    th(idx_tiles, 3).Visible = 'off';
+    ax(idx_tiles).YAxis.Visible = true;
+    axes(ax(idx_tiles))
+    apply_generic(gca, 'xticks', xl, 'yticks', yl)
+end
+exporter(fh, paths, 'fits_cmpr_zoomL.pdf')
+
+xl = [0.5 10.5];
+yl = [0 0.5];
+xlim(xl); ylim(yl);
+for idx_tiles = 1:size(th, 1)
+    axes(ax(idx_tiles))
+    apply_generic(gca, 'xticks', xl, 'yticks', yl)
+end
+exporter(fh, paths, 'fits_cmpr_zoomR.pdf')
