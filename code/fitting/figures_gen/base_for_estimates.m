@@ -6,6 +6,7 @@ addParameter(opt, 'model', []);          % <-- NEW
 addParameter(opt, 'export', false);
 addParameter(opt, 'ylimits', [-1, 4]);
 addParameter(opt, 'paths', []);
+addParameter(opt, 'fh', []);
 
 % optional: pass estimates if you want later
 addParameter(opt, 'est_means', []);      % numeric vector or table
@@ -18,6 +19,7 @@ model = opt.Results.model;
 export = opt.Results.export; %#ok<NASGU>
 paths  = opt.Results.paths;  %#ok<NASGU>
 ylimits = opt.Results.ylimits;
+fh = opt.Results.fh;
 
 % ---- Flatten model -> parameter table with VariableNames like mu1_sm, theta2_intercept, ...
 param_tbl = flatten_model_to_param_table(model, opt.Results.component_order);
@@ -28,8 +30,9 @@ est_means = param_tbl;
 
 quantiles = 0;
 col = cmapper([], quantiles);
-
-fh = figure('color','w', 'Position', [100 100 800 400]);
+if isempty(fh)
+    fh = figure('color','w', 'Position', [100 100 800 400]);
+end
 hold on
 
 [suffixes, prefixes] = extract_dep(est_means);

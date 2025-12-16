@@ -49,9 +49,9 @@ end
 results.fitted_model = sprintf('model_%s', results.fitted_model);
 if ~isempty(results.points.censoring)
     freezes.durations_s(freezes.durations_s > results.points.censoring) = results.points.censoring + 1;
-    freezes = freezes(freezes.durations_s >= results.points.truncation, :);
 
 end
+freezes = freezes(freezes.durations_s >= results.points.truncation, :);
 
 fh = figure('Position', [100 100 1570 900], 'Color', 'w');
 t = tiledlayout(3, 4, 'TileSpacing', 'compact', 'Padding', 'compact');
@@ -73,15 +73,20 @@ for idx_sm = 1:3
 
             RTs{1,1} = freezes_quant.durations_s;
             RTs{2,1} = freezes_quant.durations_s;
-            % RTD = kreg_single(RTs, RTs, xxi, xbin, h, min(freezes.durations_s) - 0.001, 500);
+            RTD = kreg_single(RTs, RTs, xxi, xbin, h, 0, 500);
 
             censored = freezes_quant.durations_s > 10.5;
             [ks_noc] = ksdensity(freezes_quant.durations_s, xxi, 'BoundaryCorrection', 'reflection', 'Bandwidth', h, 'Support', [min(freezes.durations_s) - 0.001, max(freezes.durations_s) + 0.001 ]);
             [ks] = ksdensity(freezes_quant.durations_s, xxi, 'BoundaryCorrection', 'reflection', 'Bandwidth', h, 'Support', [min(freezes.durations_s) - 0.001, max(freezes.durations_s) + 0.001 ], 'Censoring', censored);
 
-            
-            trapz(xxi, ks_noc)
-            pause(2);
+            plot(xxi, RTD{1,1}, 'k-');
+
+            %             fdd = RTD{1,1};
+            %trapz(xxi, fdd)
+            trapz(xxi(xxi >= 0.3), ks(xxi >= 0.3))
+            trapz(xxi(xxi >= 0.3), ks_noc(xxi >= 0.3))
+
+            pause(.2);
 
             censored_density = abs(trapz(xxi, ks) - trapz(xxi, ks_noc));
 

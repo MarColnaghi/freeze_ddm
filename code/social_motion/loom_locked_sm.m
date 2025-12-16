@@ -93,7 +93,7 @@ end
 %% Freeze Onset aligned sm
 
 bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
-bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', 'nloom', 1:20, 'min_dur', 18);
+bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', 'nloom', 7:20, 'min_dur', 18);
 
 window = [-300 630];
 offsets = (window(1) : window(2));
@@ -185,7 +185,7 @@ for idx_sloom = unique(sloom)'
     end
 end
 
-exporter(fh, paths, 'freeze_onset_sm_std.pdf')
+%exporter(fh, paths, 'freeze_onset_sm_std.pdf')
 
 %%
 

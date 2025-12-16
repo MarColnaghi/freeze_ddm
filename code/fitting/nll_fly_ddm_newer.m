@@ -57,10 +57,10 @@ if strcmp(plot_flag, 'p')
             %
             %
             %             else
-            fprintf('bouts %d: sum(f): = %d \n', idx_bout, trapz(fd(fd >= points.truncation & fd <= points.censoring) , exp(g(fd >= points.truncation & fd <= points.censoring))) + exp(g(end)));
-            %             end
+            fprintf('bouts %d: sum(f): = %0.3f \n', idx_bout, trapz(fd(fd >= points.truncation & fd <= points.censoring) , exp(g(fd >= points.truncation & fd <= points.censoring))) + exp(g(end)));
+            %fprintf('bouts %d: sum(f): = %0.3f \n', idx_bout, trapz(fd(fd >= points.truncation & fd <= points.censoring) , exp(g(fd >= points.truncation & fd <= points.censoring))));
         else
-            fprintf('bouts %d: sum(f): = %d \n', idx_bout, trapz(exp(g(fd > 0 & fd <= points.censoring)))) + exp(g(end));
+            fprintf('bouts %d: sum(f): = %0.3f \n', idx_bout, trapz(exp(g(fd > 0 & fd <= points.censoring)))) + exp(g(end));
         end
 
         f = f + exp(g);
@@ -68,9 +68,12 @@ if strcmp(plot_flag, 'p')
     end
 
     f = f ./ num_bouts;
+    f(fd < points.truncation) = 0;
+
 %     if strcmp('ed', tok{1}) || strcmp('ded', tok{1})
 %         f(1:end-1) = f(1:end-1)* 60;
 %     end
+
     nll = [];
 else
 
@@ -107,7 +110,7 @@ y.ls = bif.ls;
 y.intercept = bif.intercept;
 
 model = model_func();
-if isfield(extra, 'tndt')
+if isfield(extra, 'tndt') && (strcmp('ed', tok{1}) || strcmp('ded', tok{1}))
     model = rmfield(model, 'tndt');
 end
 
@@ -167,7 +170,7 @@ if strcmp('iid', iid)
 
     elseif  strcmp('dddm', tok{1})
 
-        bet = bif.durations_s >= out.tndt & bif.durations_s <= points.censoring;
+        bet = bif.durations_s >= points.truncation  & bif.durations_s <= points.censoring;
         abo = bif.durations_s > points.censoring;
 
         % pdf and cdf for single bound ddm
