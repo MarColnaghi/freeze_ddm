@@ -74,7 +74,7 @@ if strcmp(plot_flag, 'p')
 %         f(1:end-1) = f(1:end-1)* 60;
 %     end
 
-    nll = [];
+   nll = [];
 else
 
     arr = unique(bouts.fly)';

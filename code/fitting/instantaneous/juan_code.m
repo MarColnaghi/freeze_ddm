@@ -71,10 +71,28 @@ tic;
 fpt_results = sim_ddm_ultra(drifts_for_sim, sim_params, N_trials);
 % -----------------------------
 
-% Post-processing (Handle non-crossings)
+%% Post-processing (Handle non-crossings)
 % If it returns NaN, it means it didn't cross. Set to T_max.
 fpt_results(isnan(fpt_results)) = time_vec(end);
 
 elapsed_time = toc;
 fprintf('Simulation finished in %.4f seconds.\n\n', elapsed_time);
 
+% Calculate number of spatial nodes needed to reach this bound
+prop_grid_size = round((prop_bound - fixed.x_min) / fixed.dx) + 1;
+
+% Calculate where x0 (0.0) falls on this grid
+prop_start_idx = round((fixed.x0 - fixed.x_min) / fixed.dx) + 1;
+
+% Pack MEX params
+mex_p = [fixed.dt, fixed.dx, fixed.sigma_sq, fixed.x0, ...
+    fixed.x_min, prop_grid_size, prop_start_idx, prop_lambda];
+
+N = length(rts);
+log_liks = zeros(N, 1);
+
+t_vec = (0:fixed.dt:fixed.T_max)';
+
+idx_trunc = round(fixed.T_trunc / fixed.dt);
+
+leaky_pde_robust(current_drift, mex_p)

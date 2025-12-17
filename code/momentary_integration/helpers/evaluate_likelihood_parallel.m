@@ -6,10 +6,11 @@ model_str = sprintf('model_%s', model_results.fitted_model);
 model = eval(model_str);
 estimates_mean = model_results.estimates_mean;
 est_params = table2array(estimates_mean(:, find(~ismissing(estimates_mean))));
-ncomp_vars = evaluate_model(model, est_params, synth_data);
+table_est_params = estimates_mean(:, find(~ismissing(estimates_mean)));
+ncomp_vars = evaluate_model(model, table_est_params, synth_data);
 chunk_len = length(ddm_params.time_vector);
 points = model_results.points;
-points.truncation = [];
+points.truncation = 0;
 
 if isempty(select_indexes)
     trial_indexes = 1:ddm_params.eval_trials;
@@ -29,7 +30,7 @@ dq = parallel.pool.DataQueue;
 afterEach(dq, @updateProgress);
 
 % Run in parallel
-parfor i = 1:n_trials
+for i = 1:n_trials
     idx_trials = trial_indexes(i);
     trial_data = synth_data(idx_trials, :);
     ons = trial_data.onsets;
@@ -40,7 +41,7 @@ parfor i = 1:n_trials
     rts_st = nan(ddm_params.num_sims, 1);
 
     for j = 1:ddm_params.num_sims
-        if rand < ncomp_vars.pmix(idx_trials)
+        if rand <= ncomp_vars.pmix(idx_trials)
             mu_t = estimates_mean.mu1_sm .* sm_raw;
             mu_st = estimates_mean.mu1_sm .* trial_data.sm;
             theta_s = ncomp_vars.theta1(idx_trials);
@@ -57,7 +58,7 @@ parfor i = 1:n_trials
 
     ll_st_i = kde_logL_censored(rts_st, trial_data.durations_s, ddm_params.kde_grid);
     ll_tv_i = kde_logL_censored(rts_tv, trial_data.durations_s, ddm_params.kde_grid);
-    [ll_cf_i, ~, ~] = nll_fly_ddm_newer(est_params, trial_data, points, model_str, 'iid', 'p', []);
+    [ll_cf_i] = nll_fly_ddm_newer(est_params, trial_data, points, model_str, 'iid', '', []);
     ll_cf_i = -ll_cf_i;
 
     % Store results

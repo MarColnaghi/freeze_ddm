@@ -68,11 +68,11 @@ for idx_model = 1:length(model_list)
         soc_mot_cell = {ec.soc_mot_array};
 
         ll(idx_bout, idx_model) =  - nll_fly_ddm_newer(est_params, freeze, model_results.points, strcat('model_', model_results.fitted_model), 'iid', '', ec);
-
-        l_ma(idx_bout) = nll_fly_ddm_newer([1 2 0], freeze, model_results.points, strcat('model_', 'ed0'), 'iid', '', ec);
-        l_ju(idx_bout) = log_joint_likelihood_3D([1 1e-12 2], soc_mot_cell, freeze.durations_s, fixed);
-
-        [l_ma, l_ju]
+% 
+%         l_ma(idx_bout) = nll_fly_ddm_newer([1 2 0], freeze, model_results.points, strcat('model_', 'ed0'), 'iid', '', ec);
+%         l_ju(idx_bout) = log_joint_likelihood_3D([1 1e-12 2], soc_mot_cell, freeze.durations_s, fixed);
+% 
+%         [l_ma, l_ju]
     end
 end
 

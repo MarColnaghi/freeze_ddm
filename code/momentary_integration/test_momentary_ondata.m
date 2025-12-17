@@ -1,5 +1,5 @@
 clear all
-idx_seed = randi(6);
+idx_seed = randi(22);
 
 exporting = true;
 col = cmapper();
@@ -8,7 +8,7 @@ rng(sim_params.rng);
 
 % Model
 model = 'dddm2';
-select_run = 'run03';
+select_run = 'run13'; %'run03';
 gen_data = 'fr';
 
 % Load important files
@@ -16,11 +16,12 @@ paths = path_generator('folder', fullfile('/fitting_freezes/le', model, select_r
 load(fullfile(paths.results, 'surrogate.mat'))
 model_results.(gen_data) = load(fullfile(paths.results, sprintf('fit_results_%s.mat', model)));
 est_params = table2array(model_results.(gen_data).estimates_mean(:, find(~ismissing(model_results.(gen_data).estimates_mean))));
+tbl_est_params = model_results.(gen_data).estimates_mean(:, find(~ismissing(model_results.(gen_data).estimates_mean)));
 bouts_proc = surrogate;
 
 % Load the motion ts
-sim_params.motion_cache_path = fullfile(paths.dataset, 'motion_cache.mat');
-load(sim_params.motion_cache_path)
+sim_params.motion_cache_path = fullfile(paths.cache_path, 'motion_cache.mat');
+motion_cache = importdata(sim_params.motion_cache_path);
 
 % Immidiately switch paths for saving outputs accordingly
 paths = path_generator('folder', fullfile('/momentary_integration/freezes', model));
@@ -30,7 +31,7 @@ create_output_dirs(paths)
 % General DDM parameters
 sim_params.dt = 1/60;
 sim_params.T = model_results.(gen_data).points.censoring - est_params(end);
-sim_params.time_vector = 0:sim_params.dt:sim_params.T;
+sim_params.time_vector = 1/60:sim_params.dt:sim_params.T;
 sim_params.z = 0;
 
 % Simulation settings
@@ -55,7 +56,7 @@ y.durations_s = bouts_proc.durations_s;
 
 predictors = y.Properties.VariableNames;
 model_eval = eval(sprintf('model_%s', model));
-ncomp_vars = evaluate_model(model_eval, est_params, y);
+ncomp_vars = evaluate_model(model_eval, tbl_est_params, y);
 
 y.durations_s(y.durations_s > model_results.(gen_data).points.censoring, :) = model_results.(gen_data).points.censoring + 1;
 
