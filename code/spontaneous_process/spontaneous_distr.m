@@ -49,17 +49,18 @@ for idx_sm = 1:3
             nexttile(t)
             hold on
 
-            [quant_le, mask] = quantilizer(bouts_le, 'idx_quanti', struct('sm', idx_sm, 'ls', idx_ls, 'fs', idx_fs));
-            histogram(quant_le.durations, 1:1:630, 'Normalization', 'probability', 'EdgeColor','none', 'FaceColor', col.period.loom)
-            exp_generated = exprnd(1, height(quant_le), 1);
-            
-            histogram(exp_generated * 60, 1:3:630, 'Normalization', 'probability', 'EdgeColor','none', 'FaceColor', col.period.bsl)
+            exp_generated = exprnd(1/9, 10000, 1);
+            histogram(exp_generated * 60, 1:3:630, 'Normalization', 'probability', 'EdgeColor','none', 'FaceColor', 'k', 'FaceAlpha', 0.3)
 
-            xlims = [-10 640];
-            ylims = [-0.005 0.025];
+
+            [quant_le, mask] = quantilizer(bouts_spontaneous, 'idx_quanti', struct('sm', idx_sm, 'ls', idx_ls, 'fs', idx_fs));
+            histogram(quant_le.durations, 1:1:630, 'Normalization', 'probability', 'EdgeColor','none', 'FaceColor', col.period.bsl)
+         
+            xlims = [-10 190];
+            ylims = [-0.005 1.025];
             apply_generic(gca, 'xlim', xlims, 'ylim', ylims)
             ax = gca;
-           % ax.XAxis.Scale = 'log';
+            ax.YAxis.Scale = 'log';
         end
     end
 end
