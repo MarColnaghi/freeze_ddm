@@ -49,14 +49,18 @@ for idx_sm = 1:3
             nexttile(t)
             hold on
 
-            exp_generated = exprnd(1/9, 10000, 1);
-            histogram(exp_generated * 60, 1:3:630, 'Normalization', 'probability', 'EdgeColor','none', 'FaceColor', 'k', 'FaceAlpha', 0.3)
+            exp_generated = exprnd(1/25, 500000, 1);
+            exp_generated = exp_generated(exp_generated >= min(bouts_spontaneous.durations_s));
+            histogram(exp_generated * 60, 1:1:630, 'Normalization', 'probability', 'EdgeColor', 'k', 'FaceAlpha', 0.3, 'DisplayStyle', 'stairs')
 
 
-            [quant_le, mask] = quantilizer(bouts_spontaneous, 'idx_quanti', struct('sm', idx_sm, 'ls', idx_ls, 'fs', idx_fs));
-            histogram(quant_le.durations, 1:1:630, 'Normalization', 'probability', 'EdgeColor','none', 'FaceColor', col.period.bsl)
-         
-            xlims = [-10 190];
+            [quant_spon, mask] = quantilizer(bouts_spontaneous, 'idx_quanti', struct('sm', idx_sm, 'ls', idx_ls, 'fs', idx_fs));
+            histogram(quant_spon.durations, 1:1:630, 'Normalization', 'probability', 'EdgeColor','none', 'FaceColor', col.period.bsl)
+
+%             [quant_le, mask] = quantilizer(bouts_le, 'idx_quanti', struct('sm', idx_sm, 'ls', idx_ls, 'fs', idx_fs));
+%             histogram(quant_le.durations, 1:1:630, 'Normalization', 'probability', 'EdgeColor','none', 'FaceColor', col.period.loom)
+
+            xlims = [-10 160];
             ylims = [-0.005 1.025];
             apply_generic(gca, 'xlim', xlims, 'ylim', ylims)
             ax = gca;
@@ -78,7 +82,7 @@ for idx_loom = 1:20
 end
 
 apply_generic(gca, 'xlim', [0 60], 'ylim', [-0.05 1.05])
-xlabel('Frames')
+xlabel('Immobility Frames')
 ylabel('ecdf')
 
 exporter(fh, paths_out, 'contaminant_nloom.pdf')
