@@ -59,7 +59,7 @@ for idx_sloom = unique(sloom)'
         plot([-70 -70], [0 10], 'k-', 'LineWidth', 2, 'Clipping', 'on');
         colororder(col.vars.ln(end - total_looms:end, :))
 
-        apply_generic(gca, 'no_y', false, 'ylims', [-2 45], 'xlims', [-60 60], ...
+        apply_generic(gca, 'no_y', false, 'ylims', [-2 45], 'xlims', [-60 180], ...
             'no_xlabels', xlabels, 'xticks', [-60 0 180], 'tick_length', 0.04)
 
         % xline(0, 'LineWidth', 2); xtickangle(0);
@@ -139,7 +139,7 @@ for idx_sloom = unique(sloom)'
         hold on
 
         mask = n_moving_flies == idx_moving_flies & sloom == idx_sloom;
-        sm_loom = squeeze(std(sm_around_loom(mask, :, :), [], 1, 'omitnan'));
+        sm_loom = squeeze(mean(sm_around_loom(mask, :, :), 1, 'omitnan'));
 
         colororder(col.vars.ln(end - total_looms:end, :))
         plot(offsets, sm_loom')

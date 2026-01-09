@@ -13,7 +13,7 @@ function fd_distr_withparam_new(bouts_proc, moment, paths, export)
 
 % Load Colors
 extra.quantiles = 5;
-col = cmapper([], extra);
+col = cmapper([], extra.quantiles);
 
 if nargin == 0
 
@@ -110,7 +110,7 @@ for idx_param = param_list
 
     % Load Colors
     extra.quantiles = num_quantiles;
-    col = cmapper([], extra);
+    col = cmapper([], extra.quantiles);
 
     % Create Figure
     fh = figure('color','w','Position',[100, 100, 400, 500]);

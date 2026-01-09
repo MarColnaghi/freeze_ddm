@@ -6,7 +6,7 @@ function hist2d_durs_onsets(bouts, thresholds, type, str, plot_style, zoom_flag,
 
 % Load Colors
 extra.quantiles = 5;
-col = cmapper([], extra);
+col = cmapper([], extra.quantiles);
 
 if nargin == 0
     %clear all; close all; clc

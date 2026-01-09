@@ -13,8 +13,11 @@ histogram(bouts_spontaneous.durations, 'BinMethod', 'integers', 'Normalization',
 histogram(bouts_le.durations, 'BinMethod', 'integers', 'Normalization', 'probability', 'EdgeColor','none', 'FaceColor', col.period.loom)
 xlims = [-2 302];
 ylims = [-0.005 0.205];
+xlims_zoom = [-0.03 60.03];
+ylims_zoom = [-0.001 0.051];
 apply_generic(gca, 'xlim', xlims, 'ylim', ylims)
 xlabel('Duration (frames)')
+fill([xlims_zoom(1) xlims_zoom(1) xlims_zoom(2), xlims_zoom(2)], [ylims_zoom fliplr(ylims_zoom)], 'w', 'EdgeColor', 'k', 'FaceColor', 'none', 'LineWidth', 2)
 
 inset_pos = [0.4, 0.4, 0.2, 0.5];
 axes(fh, 'Position', inset_pos)
@@ -27,62 +30,11 @@ ylabel('ecdf')
 inset_pos(1) = inset_pos(1) + 0.3;
 axes(fh, 'Position', inset_pos)
 hold on
-apply_generic(gca, 'xlim', [-0.03 60.03], 'ylim', [-0.001 0.051])
+
+apply_generic(gca, 'xlim', xlims_zoom, 'ylim', ylims_zoom)
 
 histogram(bouts_spontaneous.durations, 'BinMethod', 'integers', 'Normalization', 'probability','EdgeColor','none', 'FaceColor', col.processes.contam)
 histogram(bouts_le.durations, 'BinMethod', 'integers', 'Normalization', 'probability', 'EdgeColor','none', 'FaceColor', col.period.loom)
 
 exporter(fh, paths_out, 'bsl_vs_loom_distributions.pdf')
 
-
-%% Conditions
-
-
-fh = figure('Position', [100 100 1400 900], 'Color', 'w');
-t = tiledlayout(3, 4, 'TileSpacing', 'compact', 'Padding', 'loose');
-i = 0;
-for idx_sm = 1:3
-    for idx_ls = 1:2
-        for idx_fs = 1:2
-
-            i = i + 1;
-            nexttile(t)
-            hold on
-
-            exp_generated = exprnd(1/25, 500000, 1);
-            exp_generated = exp_generated(exp_generated >= min(bouts_spontaneous.durations_s));
-            histogram(exp_generated * 60, 1:1:630, 'Normalization', 'probability', 'EdgeColor', 'k', 'FaceAlpha', 0.3, 'DisplayStyle', 'stairs')
-
-
-            [quant_spon, mask] = quantilizer(bouts_spontaneous, 'idx_quanti', struct('sm', idx_sm, 'ls', idx_ls, 'fs', idx_fs));
-            histogram(quant_spon.durations, 1:1:630, 'Normalization', 'probability', 'EdgeColor','none', 'FaceColor', col.period.bsl)
-
-%             [quant_le, mask] = quantilizer(bouts_le, 'idx_quanti', struct('sm', idx_sm, 'ls', idx_ls, 'fs', idx_fs));
-%             histogram(quant_le.durations, 1:1:630, 'Normalization', 'probability', 'EdgeColor','none', 'FaceColor', col.period.loom)
-
-            xlims = [-10 160];
-            ylims = [-0.005 1.025];
-            apply_generic(gca, 'xlim', xlims, 'ylim', ylims)
-            ax = gca;
-            ax.YAxis.Scale = 'log';
-        end
-    end
-end
-
-%% 
-col = cmapper('', 30);
-fh = figure('Position', [100 100 400 400], 'Color', 'w');
-t = tiledlayout(1, 1, 'TileSpacing', 'compact', 'Padding', 'loose');
-hold on
-
-for idx_loom = 1:20
-    bouts_spontaneous = data_parser_new(bouts, 'period', 'bsl', 'window', 'all', 'type', 'immobility', 'nloom', idx_loom);
-    [f, x] = ecdf(bouts_spontaneous.durations); 
-    plot(x, f, 'Color', col.vars.nloom(10 + idx_loom,:), 'LineWidth', 1);
-end
-
-apply_generic(gca, 'xlim', [0 60], 'ylim', [-0.05 1.05])
-xlabel('Immobility Frames')
-ylabel('ecdf')
-
-exporter(fh, paths_out, 'contaminant_nloom.pdf')
