@@ -146,11 +146,20 @@ model_results = run_fitting_newer(bouts_proc, points, 'ksddm3', paths, 'export',
 plot_estimates('results', model_results)
 % plot_fit('results', model_results, 'extra', extra)
 % plot_fit('results', model_results, 'extra', extra, 'conditions', true, 'bin_size', 2)
-[fh, ax, ax_inset] = fd_conditions('results', model_results, 'no_y', true, 'bin_size', 1);
-overlay_fits(fh, ax, ax_inset, 'results', model_results, 'export', true, 'extra', extra)
+%[fh, ax, ax_inset] = fd_conditions('results', model_results, 'no_y', true, 'bin_size', 1);
+%overlay_fits(fh, ax, ax_inset, 'results', model_results, 'export', true, 'extra', extra)
 
 
 %%
 
-bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'bsl', 'window', 'le');
-model_results = run_fitting_newer(bouts_proc, points, 'ksddm2', paths, 'export', true, 'extra', extra);
+model_results = run_fitting_newer(bouts_proc, points, 'ksddm2', paths, 'export', true, 'extra', extra, 'ground_truth', gt_table);
+plot_estimates('results', model_results)
+%[fh, ax, ax_inset] = fd_conditions('results', model_results, 'no_y', true, 'bin_size', 1);
+%overlay_fits(fh, ax, ax_inset, 'results', model_results, 'export', true, 'extra', extra)
+
+%%
+
+model_results = run_fitting_newer(bouts_proc, points, 'ksddm4', paths, 'export', true, 'extra', extra, 'ground_truth', gt_table);
+plot_estimates('results', model_results)
+%[fh, ax, ax_inset] = fd_conditions('results', model_results, 'no_y', true, 'bin_size', 1);
+%overlay_fits(fh, ax, ax_inset, 'results', model_results, 'export', true, 'extra', extra)

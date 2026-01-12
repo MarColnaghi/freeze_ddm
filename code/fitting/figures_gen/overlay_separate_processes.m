@@ -1,5 +1,5 @@
 
-function overlay_fits(fh, ax, ax_inset, varargin)
+function overlay_separate_processes(fh, ax, ax_inset, varargin)
 
 opt = inputParser;
 
