@@ -1,6 +1,6 @@
 % Load the table first. We will take advantage of an already existing
 % dataset.
-threshold_imm = 2; threshold_mob = 2; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
+threshold_imm = 3; threshold_mob = 3; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
 paths = path_generator('folder', 'fitting_freezes/bsl/kde_spontaneous', 'bouts_id', id_code);
 load(fullfile(paths.dataset, 'bouts.mat'));
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'bsl', 'window', 'all', 'nloom', 10:20);
@@ -35,7 +35,7 @@ hhandle = histogram(bouts_proc.durations_s, 1/120:1/60:300, 'Normalization', 'pd
 hold on
 plot(est_kde.xkde, est_kde.fkde, 'r--')
 plot(hhandle.BinEdges(1:end - 1) + 1/120, hhandle.Values, 'b--')
-y = interp1(hhandle.BinEdges(1:end - 1) + 1/120, hhandle.Values, x, 'pchip');
+y = interp1(hhandle.BinEdges(1:end - 1) + 1/120, hhandle.Values, x, 'previous');
 plot(x, y , 'g--')
 trapz(x(~isnan(y)), y(~isnan(y)))
 

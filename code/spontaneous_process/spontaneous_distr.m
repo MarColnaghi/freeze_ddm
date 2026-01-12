@@ -11,7 +11,7 @@ fh = figure('color', 'w', 'Position', [100, 100, 800, 400]);
 hold on
 histogram(bouts_spontaneous.durations, 'BinMethod', 'integers', 'Normalization', 'probability','EdgeColor','none', 'FaceColor', col.processes.contam)
 histogram(bouts_le.durations, 'BinMethod', 'integers', 'Normalization', 'probability', 'EdgeColor','none', 'FaceColor', col.period.loom)
-xlims = [-2 302];
+xlims = [-5 305];
 ylims = [-0.005 0.205];
 xlims_zoom = [-0.03 60.03];
 ylims_zoom = [-0.001 0.051];
