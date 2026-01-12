@@ -48,7 +48,7 @@ extra.lambda = lambda_est(~isnan(lambda_est));
 extra.tndt = 0;
 
 %%
-model_results = run_fitting_newer(bouts_proc, points, 'ksddm4', paths, 'export', true, 'bads_display', true, 'pass_ndt', false, 'n_bads', 3, 'extra', extra);
+model_results = run_fitting_newer(bouts_proc, points, 'expsddm4', paths, 'export', true, 'bads_display', true, 'pass_ndt', false, 'n_bads', 3, 'extra', extra);
 
 %%
 

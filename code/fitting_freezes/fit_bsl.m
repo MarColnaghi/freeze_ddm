@@ -19,6 +19,6 @@ bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'bsl', 'wind
 histogram(bouts_proc.durations_s, 'BinEdges', points.truncation - 1/120 :1/20: points.censoring, 'Normalization', 'pdf')
 points.truncation = min(bouts_proc.durations_s);
 
-model_results = run_fitting_newer(bouts_proc, points, 'exp1', paths, 'export', true, 'extra', []);
+model_results = run_fitting_newer(bouts_proc, points, 'exp0', paths, 'export', true, 'extra', []);
 plot_fit('results', model_results, 'conditions', false, 'bin_size', 1)
 

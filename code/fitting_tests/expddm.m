@@ -1,0 +1,159 @@
+clear all
+
+% Load the table first. We will take advantage of an already existing
+% dataset.
+threshold_imm = 2; threshold_mob = 2; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
+paths = path_generator('folder', 'fitting_tests/dddm', 'bouts_id', id_code);
+load(fullfile(paths.dataset, 'bouts.mat'));
+kde_estimates = importdata(fullfile('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/fitting_freezes/bsl/kde_spontaneous', id_code, 'kde_estimates_bsl.mat'));
+[~, idx] = unique(kde_estimates.Fkde, 'last');
+extra.Fkde = kde_estimates.Fkde(idx); extra.xkde = kde_estimates.xkde(idx); extra.fkde = kde_estimates.fkde(idx); 
+
+bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'bsl', 'window', 'all', 'nloom', 1:20);
+bouts_proc = bouts_proc(randi(height(bouts_proc), 10000, 1), :);
+
+% Only save useful variables in the table
+y = table;
+y.sm = bouts_proc.avg_sm_freeze_norm;
+y.fs = bouts_proc.avg_fs_1s_norm;
+y.ln = bouts_proc.nloom_norm;
+y.ls = bouts_proc.sloom_norm;
+y.intercept = ones(height(y),1);   % N‑by‑1 column of ones
+y.smp = bouts_proc.avg_sm_freeze_norm;
+predictors = y.Properties.VariableNames;
+
+ncomp_vars = table();
+link_linear = @(x) x;     % log link for bound height
+link_logistic = @(x) 1./(1 + exp(-x));     % log link for bound height
+
+% For mu 1
+model.lambda = struct( ...
+    'predictors', {{ ...
+    struct('name', 'intercept') ...
+    }}, ...
+    'ground_truth', 0.2, ...
+    'link', link_linear ...
+    );
+
+model.mu = struct( ...
+    'predictors', {{ ...
+    struct('name', 'sm'), ...
+    struct('name', 'intercept') ...
+    }}, ...
+    'ground_truth', [0.9 0.1], ...
+    'link', link_linear ...
+    );
+
+% For theta 1
+model.theta = struct( ...
+    'predictors', {{ ...
+    struct('name', 'intercept')
+    }}, ...
+    'ground_truth', 1.4, ...
+    'link', link_linear ...
+    );
+
+model.pmix = struct( ...
+    'predictors', {{ ...
+    struct('name', 'intercept') ...
+    }}, ...
+    'ground_truth', [0.8], ...
+    'link', link_logistic ...
+    );
+
+% Non decision time
+model.tndt = struct( ...
+    'predictors', {{ ...
+    struct('name', 'intercept') ...
+    }}, ...
+    'ground_truth', 0.09, ...
+    'link', link_linear ...
+    );
+
+[gt, lbl] = get_ground_truth_vector(model);
+x = gt(~isnan(gt));
+gt_table = array2table(gt, 'VariableNames', lbl);
+ncomp_vars = evaluate_model(model, gt_table, y);
+
+% Specify the seed
+sim_params.rng = 4578;
+rng(sim_params.rng);
+
+% General simulation parameters
+sim_params.n_trials = height(bouts_proc);
+sim_params.dt = 1/60;
+sim_params.T = 10.5;
+sim_params.time_vector = 0:sim_params.dt:sim_params.T;
+sim_params.z = 0;
+
+% Simulation settings
+sim_params.kde_grid = 0:1/1200:120;
+sim_params.eval_trials = sim_params.n_trials;
+sim_params.num_sims = 20000;
+
+% Censoring/Truncation
+points.truncation = [];
+points.censoring = sim_params.T;
+
+% Initialize outputs
+rt = table;
+rt.st = nan(sim_params.n_trials, 1);
+rt.ig = nan(sim_params.n_trials, 1);
+trial_type = nan(sim_params.n_trials, 1);
+
+% Extract Social Motion TimeSeries
+chunk_len = length(sim_params.time_vector);
+
+tic
+for idx_trials = 1:sim_params.n_trials
+
+    % Determine model 1 or 2 based on pmix
+    if rand < ncomp_vars.pmix(idx_trials)
+        trial_type(idx_trials) = 1;
+        mu_s = ncomp_vars.mu(idx_trials);
+        theta_s = ncomp_vars.theta(idx_trials);
+        tndt_s = ncomp_vars.tndt(idx_trials);
+
+        % Simulate RT from full DDM
+        [rt.st(idx_trials), traj_st] = drift_diff_new('mu', mu_s, 'theta', theta_s, ...
+            'z', sim_params.z, 'dt', sim_params.dt, 'T', sim_params.T, 'ndt', tndt_s);
+
+    else
+        trial_type(idx_trials) = 2;
+        lambda_s = ncomp_vars.lambda(idx_trials);
+        rt.st(idx_trials) = exprnd(lambda_s, 1, 1);
+
+    end
+
+end
+toc
+
+rt = [rt ncomp_vars];
+
+col = cmapper();
+fh = figure('color','w','Position',[100, 100, 600, 400]);
+tiledlayout(1,2, 'TileSpacing','compact')
+hold on
+
+histogram(rt.st(trial_type == 1), -1/120:1/60:300, 'Normalization', 'pdf')
+histogram(rt.st(trial_type == 2), -1/120:1/60:300, 'Normalization', 'pdf')
+histogram(bouts_proc.durations_s, -1/120:1/60:300, 'Normalization', 'pdf')
+
+apply_generic(gca, 'xlim', [0 5])
+
+rt.st(isnan(rt.st)) = sim_params.T + 1; 
+points.censoring = sim_params.T;
+points.truncation = 0; %min(bouts_proc.durations_s);
+
+plot(extra.xkde, extra.fkde, 'k--')
+
+%  Now we added our vector column to the bouts table.
+bouts_proc.durations_s = rt.st;
+
+model_results = run_fitting_newer(bouts_proc, points, 'expsddm2', paths, 'export', true, 'extra', extra, 'ground_truth', gt_table);
+
+plot_estimates('results', model_results)
+plot_fit('results', model_results, 'extra', extra, 'bin_size', 1)
+% plot_fit('results', model_results, 'extra', extra, 'conditions', true, 'bin_size', 2)
+%[fh, ax, ax_inset] = fd_conditions('results', model_results, 'no_y', true, 'bin_size', 1);
+%overlay_fits(fh, ax, ax_inset, 'results', model_results, 'export', true, 'extra', extra)

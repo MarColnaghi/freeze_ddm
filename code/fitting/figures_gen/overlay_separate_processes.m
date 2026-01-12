@@ -32,6 +32,8 @@ color = opt.Results.color;
 est_params = table2array(results.estimates_mean(:, ~ismissing(results.estimates_mean)));
 freezes = importdata(fullfile(results.bouts_path, 'surrogate.mat'));
 
+results.estimates_mean.Properties.VariableNames
+
 i = 0;
 for idx_sm = 1:3
     for idx_ls = 1:2
