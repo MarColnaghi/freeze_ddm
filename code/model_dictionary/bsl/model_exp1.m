@@ -9,6 +9,4 @@ model.lambda = struct( ...
     'ground_truth', [0 0] ...
     );
 
-
-
 end

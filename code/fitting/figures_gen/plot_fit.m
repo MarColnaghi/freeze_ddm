@@ -1,4 +1,5 @@
 function [fh, fd, f] = plot_fit(varargin)
+
 opt = inputParser;
 addParameter(opt, 'extra', []);
 addParameter(opt, 'freezes', []);
@@ -10,6 +11,8 @@ addParameter(opt, 'censored_inset', false);
 addParameter(opt, 'gt', false);
 addParameter(opt, 'export', false);
 addParameter(opt, 'paths', []);
+addParameter(opt, 'no_dep', false);
+
 parse(opt, varargin{:});
 
 extra = opt.Results.extra;
@@ -22,6 +25,7 @@ censored_inset = opt.Results.censored_inset;
 bin_size = opt.Results.bin_size;
 gt_plot = opt.Results.gt;
 type = opt.Results.type;
+no_dep = opt.Results.no_dep;
 
 fs = 60;
 bin_size_in_seconds = bin_size/fs;
@@ -42,15 +46,19 @@ if ~isempty(results.points.censoring)
 end
 
 if ~conditions
-    [~, f, fd] = nll_fly_ddm_newer(est_params, freezes, results.points, results.fitted_model, 'iid', 'p', extra);
+    if no_dep
+        [~, f, fd] = nll_fly_ddm_newer(est_params, freezes(1,:), results.points, results.fitted_model, 'iid', 'p', extra);
+    else
+        [~, f, fd] = nll_fly_ddm_newer(est_params, freezes, results.points, results.fitted_model, 'iid', 'p', extra);
+
+    end
+
     fh = figure('Position', [100 100 800 500], 'Color', 'w');
     hold on
     hh = histogram(freezes.durations_s, -1/120:bin_size_in_seconds:12, 'Normalization', 'pdf', 'FaceColor', 'r', 'EdgeColor', 'none');
     
     % Robustly downsample fd
     fd_ds = downsample_vec(fd, bin_size, 'mean');
-    hh2 = histogram(freezes.durations_s, fd_ds - bin_size_in_seconds/2, 'Normalization', 'pdf', 'FaceColor', 'r', 'EdgeColor', 'none');
-    hh2 = histogram(freezes.durations_s, min(freezes.durations_s):bin_size_in_seconds:max(freezes.durations_s), 'Normalization', 'pdf', 'FaceColor', 'b', 'EdgeColor', 'none');
 
     if strcmp('discrete', type)
         f_ds = downsample_vec(f, bin_size, 'sum');

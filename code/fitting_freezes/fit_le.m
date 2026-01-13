@@ -11,7 +11,7 @@ motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', 'nloom', 2:20);
 points.censoring = 10.5;
-points.truncation = min(bouts_proc.durations_s);
+points.truncation = 0.5;
 
 kde_estimates = importdata(fullfile('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/fitting_freezes/bsl/kde_spontaneous', id_code, 'kde_estimates_bsl.mat'));
 [~, idx] = unique(kde_estimates.Fkde, 'last');
@@ -48,7 +48,8 @@ extra.lambda = lambda_est(~isnan(lambda_est));
 extra.tndt = 0;
 
 %%
-model_results = run_fitting_newer(bouts_proc, points, 'expsddm4', paths, 'export', true, 'bads_display', true, 'pass_ndt', false, 'n_bads', 3, 'extra', extra);
+
+model_results = run_fitting_newer(bouts_proc, points, 'dddm5', paths, 'export', true, 'bads_display', true, 'pass_ndt', false, 'n_bads', 3, 'extra', extra, 'vbmc_exhaustive', false);
 
 %%
 

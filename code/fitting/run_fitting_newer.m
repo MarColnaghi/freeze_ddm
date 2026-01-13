@@ -13,6 +13,7 @@ addParameter(opt, 'pass_ndt', false);
 addParameter(opt, 'ground_truth', []);
 addParameter(opt, 'only_bads', false);
 addParameter(opt, 'n_bads', 5);
+addParameter(opt, 'vbmc_exhaustive', false);
 
 parse(opt, varargin{:});
 
@@ -22,6 +23,7 @@ ground_truth = opt.Results.ground_truth;
 bads_display = opt.Results.bads_display;
 pass_ndt = opt.Results.pass_ndt;
 n_bads = opt.Results.n_bads;
+vbmc_exhaustive = opt.Results.vbmc_exhaustive;
 
 %% Truncation Filter
 if isfield(points, 'truncation') && ~isempty(points.truncation)
@@ -127,8 +129,22 @@ lpriorfun = @(x) msplinetrapezlogpdf(x, LB, PLB, PUB, UB);
 postfun = @(x) lpostfun(x, llfun, lpriorfun);
 
 options_vbmc.Display = 'iter';
-options_vbmc.MaxFunEvals = 500;
-options_vbmc.RetryMaxFunEvals = 3 * 500;
+options_vbmc.MaxFunEvals = 1500;
+
+if vbmc_exhaustive
+    options_vbmc.SpecifyTargetNoise = false;
+    options_vbmc.TolStableCount = 80;
+    options_vbmc.MinFinalComponents = 50;
+
+    % 1. Force a high-resolution initial map
+    options_vbmc.FunEvalStart = 5;
+    % 2. Force it to run longer (don't stop on stability early)
+    options_vbmc.MinFunEvals = 250;
+    % 3. Force higher precision before declaring convergence
+    % options_vbmc.TolImprovement = 0.004;
+    % 4. Start with a more complex mixture model (smoother tails)
+    options_vbmc.Kwarmup = 5;
+end
 
 [VP, ELBO, ELBO_SD] = vbmc(postfun, eval_param(1,:), LB, UB, PLB, PUB, options_vbmc);
 [x_mean, x_sigma] = vbmc_moments(VP);

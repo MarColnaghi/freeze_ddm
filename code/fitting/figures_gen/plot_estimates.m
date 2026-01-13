@@ -64,7 +64,7 @@ xx = 1:size(est_means, 2);
 
 if isempty(figure_handle)
     errbar(xx, est_means, est_std, 'color','k','Linewidth', 1,'HandleVisibility','off');
-    scatter(xx, est_means, 130, 'Marker', marker, 'MarkerFaceColor', 'k', 'HandleVisibility','off');
+    scatter(xx, est_means, 130, 'Marker', marker, 'MarkerFaceColor', 'k', 'HandleVisibility','off', 'MarkerEdgeColor', 'none');
 else
     sh = scatter(xx, est_means, 130, 'Marker', marker, 'MarkerFaceColor', 'none', 'DisplayName', label, 'LineWidth', 1.3, 'MarkerEdgeColor', colors);
     errbar(xx, est_means, est_std,'Linewidth', 1.1,'HandleVisibility','off', 'Color', sh.MarkerEdgeColor);

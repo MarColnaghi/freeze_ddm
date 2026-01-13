@@ -114,10 +114,10 @@ if isfield(extra, 'tndt') && (strcmp('ed', tok{1}) || strcmp('ded', tok{1}))
     model = rmfield(model, 'tndt');
 end
 
-if isfield(extra, 'lambda') && (strcmp('exp', tok{1}) || strcmp('expsddm', tok{1}) || strcmp('expdddm', tok{1}))
-    model = rmfield(model, 'lambda');
-    x = x(2:end);
-end
+% if isfield(extra, 'lambda') && (strcmp('exp', tok{1}) || strcmp('expsddm', tok{1}) || strcmp('expdddm', tok{1}))
+%     model = rmfield(model, 'lambda');
+%     x = x(2:end);
+% end
 
 [gt, lbl] = get_ground_truth_vector(model);
 lbl = lbl(~isnan(gt));
@@ -202,7 +202,7 @@ if strcmp('iid', iid)
         g(bet) = f(ts(bet), bet) ./ trunc_factor(bet);
         g(abo) = (1 - F(points.censoring, abo)) ./ trunc_factor(abo);
 
-        g = max(g, 1e-5);
+        g = max(g, 1e-12);
         log_g = log(g);
 
     elseif  strcmp('ksddm', tok{1})
