@@ -34,7 +34,5 @@ plot_estimates('results', model_results, 'export', true, 'ylimits', [-2 10])
 [fh, ax, ax_inset] = fd_conditions('results', model_results, 'no_y', true, 'bin_size', 1);
 overlay_fits(fh, ax, ax_inset, 'results', model_results, 'export', true)
 
-
-
 plot_fit('results', model_results, 'conditions', true, 'bin_size', 3)
 
