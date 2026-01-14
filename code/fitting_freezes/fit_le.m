@@ -10,14 +10,14 @@ bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
 motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 
 thresholds = define_thresholds;
-% thresholds.le_window_fl = [5 40];
-% thresholds.le_window_sl = [15 50];
+thresholds.le_window_fl = [5 40];
+thresholds.le_window_sl = [15 50];
 
 bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
 bouts = bouts_formatting(bouts, thresholds);
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', 'nloom', 2:20);
 points.censoring = 10.5;
-points.truncation = 0.3;
+points.truncation = min(bouts_proc.durations_s);
 
 kde_estimates = importdata(fullfile('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/fitting_freezes/bsl/kde_spontaneous', id_code, 'kde_estimates_bsl.mat'));
 [~, idx] = unique(kde_estimates.Fkde, 'last');
@@ -53,7 +53,7 @@ lambda_est = table2array(results_bsl.estimates_mean);
 % extra.lambda = lambda_est(~isnan(lambda_est));
 % extra.tndt = 0;
 
-model_results = run_fitting_newer(bouts_proc, points, 'dddm5', paths, 'export', true, 'bads_display', true, 'pass_ndt', false, 'n_bads', 3, 'extra', extra, 'vbmc_exhaustive', false);
+model_results = run_fitting_newer(bouts_proc, points, 'ded5', paths, 'export', true, 'bads_display', true, 'pass_ndt', true, 'n_bads', 3, 'extra', extra, 'vbmc_exhaustive', false);
 
 %%
 

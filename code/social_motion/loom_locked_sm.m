@@ -1,4 +1,3 @@
-tic
 clearvars
 paths = path_generator('folder', '/social_motion');
 motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
@@ -28,7 +27,7 @@ for idx_fly = 1:total_flies
 
 end
 
-% Plot Time Locked Social Motion
+%% Plot Time Locked Social Motion
 
 col = cmapper( '', 30);
 fh = figure('color','w','Position',[100, 100, 1400, 630]);
@@ -55,7 +54,7 @@ for idx_sloom = unique(sloom)'
         colororder(col.vars.ln(end - total_looms:end, :))
 
         apply_generic(gca, 'no_y', true, 'ylims', [-1 21], 'xlims', [-60 180], ...
-      'xticks', [-60 0 180], 'yticks', [0 10 20], 'tick_length', 0.04)
+            'no_xlabels', xlabels, 'xticks', [-60 0 180], 'yticks', [0 10 20], 'tick_length', 0.04)
 
         xl = xlim;   yl = ylim;
         wx = diff(xl);
@@ -117,9 +116,9 @@ for idx_sloom = unique(sloom)'
     end
 end
 
-exporter(fh, paths, 'loom_evoked_sm.pdf')
+% exporter(fh, paths, 'loom_evoked_sm.pdf')
 
-toc
+
 
 
 
