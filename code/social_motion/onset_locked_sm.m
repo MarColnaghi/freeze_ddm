@@ -77,16 +77,7 @@ for idx_sloom = unique(sloom)'
         text(1, 34, 'Freeze Onset', 'FontSize', 18)
         xtickangle(0);
 
-        %         if idx_sloom == 25
-        %             fill([0 0 30 30], [-3 -4 -4 -3], 'k', 'Clipping', 'off', 'EdgeColor', 'none')
-        %             fill([thresholds.le_window_sl fliplr(thresholds.le_window_sl)], [-6 -6 -5 -5], 'b', 'Clipping', 'off', 'EdgeColor', 'none')
-        %
-        %         elseif idx_sloom == 50
-        %             fill([0 0 30 30], [-3 -4 -4 -3], 'k', 'Clipping', 'off', 'EdgeColor', 'none')
-        %             fill([thresholds.le_window_fl fliplr(thresholds.le_window_fl)], [-6 -6 -5 -5], 'b', 'Clipping', 'off', 'EdgeColor', 'none')
-        %
-        %         end
-
+        
         if idx_sloom == 25
             xlabels = true;
             txtpos = nt.Position;
