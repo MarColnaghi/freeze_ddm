@@ -1,4 +1,7 @@
-id_code = 'imm2_mob2_pc4';
+% This script shows how many bouts are there per fly, and a summary of the
+% distribution of counts at the population level
+% 
+% id_code = 'imm2_mob2_pc4';
 paths_out = path_generator('folder', '/spontaneous_process', 'bouts_id', id_code, 'imfirst', false);
 bouts = importdata(fullfile(paths_out.dataset, 'bouts.mat'));
 
@@ -19,3 +22,5 @@ histogram(counts_x_fly, 50, 'EdgeColor', 'none')
 apply_generic(gca, 'tick_length', 0.01)
 xlabel('Number of Bouts')
 ylabel('Counts')
+
+exporter(fh, paths_out, 'contaminant_howmany_xfly.pdf')

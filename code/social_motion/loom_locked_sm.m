@@ -8,7 +8,7 @@ thresholds = define_thresholds;
 
 window = [-300 300];
 offsets = (window(1) : window(2));
-total_looms = 20; 
+total_looms = 20;
 total_flies = size(motion_cache, 1);
 
 n_moving_flies = nan(total_flies, 1);
@@ -34,11 +34,12 @@ fh = figure('color','w','Position',[100, 100, 1400, 630]);
 tiledlayout(2, 5, 'TileSpacing', 'compact')
 
 graphvector.yaxis = [1 0 0 0 0 0 0 0 0 0];
+y_pos = -2; y_pos_scale = 0.75;
 
 for idx_sloom = unique(sloom)'
-        
+
     for idx_moving_flies = unique(n_moving_flies)'
-        
+
         nt = nexttile;
         hold on
 
@@ -48,30 +49,59 @@ for idx_sloom = unique(sloom)'
         colororder(col.vars.ln(end - total_looms:end, :))
         plot(offsets, sm_loom')
 
-        if idx_moving_flies == 0 && idx_sloom == 25
-            xlabels = false;
-            % xlabel('frames')
-           % text(-75, 0, '0', 'HorizontalAlignment', 'right', 'VerticalAlignment', 'middle', 'Clipping', 'off', 'FontSize', 16)
-           % text(-75, 10, '10', 'HorizontalAlignment', 'right', 'VerticalAlignment', 'middle', 'Clipping', 'off', 'FontSize', 16)
+
+
+        colororder(col.vars.ln(end - total_looms:end, :))
+
+        apply_generic(gca, 'no_y', true, 'ylims', [-1 21], 'xlims', [-60 180], ...
+            'no_xlabels', xlabels, 'xticks', [-60 0 180], 'yticks', [0 10 20], 'tick_length', 0.04)
+
+        xl = xlim;   yl = ylim;
+        wx = diff(xl);
+        wy = diff(yl);
+
+        plot([xl(1) - 0.02*wx xl(1) - 0.02*wx], [0 10], 'k-', 'LineWidth', 2, 'Clipping', 'off');
+       
+        if ~(idx_moving_flies == 0 && idx_sloom == 25)
+        else
+            text(xl(1) - 0.04*wx, 0, '0', 'HorizontalAlignment', 'right', 'VerticalAlignment', 'middle', 'Clipping', 'off', 'FontSize', 16)
+            text(xl(1) - 0.04*wx, 10, '10', 'HorizontalAlignment', 'right', 'VerticalAlignment', 'middle', 'Clipping', 'off', 'FontSize', 16)
 
         end
 
-        plot([-70 -70], [0 10], 'k-', 'LineWidth', 2, 'Clipping', 'on');
-        colororder(col.vars.ln(end - total_looms:end, :))
+        % ---- BLACK SCALE BAR (time) ----
+        x1 = 0;
+        x2 = 30;
 
-        apply_generic(gca, 'no_y', false, 'ylims', [-2 45], 'xlims', [-60 180], ...
-            'no_xlabels', xlabels, 'xticks', [-60 0 180], 'tick_length', 0.04)
+        y_top_k = yl(1) - 0.02*wy;
+        y_bot_k = yl(1) - 0.05*wy;
 
-        % xline(0, 'LineWidth', 2); xtickangle(0);
+        % ---- BLUE THRESHOLD BAR ----
+        y_bot_b = yl(1) - 0.09*wy;
+        y_top_b = yl(1) - 0.06*wy;
 
         if idx_sloom == 25
-            fill([0 0 30 30], [-3 -4 -4 -3], 'k', 'Clipping', 'off', 'EdgeColor', 'none')
-            fill([thresholds.le_window_sl fliplr(thresholds.le_window_sl)], [-6 -6 -5 -5], 'b', 'Clipping', 'off', 'EdgeColor', 'none')
-
+            x_thr = thresholds.le_window_sl;
         elseif idx_sloom == 50
-            fill([0 0 30 30], [-3 -4 -4 -3], 'k', 'Clipping', 'off', 'EdgeColor', 'none')
-            fill([thresholds.le_window_fl fliplr(thresholds.le_window_fl)], [-6 -6 -5 -5], 'b', 'Clipping', 'off', 'EdgeColor', 'none')
+            x_thr = thresholds.le_window_fl;
+        else
+            x_thr = [];
+        end
 
+        if idx_sloom == 25
+            fill([x1 x1 x2 x2], ...
+                [y_top_k y_bot_k y_bot_k y_top_k], ...
+                'k', 'Clipping','off', 'EdgeColor','none');
+            fill([x_thr fliplr(x_thr)], ...
+                [y_bot_b y_bot_b y_top_b y_top_b], ...
+                'b', 'Clipping','off', 'EdgeColor','none');
+        elseif idx_sloom == 50
+            fill([x1 x1 x2 x2], ...
+                [y_top_k y_bot_k y_bot_k y_top_k], ...
+                'k', 'Clipping','off', 'EdgeColor','none');
+            fill([x_thr fliplr(x_thr)], ...
+                [y_bot_b y_bot_b y_top_b y_top_b], ...
+                'b', 'Clipping','off', 'EdgeColor','none');
         end
 
         if idx_sloom == 25
@@ -80,7 +110,7 @@ for idx_sloom = unique(sloom)'
             txtpos(2) = txtpos(2) + 0.03;
             annotation('textbox', txtpos, 'String', sprintf('Moving Flies: %d', idx_moving_flies) ,'HorizontalAlignment', 'left', 'VerticalAlignment','top', ...
                 'LineStyle', 'none', 'FontSize', 18);
-            
+
         end
 
     end
@@ -90,102 +120,7 @@ end
 
 
 
-%% Freeze Onset aligned sm
 
-bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
-bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', 'nloom', 7:20, 'min_dur', 18);
-
-window = [-300 630];
-offsets = (window(1) : window(2));
-total_looms = 20; 
-total_flies = size(motion_cache, 1);
-
-n_moving_flies = nan(total_flies, 1);
-sloom = nan(total_flies, 1);
-sm_around_loom = nan(total_flies, total_looms, length(offsets));
-
-for idx_fly = 1:total_flies
-    fly_loom_x_sm = nan(total_looms, length(offsets));
-
-    sm_fly = motion_cache(idx_fly);
-    bouts_fly = bouts_proc(bouts_proc.fly == idx_fly, :);
-    freeze_frames = bouts_fly.onsets;
-    idx_slice = freeze_frames(:) + offsets;
-    fly_loom_x_sm(bouts_fly.nloom, :) = sm_fly(idx_slice);
-
-    try
-        n_moving_flies(idx_fly) = unique(bouts_fly.moving_flies);
-        sloom(idx_fly) = unique(bouts_fly.sloom);
-    catch
-    end
-        sm_around_loom(idx_fly, :, :) = fly_loom_x_sm;
-
-end
-
-col = cmapper( '', 30);
-fh = figure('color','w','Position',[100, 100, 1400, 630]);
-tiledlayout(2, 5, 'TileSpacing', 'compact')
-
-graphvector.yaxis = [1 0 0 0 0 0 0 0 0 0];
-
-sloom = sloom(~isnan(sloom));
-n_moving_flies = n_moving_flies(~isnan(n_moving_flies));
-
-for idx_sloom = unique(sloom)'
-        
-    for idx_moving_flies = unique(n_moving_flies)'
-        
-        nt = nexttile;
-        hold on
-
-        mask = n_moving_flies == idx_moving_flies & sloom == idx_sloom;
-        sm_loom = squeeze(mean(sm_around_loom(mask, :, :), 1, 'omitnan'));
-
-        colororder(col.vars.ln(end - total_looms:end, :))
-        plot(offsets, sm_loom')
-
-        if idx_moving_flies == 0 && idx_sloom == 25
-            xlabels = false;
-            % xlabel('frames')
-            text(-75, 0, '0', 'HorizontalAlignment', 'right', 'VerticalAlignment', 'middle', 'Clipping', 'off', 'FontSize', 16)
-            text(-75, 10, '10', 'HorizontalAlignment', 'right', 'VerticalAlignment', 'middle', 'Clipping', 'off', 'FontSize', 16)
-
-        end
-
-        
-        plot([-70 -70], [0 10], 'k-', 'LineWidth', 2, 'Clipping', 'off');
-        colororder(col.vars.ln(end - total_looms:end, :))
-
-        apply_generic(gca, 'no_y', true, 'ylims', [-2 45], 'xlims', [-60 180], ...
-            'no_xlabels', xlabels, 'xticks', [-60 -30 0 30 60 120 180], 'tick_length', 0.04, 'font_size', 18)
-
-        plot([0 0], [-1 31], 'k-.', 'LineWidth', 1); 
-        text(1, 34, 'Freeze Onset', 'FontSize', 18)
-        xtickangle(0);
-
-%         if idx_sloom == 25
-%             fill([0 0 30 30], [-3 -4 -4 -3], 'k', 'Clipping', 'off', 'EdgeColor', 'none')
-%             fill([thresholds.le_window_sl fliplr(thresholds.le_window_sl)], [-6 -6 -5 -5], 'b', 'Clipping', 'off', 'EdgeColor', 'none')
-% 
-%         elseif idx_sloom == 50
-%             fill([0 0 30 30], [-3 -4 -4 -3], 'k', 'Clipping', 'off', 'EdgeColor', 'none')
-%             fill([thresholds.le_window_fl fliplr(thresholds.le_window_fl)], [-6 -6 -5 -5], 'b', 'Clipping', 'off', 'EdgeColor', 'none')
-% 
-%         end
-
-        if idx_sloom == 25
-            xlabels = true;
-            txtpos = nt.Position;
-            txtpos(2) = txtpos(2) + 0.03;
-            annotation('textbox', txtpos, 'String', sprintf('Moving Flies: %d', idx_moving_flies) ,'HorizontalAlignment', 'left', 'VerticalAlignment','top', ...
-                'LineStyle', 'none', 'FontSize', 18);
-            
-        end
-
-    end
-end
-
-%exporter(fh, paths, 'freeze_onset_sm_std.pdf')
 
 %%
 
@@ -196,9 +131,9 @@ sloom = sloom(~isnan(sloom));
 n_moving_flies = n_moving_flies(~isnan(n_moving_flies));
 
 for idx_sloom = unique(sloom)'
-        
+
     for idx_moving_flies = unique(n_moving_flies)'
-   
+
         fh = figure('color','w','Position',[100, 100, 800, 1080]);
         tiledlayout(4, 5, 'TileSpacing', 'compact')
 
@@ -252,7 +187,7 @@ for idx_bouts = 1:height(bouts_temp)
 
 end
 
-figure 
+figure
 histogram(bouts_temp.durations_s)
 
 %% Plot the freezes

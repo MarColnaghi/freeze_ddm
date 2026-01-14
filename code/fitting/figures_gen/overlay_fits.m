@@ -47,10 +47,10 @@ for idx_sm = 1:3
             if isfield(extra, 'soc_mot_array')
                 ec.soc_mot_array = extra.soc_mot_array(mask, :);
             end
-            
+
             [~, f, fd] =  nll_fly_ddm_newer(est_params, freezes_quant, results.points, strcat('model_', results.fitted_model), 'iid', 'p', extra);
 
-            plot(fd, f, 'LineWidth', 1.25, 'Color', 'k', 'LineStyle', '--')
+            plot(fd, f, 'LineWidth', 1.9, 'Color', 'k', 'LineStyle', '--')
 
             axes(ax_inset(i));
             plot(results.points.censoring, f(end), 'o', 'LineWidth', 1, 'MarkerSize', 5, 'MarkerEdgeColor', 'k');

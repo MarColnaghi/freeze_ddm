@@ -53,7 +53,7 @@ if ~isempty(results.points.censoring)
 end
 freezes = freezes(freezes.durations_s >= results.points.truncation, :);
 
-fh = figure('Position', [100 100 1570 900], 'Color', 'w');
+fh = figure('Position', [100 100 1300 700], 'Color', 'w');
 t = tiledlayout(3, 4, 'TileSpacing', 'compact', 'Padding', 'compact');
 % ax_inset = struct;
 % ax = struct();
@@ -73,13 +73,13 @@ for idx_sm = 1:3
 
             RTs{1,1} = freezes_quant.durations_s;
             RTs{2,1} = freezes_quant.durations_s;
-            RTD = kreg_single(RTs, RTs, xxi, xbin, h, 0, 500);
+            % RTD = kreg_single(RTs, RTs, xxi, xbin, h, 0, 500);
 
             censored = freezes_quant.durations_s > 10.5;
             [ks_noc] = ksdensity(freezes_quant.durations_s, xxi, 'BoundaryCorrection', 'reflection', 'Bandwidth', h, 'Support', [min(freezes.durations_s) - 0.001, max(freezes.durations_s) + 0.001 ]);
             [ks] = ksdensity(freezes_quant.durations_s, xxi, 'BoundaryCorrection', 'reflection', 'Bandwidth', h, 'Support', [min(freezes.durations_s) - 0.001, max(freezes.durations_s) + 0.001 ], 'Censoring', censored);
 
-            plot(xxi, RTD{1,1}, 'k-');
+            % plot(xxi, RTD{1,1}, 'k-');
 
             %             fdd = RTD{1,1};
             %trapz(xxi, fdd)
@@ -94,7 +94,7 @@ for idx_sm = 1:3
             % plot(xxi, RTD{1,2}, 'Color', 'k', 'LineWidth', 2)
 
             histogram(freezes_quant.durations_s, min(freezes.durations_s) - 1/120:bin_size_in_seconds:900, 'Normalization', 'pdf', 'EdgeColor', 'none', 'FaceColor',  col.empirical.(color)( 2*(idx_sm - 1) + idx_fs, :), 'FaceAlpha', 0.25)
-            plot(xxi, ks, 'Color', col.empirical.(color)( 2*(idx_sm - 1) + idx_fs, :), 'LineWidth' , 2.2)
+            plot(xxi, ks, 'Color', col.empirical.(color)( 2*(idx_sm - 1) + idx_fs, :), 'LineWidth' , 2.5)
 
             th(i,1) = plot([-.3 -.3], [0 1], 'k-', 'LineWidth', 2, 'Clipping', 'off', 'Visible', hand_vis);
             th(i,2) = text(-0.52, 0, '0', 'HorizontalAlignment', 'right', 'VerticalAlignment', 'middle', 'FontSize', 18, 'Visible', hand_vis);
@@ -113,7 +113,7 @@ for idx_sm = 1:3
                 censored_x = results.points.censoring;
                 scatter(censored_x, censored_density, 32, 'filled', 'MarkerFaceColor', col.empirical.(color)( 2*(idx_sm - 1) + idx_fs, :), 'MarkerEdgeColor', 'none');
 
-                apply_generic(ax_inset(i), 'ylim', [0 0.3], 'xlim', [censored_x - 0.025 censored_x + 0.025], 'yticks', [0 0.3], 'xticks', censored_x, ...
+                apply_generic(ax_inset(i), 'ylim', [0 0.4], 'xlim', [censored_x - 0.025 censored_x + 0.025], 'yticks', [0 0.4], 'xticks', censored_x, ...
                     'tick_length', 0.05, 'line_width', 2, 'no_x', true, 'font_size', 18);
 
                 if i > 1

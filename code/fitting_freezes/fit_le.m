@@ -9,9 +9,15 @@ paths = path_generator('folder', 'fitting_freezes/le', 'bouts_id', id_code, 'imf
 bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
 motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 
+thresholds = define_thresholds;
+thresholds.le_window_fl = [5 40];
+thresholds.le_window_sl = [15 50];
+
+bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
+bouts = bouts_formatting(bouts, thresholds);
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', 'nloom', 2:20);
 points.censoring = 10.5;
-points.truncation = 0.5;
+points.truncation = min(bouts_proc.durations_s);
 
 kde_estimates = importdata(fullfile('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/fitting_freezes/bsl/kde_spontaneous', id_code, 'kde_estimates_bsl.mat'));
 [~, idx] = unique(kde_estimates.Fkde, 'last');
@@ -44,12 +50,10 @@ soc_mot_array = cell2mat(sm_during)';
 extra.soc_mot_array = soc_mot_array;
 results_bsl = importdata('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/fitting_freezes/bsl/exp0/run07/fit_results_exp0.mat');
 lambda_est = table2array(results_bsl.estimates_mean);
-extra.lambda = lambda_est(~isnan(lambda_est));
-extra.tndt = 0;
+% extra.lambda = lambda_est(~isnan(lambda_est));
+% extra.tndt = 0;
 
-%%
-
-model_results = run_fitting_newer(bouts_proc, points, 'dddm5', paths, 'export', true, 'bads_display', true, 'pass_ndt', false, 'n_bads', 3, 'extra', extra, 'vbmc_exhaustive', false);
+model_results = run_fitting_newer(bouts_proc, points, 'ded5', paths, 'export', true, 'bads_display', true, 'pass_ndt', true, 'n_bads', 3, 'extra', extra, 'vbmc_exhaustive', false);
 
 %%
 
@@ -57,7 +61,7 @@ model_results = run_fitting_newer(bouts_proc, points, 'dddm5', paths, 'export', 
 % fh_conditions = plot_fit('results', model_results, 'conditions', true, 'export', true, 'bin_size', 3 , 'type', 'discrete', 'extra', extra);
 
 plot_estimates('results', model_results, 'export', true, 'ylimits', [-2 5])
-[fh, ax, ax_inset] = fd_conditions('results', model_results, 'no_y', true);
+[fh, ax, ax_inset] = fd_conditions('results', model_results, 'no_y', true, 'vis', 'on');
 overlay_fits(fh, ax, ax_inset, 'results', model_results, 'export', true, 'extra', extra)
 overlay_separate_processes(fh, ax, ax_inset, 'results', model_results, 'export', true, 'extra', extra)
 
