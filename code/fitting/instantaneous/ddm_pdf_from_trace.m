@@ -1,11 +1,10 @@
-function out = ddm_pdf_from_trace(params, drift_coarse, fixed)
+function out = ddm_pdf_from_trace(params, scaled_drift, fixed)
 % params = [drift_scale, lambda, bound]
 % drift_coarse: the stored trace in drifts_cell{i} (column vector, coarse dt)
 % fixed: your struct
 
-drift_scale = params(1);
-lambda      = params(2);
-bound       = params(3);
+lambda      = params(1);
+bound       = params(2);
 
 % --- Dynamic grid for THIS bound ---
 grid_size = round((bound - fixed.x_min) / fixed.dx) + 1;
@@ -15,7 +14,7 @@ mex_p = [fixed.dt, fixed.dx, fixed.sigma_sq, fixed.x0, ...
          fixed.x_min, grid_size, start_idx, lambda];
 
 % --- Drift seen by PDE ---
-drift_used = drift_coarse(:) * drift_scale;
+drift_used = scaled_drift(:);
 
 % --- Solve PDE ---
 [p_dist, survival_at_Tmax] = leaky_pde_robust(drift_used, mex_p);

@@ -47,7 +47,7 @@ end
 
 %%
 p = [1.1, 00, 2.6];
-i = 92;
+i = 2;
 out = ddm_pdf_from_trace(p, sm_raw{i}, fixed);
 
 figure('color','w'); hold on; plot(out.t, out.pdf); xlabel('t'); ylabel('p(T=t)'); plot(out.t, sm_raw{i});
@@ -57,7 +57,7 @@ title('First-passage time PDF (renormalized)');
 mu_tv = p(1) *  sm_raw{i};
  
 rt = nan(10000, 1);
-for idx_sims = 1:100000
+for idx_sims = 1:1000000
     rt(idx_sims) = drift_diff_new('mu_t', mu_tv(1:end-1), 'theta', p(3), 'z', 0, ...
             'dt', 1/60, 'T', max(out.t), 'ndt', 0);
 end
@@ -85,6 +85,56 @@ for idx = 20 %:5:50
 end
 mu_tv = p(1) *  sm_raw{i};
 
+rt = nan(10000, 1);
+for idx_sims = 1:50000
+    rt(idx_sims) = extrema_detection_new('mu_t', mu_tv(1:end-1), 'theta', p(3), 'z', 0, ...
+            'dt', 1/60, 'T', max(out.t), 'ndt', 0);
+end
+
+
+histogram(rt, -1/120:1/60:11, 'Normalization', 'pdf')
+ec.soc_mot_array = sm_raw{i}';
+points.censoring = max(out.t);
+points.truncation = 0;
+bouts_le.sm = bouts_le.avg_sm_freeze_norm;
+bouts_le.fs = bouts_le.avg_fs_1s_norm;
+bouts_le.ln = bouts_le.nloom_norm;
+bouts_le.ls = bouts_le.sloom_norm;
+bouts_le.intercept = ones(height(bouts_le),1);
+bouts_le.smp = bouts_le.avg_sm_freeze_norm;
+bouts_le.onsets = bouts_le.onsets;
+bouts_le.fly = bouts_le.fly;
+[~, f, fd] =  nll_fly_ddm_newer([p(1) p(3) 0], bouts_le(i, :), points, 'model_ed1', 'iid', 'p', ec);
+
+plot(fd, f * 60)
+
+%%
+figure('color','w'); 
+for idx = 20 %:5:50
+    p = [0.9, 0, 1.6];
+    i = 33;
+    sm_raw{i} = ones(1, length(sm_raw{i}));
+    out = ddm_pdf_from_trace(p, sm_raw{i}, fixed);
+
+    hold on; plot(out.t, out.pdf); xlabel('t'); ylabel('p(T=t)'); plot(out.t, sm_raw{i});
+    trapz(out.t(~isnan(out.pdf)), out.pdf(~isnan(out.pdf)));
+
+    title('First-passage time PDF (renormalized)');
+end
+mu_tv = p(1) *  sm_raw{i};
+
+for idx_sims = 1:100000
+    rt(idx_sims) = drift_diff_new('mu_t', mu_tv(1:end-1), 'theta', p(3), 'z', 0, ...
+            'dt', 1/60, 'T', max(out.t), 'ndt', 0);
+end
+
+histogram(rt, -1/120:3/60:11, 'Normalization', 'pdf')
+
+[~, f, fd] =  nll_fly_ddm_newer([p(1) p(3) 0], bouts_le(i, :), points, 'model_sddm0', 'iid', 'p', ec);
+
+plot(fd + 1/120, f)
+
+%%
 rt = nan(10000, 1);
 for idx_sims = 1:50000
     rt(idx_sims) = extrema_detection_new('mu_t', mu_tv(1:end-1), 'theta', p(3), 'z', 0, ...
