@@ -68,4 +68,8 @@ out.survival     = surv_renorm;           % observed-time survival
 out.norm_factor  = norm_factor;
 out.ndt_idx      = ndt_idx;
 
+% --- 7. Discrete PMF (for likelihood comparison) ---
+out.pmf = out.pdf * fixed.dt;
+out.pmf = max(out.pmf, 1e-12);
+
 end

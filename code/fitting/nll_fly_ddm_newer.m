@@ -57,10 +57,10 @@ if strcmp(plot_flag, 'p')
             %
             %
             %             else
-            fprintf('bouts %d: sum(f): = %0.3f \n', idx_bout, trapz(fd(fd >= points.truncation & fd <= points.censoring) , exp(g(fd >= points.truncation & fd <= points.censoring))) + exp(g(end)));
+            %fprintf('bouts %d: sum(f): = %0.3f \n', idx_bout, trapz(fd(fd >= points.truncation & fd <= points.censoring) , exp(g(fd >= points.truncation & fd <= points.censoring))) + exp(g(end)));
             %fprintf('bouts %d: sum(f): = %0.3f \n', idx_bout, trapz(fd(fd >= points.truncation & fd <= points.censoring) , exp(g(fd >= points.truncation & fd <= points.censoring))));
         else
-            fprintf('bouts %d: sum(f): = %0.3f \n', idx_bout, trapz(exp(g(fd > 0 & fd <= points.censoring)))) + exp(g(end));
+            %fprintf('bouts %d: sum(f): = %0.3f \n', idx_bout, trapz(fd(fd <= points.censoring) , exp(g(fd <= points.censoring))) + exp(g(end)));
         end
 
         f = f + exp(g);
@@ -68,7 +68,7 @@ if strcmp(plot_flag, 'p')
     end
 
     f = f ./ num_bouts;
-%    f(fd < points.truncation) = 0;
+    f(fd < points.truncation) = 0;
 
 %     if strcmp('ed', tok{1}) || strcmp('ded', tok{1})
 %         f(1:end-1) = f(1:end-1)* 60;
@@ -341,13 +341,17 @@ if strcmp('iid', iid)
         epsN = 1e-12;
 
         if ~isempty(points.truncation)
-            trunc_factor = @(inds) max(F(points.truncation, inds), epsN) ;
+            trunc_factor = @(inds) max(F(points.truncation - 1/fs, inds), epsN) ;
         else
             trunc_factor = @(inds) ones(size(ts(inds)))';
         end
 
-        g(bet) = f(ts(bet), bet) ./ trunc_factor(bet)  .* 60;
+        g(bet) = f(ts(bet), bet) ./ trunc_factor(bet);
         g(abo) = F(points.censoring, abo) ./ trunc_factor(abo);
+
+%         z = g;
+%         z(bet) = z(bet);
+%         sum(z(ts >= points.truncation))
 
         g      = max(g, 1e-12);
         log_g  = log(g);

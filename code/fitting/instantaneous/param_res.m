@@ -1,4 +1,4 @@
-function pr = param_res(true_bound)
+function pr = param_res(true_bound, points)
 
 % -- Likelihood / Signal Parameters (Coarse) --
 pr.dt = 1/60;       % 1ms for signal and PDE
@@ -18,5 +18,5 @@ pr.grid_size = grid_size;
 pr.start_idx = start_idx;
 
 % Truncation and T_max
-pr.T_trunc = 0;
-pr.T_max = 10.5 - 1/60;
+pr.T_trunc = points.truncation;
+pr.T_max = points.censoring - pr.dt;

@@ -40,7 +40,7 @@ function result = ed_vectorized_trials(ts, theta, mu, fs, output_type)
     too_early  = frames < 1;
     frames = max(1, min(n_frames, frames));
 
-    % Compute all survival probabilities
+    % Compute survival probability for each frame
     surv_probs = normcdf(theta - mu, 0, sqrt(1/fs));
     
     % Compute cumulative products (survival up to each frame)

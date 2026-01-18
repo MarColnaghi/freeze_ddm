@@ -8,8 +8,12 @@ threshold_imm = 2; threshold_mob = 2; threshold_pc = 4; id_code = sprintf('imm%d
 col = cmapper();
 
 color_list = {col.timevarying_sm, col.extremadetection};
-model_list = {'ded2', 'dddm2' };
-run_list = {'run10', 'run13' };
+% model_list = {'ded2', 'dddm2' };
+% run_list = {'run14', 'run13' };
+
+model_list = {'dddm2', 'ded2' };
+run_list = {'run13', 'run14' };
+
 label_list = {'Extrema Detection','Integration'};
 
 paths = path_generator('folder', 'fitting_freezes/le');
@@ -17,8 +21,8 @@ paths = path_generator('folder', 'fitting_freezes/le');
 results_folder_1 = fullfile(paths.results, model_list{1}, run_list{1});
 results_folder_2 = fullfile(paths.results, model_list{2}, run_list{2});
 
-freezes_1 = importdata(fullfile(results_folder, 'surrogate.mat'));
-freezes_2 = importdata(fullfile(results_folder, 'surrogate.mat'));
+freezes_1 = importdata(fullfile(results_folder_1, 'surrogate.mat'));
+freezes_2 = importdata(fullfile(results_folder_2, 'surrogate.mat'));
 
 if isequaln(freezes_1, freezes_2)
     fprintf('The two freeze tables match \n')
@@ -28,6 +32,9 @@ else
 
 end
 
+nll_ed = nan(height(freezes), 1);
+ll_tv = nan(height(freezes), 1);
+nll_st = nan(height(freezes), 1);
 
 for idx_model = 1:length(model_list)
 
@@ -46,13 +53,9 @@ for idx_model = 1:length(model_list)
     model = model_func();
     out = evaluate_model(model, model_results.estimates_mean, freezes);
 
-    ll = nan(height(freezes), 1);
-    nll_st = nan(height(freezes), 1);
-
     for idx_bout = 1:height(freezes)
 
         out_f = out(idx_bout, :);
-        out_f.tndt = 0;
         fprintf('bout: %d \n', idx_bout)
         freeze = freezes(idx_bout, :);
             
@@ -61,18 +64,17 @@ for idx_model = 1:length(model_list)
 
         if contains(model_list{idx_model}, 'ddm')
 
-            [pdf] = compute_pdf_tv_ddm(out_f);
-            [ll(idx_bout)] = compute_likelihood(pdf, is_censored, freeze.durations_s);
+            [pdf] = compute_pdf_tv_ddm(out_f, model_results.points);
+            [ll_tv(idx_bout)] = compute_likelihood(pdf, is_censored, freeze.durations_s);
 
-            model_results.points.truncation = 0;
-
-            % Check if ndt = 0 works better: it does.
-
+            %% Check if ndt = 0 works better: it does.
             % est_params(end) = 0;
-            [~, f, fd] = nll_fly_ddm_newer(est_params, freeze, model_results.points, strcat('model_', model_list{idx_model}), 'iid', 'p', ec);
-            [nll_st(idx_bout)] = nll_fly_ddm_newer(est_params, freeze, model_results.points, strcat('model_', model_list{idx_model}), 'iid', '', ec);
 
-            fprintf('ll difference: %d \n', sum(ll + nll_st, 1, 'omitnan'))
+            %% Here we compare with the stationary model
+%             [~, f, fd] = nll_fly_ddm_newer(est_params, freeze, model_results.points, strcat('model_', model_list{idx_model}), 'iid', 'p', ec);
+%             [nll_st(idx_bout)] = nll_fly_ddm_newer(est_params, freeze, model_results.points, strcat('model_', model_list{idx_model}), 'iid', '', ec);
+
+%  fprintf('ll difference: %d \n', sum(ll + nll_st, 1, 'omitnan'))
  
 %             figure
 %             plot(fd, f)
@@ -122,14 +124,15 @@ for idx_model = 1:length(model_list)
 
         elseif contains(model_list{idx_model}, 'ed')
 
-            model_results.points.truncation = [];
+            % model_results.points.truncation = [];
 
-            [~, f, fd] = nll_fly_ddm_newer(est_params, freezes(idx_bout, :), model_results.points, 'model_ded2', 'iid', 'p', ec);
-            [nll_st(idx_bout)] = nll_fly_ddm_newer(est_params, freeze, model_results.points, strcat('model_', model_list{idx_model}), 'iid', '', ec);
-            trapz(fd(1:end-1),f(1:end-1)) + f(end)
-            figure
-            plot(fd, f)
-            hold on
+            [~, f, fd] = nll_fly_ddm_newer(est_params, freeze, model_results.points, 'model_ded2', 'iid', 'p', ec);
+            [nll_ed(idx_bout)] = nll_fly_ddm_newer(est_params, freeze, model_results.points, strcat('model_', model_list{idx_model}), 'iid', '', ec);
+            
+            
+%             figure
+%             plot(fd, f)
+%             hold on
             %plot(fd, ec.soc_mot_array)
 
         end
