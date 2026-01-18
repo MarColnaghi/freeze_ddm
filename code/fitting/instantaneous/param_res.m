@@ -19,4 +19,4 @@ pr.start_idx = start_idx;
 
 % Truncation and T_max
 pr.T_trunc = points.truncation;
-pr.T_max = points.censoring - pr.dt;
+pr.T_max = points.censoring;

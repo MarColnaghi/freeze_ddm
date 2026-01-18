@@ -17,7 +17,7 @@ bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
 bouts = bouts_formatting(bouts, thresholds);
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', 'nloom', 2:20);
 points.censoring = 10.5;
-points.truncation = 0.3;
+points.truncation = 0.5;
 
 kde_estimates = importdata(fullfile('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/fitting_freezes/bsl/kde_spontaneous', id_code, 'kde_estimates_bsl.mat'));
 [~, idx] = unique(kde_estimates.Fkde, 'last');
@@ -53,7 +53,7 @@ lambda_est = table2array(results_bsl.estimates_mean);
 % extra.lambda = lambda_est(~isnan(lambda_est));
 % extra.tndt = 0;
 
-model_results = run_fitting_newer(bouts_proc, points, 'ded2', paths, 'export', true, 'bads_display', true, 'pass_ndt', true, 'n_bads', 5, 'extra', extra, 'vbmc_exhaustive', false);
+model_results = run_fitting_newer(bouts_proc, points, 'dddm2', paths, 'export', true, 'bads_display', true, 'pass_ndt', false, 'n_bads', 5, 'extra', extra, 'vbmc_exhaustive', false);
 
 %%
 
@@ -62,7 +62,7 @@ model_results = run_fitting_newer(bouts_proc, points, 'ded2', paths, 'export', t
 
 plot_estimates('results', model_results, 'export', true, 'ylimits', [-2 5])
 [fh, ax, ax_inset] = fd_conditions('results', model_results, 'no_y', true, 'vis', 'on');
-overlay_fits(fh, ax, ax_inset, 'results', model_results, 'export', true, 'extra', extra)
+overlay_fits(fh, ax, ax_inset, 'results', model_results, 'export', true, 'extra', extra);
 overlay_separate_processes(fh, ax, ax_inset, 'results', model_results, 'export', true, 'extra', extra)
 
 %fh = kde_fit('results', model_results, 'conditions', false, 'export', true, 'bin_size', 3, 'censored_inset', true, 'type', 'continuous');
