@@ -111,9 +111,9 @@ plot(fd, f * 60)
 %%
 figure('color','w'); 
 for idx = 20 %:5:50
-    p = [0.9, 0, 1.6];
+    p = [0, 2.4, 0.2 ];
     i = 33;
-    sm_raw{i} = ones(1, length(sm_raw{i}));
+    sm_raw{i} = ones(1, length(sm_raw{i})) * 0.6;
     out = ddm_pdf_from_trace(p, sm_raw{i}, fixed);
 
     hold on; plot(out.t, out.pdf); xlabel('t'); ylabel('p(T=t)'); plot(out.t, sm_raw{i});
@@ -121,18 +121,18 @@ for idx = 20 %:5:50
 
     title('First-passage time PDF (renormalized)');
 end
-mu_tv = p(1) *  sm_raw{i};
-
-for idx_sims = 1:100000
-    rt(idx_sims) = drift_diff_new('mu_t', mu_tv(1:end-1), 'theta', p(3), 'z', 0, ...
-            'dt', 1/60, 'T', max(out.t), 'ndt', 0);
+mu_tv = sm_raw{i};
+n_sims = 50000;
+rt = nan(n_sims, 1);
+for idx_sims = 1:n_sims
+    rt(idx_sims) = drift_diff_new('mu_t', mu_tv(1:end), 'theta', p(2), 'z', 0, ...
+            'dt', 1/60, 'T', 10.5, 'ndt', 0.2);
 end
 
 histogram(rt, -1/120:3/60:11, 'Normalization', 'pdf')
 
-[~, f, fd] =  nll_fly_ddm_newer([p(1) p(3) 0], bouts_le(i, :), points, 'model_sddm0', 'iid', 'p', ec);
-
-plot(fd + 1/120, f)
+[~, f, fd] =  nll_fly_ddm_newer([.6 p(2) 0.2], bouts_le(i, :), points, 'model_sddm0', 'iid', 'p', ec);
+plot(fd,f)
 
 %%
 rt = nan(10000, 1);

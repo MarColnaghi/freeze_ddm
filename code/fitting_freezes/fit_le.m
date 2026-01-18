@@ -38,7 +38,7 @@ for idx_trials = 1:height(bouts_proc)
     ons = bouts_proc.onsets(idx_trials);
     off = bouts_proc.ends(idx_trials) - 1;
     sum_motion = motion_cache(bouts_proc.fly(idx_trials));
-    sm_during{idx_trials} = sum_motion(ons:ons + chunk_len - 1) ./ 10;
+    sm_during{idx_trials} = sum_motion(ons:ons + chunk_len) ./ 10;
 
     sum_motion = motion_cache(bouts_proc.fly(idx_trials));
 
@@ -53,7 +53,7 @@ lambda_est = table2array(results_bsl.estimates_mean);
 % extra.lambda = lambda_est(~isnan(lambda_est));
 % extra.tndt = 0;
 
-model_results = run_fitting_newer(bouts_proc, points, 'dddm2', paths, 'export', true, 'bads_display', true, 'pass_ndt', false, 'n_bads', 3, 'extra', extra, 'vbmc_exhaustive', false);
+model_results = run_fitting_newer(bouts_proc, points, 'ded2', paths, 'export', true, 'bads_display', true, 'pass_ndt', true, 'n_bads', 3, 'extra', extra, 'vbmc_exhaustive', false);
 
 %%
 

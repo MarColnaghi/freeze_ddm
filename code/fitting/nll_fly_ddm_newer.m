@@ -18,7 +18,7 @@ tok = regexp(model_num, pattern, 'tokens');
 if strcmp(plot_flag, 'p')
 
 
-    fd = [0:1/60:(points.censoring + 1/60)]';
+    fd = (0:1/60:(points.censoring + 1/60))';
     num_times = height(fd);
     num_bouts = height(bouts);
 
@@ -68,7 +68,7 @@ if strcmp(plot_flag, 'p')
     end
 
     f = f ./ num_bouts;
-    f(fd < points.truncation) = 0;
+%    f(fd < points.truncation) = 0;
 
 %     if strcmp('ed', tok{1}) || strcmp('ded', tok{1})
 %         f(1:end-1) = f(1:end-1)* 60;
