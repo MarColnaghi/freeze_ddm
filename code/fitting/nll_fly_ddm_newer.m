@@ -346,7 +346,7 @@ if strcmp('iid', iid)
             trunc_factor = @(inds) ones(size(ts(inds)))';
         end
 
-        g(bet) = f(ts(bet), bet) ./ trunc_factor(bet);
+        g(bet) = f(ts(bet), bet) ./ trunc_factor(bet); % * fs;
         g(abo) = F(points.censoring, abo) ./ trunc_factor(abo);
 
 %         z = g;

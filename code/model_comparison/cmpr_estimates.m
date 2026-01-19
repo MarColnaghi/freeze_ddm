@@ -14,7 +14,7 @@ markers = {'o','+','*','s','d','v','>','h'};
 mkrsize = 220;
 
 model_list = {'dddm2', 'ded2'};
-run_list = {'run12', 'run10'};
+run_list   = {'run21', 'run15'};
 label_list = {'Integration', 'Extrema Detection'};
 color_list = {col.timevarying_sm, col.extremadetection};
 

@@ -11,7 +11,7 @@ col = cmapper();
 
 color_list = {col.timevarying_sm, col.extremadetection};
 model_list = {'dddm2', 'ded2'};
-run_list = {'run13', 'run10'};
+run_list   = {'run21', 'run15'};
 label_list = {'Integration', 'Extrema Detection'};
 
 paths = path_generator('folder', 'fitting_freezes/le');
@@ -47,7 +47,10 @@ for idx_model = 1:length(model_list)
 
                 ec = extra;
                 ec.soc_mot_array = extra.soc_mot_array(mask, :);
-                ec = rmfield(ec, 'tndt');
+
+                if contains(model_list{idx_model}, 'ded')
+                    ec = rmfield(ec, 'tndt');
+                end
                 [~, f, fd] =  nll_fly_ddm_newer(est_params, freezes_quant, model_results.points, strcat('model_', model_results.fitted_model), 'iid', 'p', ec);
 
                 plot(fd, f, 'LineWidth', 1.5, 'Color',  color_list{idx_model}, 'LineStyle', '--')

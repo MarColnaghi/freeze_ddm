@@ -1,7 +1,7 @@
 %% Script: Individual Freeze Likelihood Comparison
 % Refactored to loop over bouts (freezes) first.
 
-paths = path_generator('folder', 'extrema_detection/fit_comparison');
+paths_exp = path_generator('folder', 'momentary_integration/alternative');
 
 % --- 1. Configuration & Paths ---
 threshold_imm = 2; threshold_mob = 2; threshold_pc = 4; 
@@ -10,8 +10,8 @@ col = cmapper('', 2);
 ddm_params.kde_grid = 0:1/60:30;
 
 % Model 1: Integration (DDM-based) | Model 2: Extrema Detection
-model_list = {'dddm2', 'ded2'};
-run_list   = {'run21', 'run15'};
+model_list = {'dddm2'};
+run_list   = {'run21'};
 paths      = path_generator('folder', 'fitting_freezes/le');
 
 % --- 2. Data Pre-loading & Preparation ---
@@ -61,8 +61,8 @@ freezes_ref = data(1).table; % Reference table
 n_bouts     = height(freezes_ref);
 censoring_val = data(1).results.points.censoring;
 
-ll_integration = nan(n_bouts, 1);
-ll_extrema     = nan(n_bouts, 1);
+ll_tv = nan(n_bouts, 1);
+ll_st = nan(n_bouts, 1);
 
 for idx_bout = 1:n_bouts
     if mod(idx_bout, 100) == 0, fprintf('Processing bout %d/%d\n', idx_bout, n_bouts); end
@@ -78,26 +78,26 @@ for idx_bout = 1:n_bouts
     % --- Model 1 (Integration) ---
     out_f1 = data(1).out_all(idx_bout, :);
     [pdf_ddm] = compute_pdf_tv_ddm(out_f1, data(1).results.points);
-    ll_integration(idx_bout) = compute_likelihood(pdf_ddm, is_censored, dur_s);
+    ll_tv(idx_bout) = compute_likelihood(pdf_ddm, is_censored, dur_s);
     
     % --- Model 2 (Extrema Detection) ---
     % Using the prepared freeze_row and ec
-    [~, f, fd] = nll_fly_ddm_newer(data(2).est, freeze_row, data(2).results.points, ...
-                                  'model_ded2', 'iid', 'p', ec);
-    nll_val_ed = nll_fly_ddm_newer(data(2).est, freeze_row, data(2).results.points, ...
-                                  'model_ded2', 'iid', '', ec);
-    ll_extrema(idx_bout) = -nll_val_ed;
+    [~, f, fd] = nll_fly_ddm_newer(data(1).est, freeze_row, data(1).results.points, ...
+                                  'model_dddm2', 'iid', 'p', ec);
+    nll_val_st = nll_fly_ddm_newer(data(1).est, freeze_row, data(1).results.points, ...
+                                  'model_dddm2', 'iid', '', ec);
+    ll_st(idx_bout) = -nll_val_st;
 
 
 end
 
 % --- 4. Final Output ---
-total_ll_int = sum(ll_integration, 'omitnan');
-total_ll_ext = sum(ll_extrema, 'omitnan');
+total_ll_tv = sum(ll_tv, 'omitnan');
+total_ll_st = sum(ll_st, 'omitnan');
 
 fprintf('\nFinal Results:\n');
-fprintf('Integration Total LL: %.2f\n', total_ll_int);
-fprintf('Extrema Det. Total LL: %.2f\n', total_ll_ext);
+fprintf('Time-Varying Total LL: %.2f\n', total_ll_tv);
+fprintf('Stationary Total LL: %.2f\n', total_ll_st);
 
 %%
 
@@ -105,10 +105,10 @@ fh = figure('color','w','Position',[100, 100, 1800, 800]);
 n_col = 3; n_rows = 3; items = n_col * n_rows;
 tl = tiledlayout(n_rows, n_col, 'TileSpacing', 'tight', 'Padding', 'tight');
 
-diff = ll_integration - ll_extrema;
+diff = ll_tv - ll_st;
 [c, i] = sort(diff);
 
-selection = 'best';
+selection = 'worst';
 
 if strcmp(selection, 'best')
     selected = i(end - items + 1:end);
@@ -116,7 +116,7 @@ elseif strcmp(selection, 'worst')
     selected = i(1:items);
 end
 
-for idx_selected_bout = selected'
+for idx_selected_bout = [randi(n_bouts, items, 1)]' 
 
     % Current freeze row
     freeze_row = freezes_ref(idx_selected_bout, :);
@@ -130,26 +130,26 @@ for idx_selected_bout = selected'
     % --- Model 1 (Integration) ---
     out_f1 = data(1).out_all(idx_selected_bout, :);
     [pdf_ddm] = compute_pdf_tv_ddm(out_f1, data(1).results.points);
-    ll_integration(idx_selected_bout) = compute_likelihood(pdf_ddm, is_censored, dur_s);
+    ll_tv(idx_selected_bout) = compute_likelihood(pdf_ddm, is_censored, dur_s);
 
     % --- Model 2 (Extrema Detection) ---
     % Using the prepared freeze_row and ec
-    [~, f, fd] = nll_fly_ddm_newer(data(2).est, freeze_row, data(2).results.points, ...
-        'model_ded2', 'iid', 'p', ec);
-    nll_val_ed = nll_fly_ddm_newer(data(2).est, freeze_row, data(2).results.points, ...
-        'model_ded2', 'iid', '', ec);
-    ll_extrema(idx_selected_bout) = -nll_val_ed;
+    [~, f, fd] = nll_fly_ddm_newer(data(1).est, freeze_row, data(1).results.points, ...
+                                  'model_dddm2', 'iid', 'p', ec);
+    nll_val_st = nll_fly_ddm_newer(data(1).est, freeze_row, data(1).results.points, ...
+                                  'model_dddm2', 'iid', '', ec);
+    ll_st(idx_bout) = -nll_val_st;
 
     nexttile
     hold on
 
-    plot(fd(1:end-1), f(1:end-1), 'LineWidth', 1.4, 'Color', col.extremadetection)
-    stem(fd(end), f(end), 'Color', col.extremadetection)
+    plot(fd(1:end-1), f(1:end-1), 'LineWidth', 1.4, 'Color', col.stationary_sm)
+    stem(fd(end), f(end), 'Color', col.stationary_sm)
     plot(pdf_ddm.t, pdf_ddm.ddm, 'LineWidth', 1.4, 'Color', col.timevarying_sm)
     stem(fd(end), pdf_ddm.survival, 'Color', col.timevarying_sm)
 
-    sum(f);
-    sum(pdf_ddm.ddm(pdf_ddm.t >= data(1).results.points.truncation)) + pdf_ddm.survival;
+    trapz(fd(1:end - 1), f(1:end - 1)) + f(end)
+    trapz(pdf_ddm.t(pdf_ddm.t >= data(1).results.points.truncation), pdf_ddm.ddm(pdf_ddm.t >= data(1).results.points.truncation)) + pdf_ddm.survival
     
     xlabel('Duration (s)')
     ylabel('density')
@@ -163,7 +163,7 @@ for idx_selected_bout = selected'
     colormap(col.vars.sm)
 
     xlim([0 11])
-    ylim([-0.005 0.0555])
+    ylim([-0.3 2.0])
     xticks([0 10])
 
     ax.Clipping= 'on';
@@ -171,20 +171,20 @@ for idx_selected_bout = selected'
     ax.YAxis.Visible = 'off';
     ax.XLabel.Position(2) = -0.45;
 
-    xline(dur_s, 'LineWidth', 1.2, 'LineStyle', '-.', 'Color', 'k')
-    scatter(dur_s, ax.YLim(1) - 0.003, 100, 'filled', '^', 'Clipping', 'off', 'MarkerFaceColor', 'k')
+    xline(dur_s, 'LineWidth', 1.2, 'LineStyle', '--', 'Color', 'k')
+    scatter(dur_s, ax.YLim(1) - 0.15, 100, 'filled', '^', 'Clipping', 'off', 'MarkerFaceColor', 'k')
 
 end
 
-exporter(fh, paths, sprintf('examples_%s.pdf', selection))
+exporter(fh, paths_exp, sprintf('examples_%s.pdf', selection))
 
 %%
 fh = figure('color','w','Position',[100, 100, 1200, 300]);
 tiledlayout(1, 3, 'TileSpacing', 'compact', 'Padding', 'compact')
 nexttile
 ll = table();
-ll.tv = ll_integration;
-ll.ed = ll_extrema;
+ll.tv = ll_tv;
+ll.st = ll_st;
 
 total_ll_bar(ll, col)
 
@@ -194,10 +194,10 @@ ylim([-3 3])
 xlim([-50 height(ll) + 50])
 ax = gca;
 
-[sorted_deltall, idx_deltall_tv] = sort(ll.tv - ll.ed);
+[sorted_deltall, idx_deltall_tv] = sort(ll.tv - ll.st);
 idx_crossing = find(sorted_deltall > 0);
 
-fill([ax.XLim(1) ax.XLim(1) idx_crossing(1) idx_crossing(1)], [ax.YLim(1) 0 0 ax.YLim(1)], hex2rgb(col.extremadetection), 'FaceAlpha', 0.2, 'EdgeColor', 'none', 'LineWidth', 2)
+fill([ax.XLim(1) ax.XLim(1) idx_crossing(1) idx_crossing(1)], [ax.YLim(1) 0 0 ax.YLim(1)], hex2rgb(col.stationary_sm), 'FaceAlpha', 0.2, 'EdgeColor', 'none', 'LineWidth', 2)
 fill([idx_crossing(1) idx_crossing(1) ax.XLim(2) ax.XLim(2)], [ax.YLim(2) 0 0 ax.YLim(2)], hex2rgb(col.timevarying_sm), 'FaceAlpha', 0.2, 'EdgeColor', 'none', 'LineWidth', 2)
 
 xline(idx_crossing(1), 'Label', sprintf('%.2f%%', (sum(sorted_deltall > 0)./length(sorted_deltall)) * 100), 'FontSize', 20, 'LabelOrientation','horizontal')
@@ -205,17 +205,17 @@ xline(idx_crossing(1), 'Label', sprintf('%.2f%%', (sum(sorted_deltall > 0)./leng
 bar(sorted_deltall, 'FaceColor', 'k', 'EdgeColor', 'none' )
 xlabel('Sorted Freezes')
 xticks([])
-ylabel('$\log \!\big(\mathcal{L}_{\mathrm{tv}} / \mathcal{L}_{\mathrm{ed}}\big)$', ...
+ylabel('$\log \!\big(\mathcal{L}_{\mathrm{tv}} / \mathcal{L}_{\mathrm{st}}\big)$', ...
     'Interpreter','latex')
 apply_generic(ax)
 
-exporter(fh, paths, 'compare_total_ll.pdf')
+exporter(fh, paths_exp, 'compare_total_ll.pdf')
 
 function total_ll_bar(lls_output, col)
 
-bh = bar([sum(lls_output.tv), sum(lls_output.ed)], 'FaceColor', 'flat', 'EdgeColor', 'flat', 'LineWidth', 2);
+bh = bar([sum(lls_output.tv), sum(lls_output.st)], 'FaceColor', 'flat', 'EdgeColor', 'flat', 'LineWidth', 2);
 bh.CData(1,:) = hex2rgb(col.timevarying_sm);
-bh.CData(2,:) = hex2rgb(col.extremadetection);
+bh.CData(2,:) = hex2rgb(col.stationary_sm);
 
 % if strcmp(gen_data, 'tv')
 %         text(1, bh.YData(1), 'generative', 'HorizontalAlignment', 'right', 'VerticalAlignment', 'middle', 'FontSize', 20, 'Color', 'w', 'Rotation', 90)
@@ -228,12 +228,12 @@ bh.CData(2,:) = hex2rgb(col.extremadetection);
 % 
 % end
 
-xticklabels({'acc', 'ed'})
+xticklabels({'acc', 'st'})
 ylabel('Total log($\mathcal{L}$)', 'Interpreter', 'latex')
 ax = gca;
 apply_generic(ax)
 ax.YAxis.Direction = 'reverse';
-ylim([-30000 -28000]); %ax.YTickLabel(1) = {'worse'}; ax.YTickLabel(end) = {'better'};
-text(2, ax.YLim(1) + 500, sprintf('$\\Delta log(\\mathcal{L}): %.2f$', sum(lls_output.tv) - sum(lls_output.ed)), 'FontSize', 20, 'Interpreter', 'latex', 'HorizontalAlignment', 'center')
+ylim([-15000 0]); %ax.YTickLabel(1) = {'worse'}; ax.YTickLabel(end) = {'better'};
+text(2, ax.YLim(1) + 500, sprintf('$\\Delta log(\\mathcal{L}): %.2f$', sum(lls_output.tv) - sum(lls_output.st)), 'FontSize', 20, 'Interpreter', 'latex', 'HorizontalAlignment', 'center')
 
 end
