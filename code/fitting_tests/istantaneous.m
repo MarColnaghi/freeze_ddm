@@ -1,5 +1,4 @@
-% 1. RNG
-rng(556);
+clearvars
 
 % 3. Trial table (like y in mixture script)
 threshold_imm = 2; threshold_mob = 2; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
@@ -34,13 +33,25 @@ model.mu = struct( ...
 
 model.lambda = struct( ...
     'predictors', {{ struct('name','intercept') }}, ...
-    'ground_truth', 0.2, ...       % leak
+    'ground_truth', 0.14, ...       % leak
     'link', link_linear );
 
-model.bound = struct( ...
-    'predictors', {{ struct('name','intercept') }}, ...
-    'ground_truth', 1.2, ...        % bound
-    'link', link_linear );
+model.theta = struct(...
+    'predictors', {{ ...
+    struct('name', 'fs'), ...
+    struct('name', 'intercept') ...
+    }}, ...
+    'ground_truth', [0.24 0.8], ...
+    'link', link_linear ...
+    );
+
+model.tndt = struct(...
+    'predictors', {{ ...
+    struct('name', 'intercept') ...
+    }}, ...
+    'ground_truth', [0.09], ...
+    'link', link_linear ...
+    );
 
 % 5. Evaluate model → trial-wise parameters
 [gt, lbl] = get_ground_truth_vector(model);
@@ -91,7 +102,8 @@ for idx_bout = 1:n_bouts
     % ---- Trial-wise parameters ----
     mu_st     = ncomp_vars.mu(idx_bout);
     lambda_i = ncomp_vars.lambda(idx_bout);
-    bound_i  = ncomp_vars.bound(idx_bout);
+    theta_i  = ncomp_vars.theta(idx_bout);
+    tndt_i  = ncomp_vars.tndt(idx_bout);
 
     % ---- Generate COARSE drift signal (model-visible) ----
     drifts_cell{idx_bout}  = sm_chunk;
@@ -109,7 +121,7 @@ for idx_bout = 1:n_bouts
         sim.dt, ...
         fixed.sigma_sq, ...
         fixed.x0, ...
-        bound_i, ...
+        theta_i, ...
         lambda_i ];
 
     % ---- Unique RNG seed per trial ----
@@ -121,9 +133,9 @@ for idx_bout = 1:n_bouts
 
     % ---- Censoring ----
     if isnan(res)
-        rt.tv(idx_bout) = fixed.T_max + fixed.dt;
+        rt.tv(idx_bout) = fixed.T_max + fixed.dt + tndt_i;
     else
-        rt.tv(idx_bout) = res;
+        rt.tv(idx_bout) = res + tndt_i;
     end
 
 end
@@ -146,8 +158,6 @@ histogram(rt.tv, 1/120:1/20:points.censoring + fixed.dt * 3, 'EdgeColor', 'none'
 apply_generic(gca)
 ylabel('Density'); xlabel('Duration (s)'); ax.YAxis.Visible = 'off';
 
-
-%%
 % exporter(fh, paths, 'Durations.pdf')
 
 extra.soc_mot_array = cell2mat(sm_raw)';
@@ -161,5 +171,6 @@ bouts_proc.ls = bouts_proc.sloom_norm;
 bouts_proc.ln = bouts_proc.nloom_norm;
 bouts_proc.intercept = ones(height(y),1);
 
-model_2_fit = 'sddmtv10';
-model_results = run_fitting_newer(bouts_proc, points, model_2_fit, paths, 'export', true,  'ground_truth', gt_table, 'bads_display', true, 'pass_ndt', true, 'n_bads', 3, 'extra', extra);
+model_2_fit = 'sddmtv11';
+model_results = run_fitting_newer(bouts_proc, points, model_2_fit, paths, 'export', true,  'ground_truth', gt_table, 'bads_display', true, 'pass_ndt', false, 'n_bads', 1, 'extra', extra);
+plot_estimates('results', model_results, 'export', true, 'paths', paths)

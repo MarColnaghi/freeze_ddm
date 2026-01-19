@@ -510,6 +510,23 @@ if strcmp('iid', iid)
         g      = max(g, 1e-5);
         log_g  = log(g);
 
+    elseif  strcmp('sddmtv', tok{1})
+
+        parfor idx_bouts = 1:height(bif)
+            params = [out.lambda(idx_bouts), out.theta(idx_bouts), out.tndt(idx_bouts)];
+            scaled_drift = extra.soc_mot_array(idx_bouts, :) .* x(1);
+            pr = param_res(out.theta(idx_bouts), points);
+            pdf = ddm_pdf_from_trace(params, scaled_drift, pr);
+            if ts(idx_bouts) <= points.censoring
+                g(idx_bouts) = interp1(pdf.t, pdf.pmf, ts(idx_bouts));
+            else
+                g(idx_bouts) = pdf.survival;
+            end
+
+        end
+        g      = max(g, 1e-12);
+        log_g  = log(g);
+
     end
 end
 
