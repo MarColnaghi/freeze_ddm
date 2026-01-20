@@ -7,42 +7,26 @@
 % experimental parameter
 
 %% Load Data and Preprocess
-%clear all; %close all; clc;
 
-function fd_distr_withparam_new(bouts_proc, moment, paths, export)
+function fd_distr_withparam_new(varargin)
+
+opt = inputParser;
+addParameter(opt, 'bouts_proc', []);
+addParameter(opt, 'export', false);
+addParameter(opt, 'moment', 'loom');
+addParameter(opt, 'paths', 'descr/fd_distr');
+addParameter(opt, 'params', {'avg_sm_freeze_norm', 'avg_fs_1s_norm', 'sloom', 'nloom'});
+
+parse(opt, varargin{:});
+
+bouts_proc = opt.Results.bouts;
+export = opt.Results.export;
+moment = opt.Results.moment;
+paths = opt.Results.paths;
 
 % Load Colors
 extra.quantiles = 5;
 col = cmapper([], extra.quantiles);
-
-if nargin == 0
-
-    disp('no input provided, will load the dataset in the dataset folder')
-
-    paths = path_generator('descr/fd_distr');
-
-    thresholds = define_thresholds;
-
-    % Load the Data
-    load(fullfile(paths.dataset, 'bouts.mat'))
-    bouts = bouts(bouts.genotype == 1, :);
-    bouts = bouts_formatting(bouts, thresholds);
-    [bouts_proc] = data_parser_new(bouts);
-    moment = 'loom';
-
-    if strcmp(moment, 'bsl')
-        bouts_proc = bouts_proc(bouts_proc.period == 0, :);
-
-    elseif strcmp(moment, 'loom')
-        bouts_proc = bouts_proc(bouts_proc.period == 1, :);
-
-    end
-
-else
-    disp('input provided')
-    paths.fig = fullfile(paths.fig, 'fd_durs');
-
-end
 
 [g, ~] = findgroups(bouts_proc.fly);
 c = splitapply(@(x1){cumsum(x1)}, ones(height(bouts_proc),1), g);
@@ -52,7 +36,6 @@ bouts_proc.n_freezes = vertcat(c{:});
 % Choose Param here %
 %%%%%%%%%%%%%%%%%%%%%
 
-%param_list = {'onsets_loomaligned'};
 param_list =  {'avg_sm_freeze_norm', 'avg_fs_1s_norm', 'sloom', 'nloom'};
 
 for idx_param = param_list

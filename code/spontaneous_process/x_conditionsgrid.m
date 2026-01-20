@@ -16,7 +16,7 @@ for idx_sm = 1:3
             nexttile(t)
             hold on
 
-            exp_generated = exprnd(1/7, 500000, 1);
+            exp_generated = exprnd(1/9, 500000, 1) + exprnd(1/9, 500000, 1);
             exp_generated = exp_generated(exp_generated >= min(bouts_spontaneous.durations_s));
             histogram(exp_generated * 60, 1:1:630, 'Normalization', 'probability', 'EdgeColor', 'k', 'FaceAlpha', 0.3, 'DisplayStyle', 'stairs')
 
@@ -35,3 +35,33 @@ for idx_sm = 1:3
         end
     end
 end
+
+
+%% Playing around with sum of exponentials.
+
+% Parameters
+N = 1e6;
+lambda1 = 1;
+lambda2 = 4;
+
+% Simulate
+X = exprnd(1/lambda1, N, 1);
+Y = exprnd(1/lambda2, N, 1);
+S = X + Y;
+
+% Empirical histogram
+figure
+edges = linspace(0, prctile(S, 99.9), 200);
+histogram(S, edges, 'Normalization', 'pdf');
+hold on
+
+% True hypoexponential pdf
+s = linspace(0, max(edges), 1000);
+pdf_hypo = (lambda1 * lambda2 / (lambda2 - lambda1)) .* ...
+           (exp(-lambda1 .* s) - exp(-lambda2 .* s));
+plot(s, pdf_hypo, 'k', 'LineWidth', 2)
+
+legend('Empirical', 'Hypoexponential')
+xlabel('s')
+ylabel('pdf')
+title('Sum of Exp(\lambda_1) + Exp(\lambda_2)')
