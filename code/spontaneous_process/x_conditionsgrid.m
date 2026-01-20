@@ -2,7 +2,7 @@ id_code = 'imm2_mob2_pc4';
 col = cmapper();
 paths_out = path_generator('folder', '/spontaneous_process', 'bouts_id', id_code, 'imfirst', false);
 bouts = importdata(fullfile(paths_out.dataset, 'bouts.mat'));
-bouts_spontaneous = data_parser_new(bouts, 'period', 'bsl', 'window', 'le', 'type', 'immobility', 'nloom', 10:20);
+bouts_spontaneous = data_parser_new(bouts, 'period', 'bsl', 'window', 'all', 'type', 'immobility', 'nloom', 10:20);
 bouts_le = data_parser_new(bouts, 'period', 'loom', 'window', 'le', 'type', 'immobility', 'nloom', 2:20);
 
 fh = figure('Position', [100 100 1400 900], 'Color', 'w');
@@ -16,7 +16,7 @@ for idx_sm = 1:3
             nexttile(t)
             hold on
 
-            exp_generated = exprnd(1/15, 500000, 1);
+            exp_generated = exprnd(1/7, 500000, 1);
             exp_generated = exp_generated(exp_generated >= min(bouts_spontaneous.durations_s));
             histogram(exp_generated * 60, 1:1:630, 'Normalization', 'probability', 'EdgeColor', 'k', 'FaceAlpha', 0.3, 'DisplayStyle', 'stairs')
 
