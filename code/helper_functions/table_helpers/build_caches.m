@@ -53,5 +53,6 @@ elseif strcmp(var_name, 'pixelchange')
     save('/Users/marcocolnaghi/PhD/freeze_ddm/datasets/caches/pixel_cache.mat', 'caches')
 elseif strcmp(var_name, 'looming_bout')
     save('/Users/marcocolnaghi/PhD/freeze_ddm/datasets/caches/loom_cache.mat', 'caches')
-
+elseif strcmp(var_name, 'velocity')
+    save('/Users/marcocolnaghi/PhD/freeze_ddm/datasets/caches/speed_cache.mat', 'caches')
 end

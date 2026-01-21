@@ -11,18 +11,29 @@
 function fd_distr_withparam_new(varargin)
 
 opt = inputParser;
-addParameter(opt, 'bouts_proc', []);
+addParameter(opt, 'bouts', []);
 addParameter(opt, 'export', false);
-addParameter(opt, 'moment', 'loom');
+addParameter(opt, 'period', []);
 addParameter(opt, 'paths', 'descr/fd_distr');
 addParameter(opt, 'params', {'avg_sm_freeze_norm', 'avg_fs_1s_norm', 'sloom', 'nloom'});
+addParameter(opt, 'type', 'ecdf');
 
 parse(opt, varargin{:});
 
 bouts_proc = opt.Results.bouts;
 export = opt.Results.export;
-moment = opt.Results.moment;
+period = opt.Results.period;
 paths = opt.Results.paths;
+params = opt.Results.params;
+type = opt.Results.type;
+
+if isempty(period)
+    if unique(bouts_proc.period) == 1
+        period = 'loom';
+    elseif unique(bouts_proc.period) == 0
+        period = 'bsl';
+    end
+end
 
 % Load Colors
 extra.quantiles = 5;
@@ -36,20 +47,19 @@ bouts_proc.n_freezes = vertcat(c{:});
 % Choose Param here %
 %%%%%%%%%%%%%%%%%%%%%
 
-param_list =  {'avg_sm_freeze_norm', 'avg_fs_1s_norm', 'sloom', 'nloom'};
-
-for idx_param = param_list
+for idx_param = params
 
     param = idx_param{1};
 
+    if strcmp(param, 'sloom')
+
+    end
+
+    
     if strcmp(param, 'nloom')
         num_quantiles = 4;
         param_str = 'Loom Number';
-        if strcmp(moment, 'bsl')
-            thresholds = 0:5:21;
-        elseif  strcmp(moment, 'loom')
-            thresholds = 0:5:21;
-        end
+        thresholds = 0:5:21;
 
     elseif strcmp(param, 'sloom')
         num_quantiles = 2;
@@ -83,14 +93,6 @@ for idx_param = param_list
     % Choose Param here %
     %%%%%%%%%%%%%%%%%%%%%
 
-    type = 'ecdf';
-    bw = 0.25;
-
-    dx = .005;
-    xbin = (0:dx:dx*(ceil(10/dx)+10))';
-    x     = (0:10:10000)/1000;
-    h       = .05;
-
     % Load Colors
     extra.quantiles = num_quantiles;
     col = cmapper([], extra.quantiles);
@@ -103,60 +105,73 @@ for idx_param = param_list
     ax = gca;
     hold on
 
-
     for idx_quant = 1:num_quantiles
         if strcmp(type, 'ecdf')
+            
             [f, x] = ecdf(bouts_proc.durations_s(quantiles == idx_quant));%, 'censoring', bouts_proc.bout_with_loom(quantiles == idx_quant) > 0);
-            length(find(bouts_proc.durations_s(quantiles == idx_quant)))
+
             plot(x, f, 'Color', col.vars.(param)(1 + idx_quant,:), 'LineWidth', 3)
             ylabel('ecdf');
-            ylim([0 1]);
+
+            switch period
+                case 'loom'
+                    xlim([0 10.5])
+                    ylim([-0.02 1.02]);
+                case 'bsl'
+                    xlim([-0.05 1.05])
+                    ylim([0.5 1.0]);
+            end
+            text(ax.XLim(2)/2, 0.99, param_str, 'HorizontalAlignment','center','VerticalAlignment','bottom','FontSize', 20, 'Color', col.vars.(param)(idx_quant,:));
 
         elseif strcmp(type, 'kde')
-            RTs{1,1} = bouts_proc.durations_s(quantiles == idx_quant); RTs{2,1} = bouts_proc.durations_s(quantiles == idx_quant);
-            [f] = kreg_single(RTs, RTs, x, xbin, h, 0, 1000);
-            plot(x, f{1,2}, 'Color', col.vars.(param)(idx_quant,:), 'LineWidth', 3)
+            
+            % RTs{1,1} = bouts_proc.durations_s(quantiles == idx_quant); RTs{2,1} = bouts_proc.durations_s(quantiles == idx_quant);
+            % [f] = kreg_single(RTs, RTs, x, xbin, h, 0, 1000);
+            % plot(x, f{1,2}, 'Color', col.vars.(param)(idx_quant,:), 'LineWidth', 3)
 
             %[f, x] = ksdensity(bouts_proc.durations_s(quantiles == idx_param), 'Function','pdf', 'NumPoints', 500);
             %length(find(bouts_proc.durations_s(quantiles == idx_param)))
 
             %plot(x, f, 'Color', col.vars.(param)(1 + idx_param,:), 'LineWidth', 3)
-            ylabel('kde');
-            ylim([0 1]);
 
-        elseif strcmp(type, 'whisk')
+            histogram(bouts_proc.durations_s(quantiles == idx_quant), min(bouts_proc.durations_s):5/60:max(bouts_proc.durations_s), 'DisplayStyle', 'stairs',...
+                'EdgeColor', col.vars.(param)(1 + idx_quant,:), 'LineWidth', 1.2, 'Normalization', 'pdf')
+
+            ylabel('pdf');
+
+            switch period
+                case 'loom'
+                    xlim([0 10.5])
+                    ylim([-0.02 1.52]);
+                case 'bsl'
+                    xlim([-0.05 1.05])
+                    ylim([-0.02 1.52]);
+            end
+
+            text(ax.XLim(2)/2, 1.52, param_str, 'HorizontalAlignment','center','VerticalAlignment','top','FontSize', 20, 'Color', col.vars.(param)(idx_quant,:));
+
         end
     end
+
     if strcmp(type, 'whisk')
-        boxplot(bouts_proc.durations_s, quantiles)
-        ylim([0 10.5]);
-
+        bh = boxchart(quantiles, bouts_proc.durations_s, 'GroupByColor', quantiles, 'Orientation', 'horizontal', 'BoxWidth', 2.2);
+        colororder(col.vars.(param)(2:end, :))
+        yticks(1:num_quantiles)
+        switch period
+            case 'loom'
+                xlim([0 10.5])
+                ylim([0 5]);
+            case 'bsl'
+                xlim([-0.05 1.05])
+                ylim([0 5]);
+        end
     end
-
-
 
     % Separate Graph Functions
-    yticks([0, 0.5, 1])
-
-    switch moment
-        case 'loom'
-            xlim([0 10.5])
-            ylim([-0.02 1.02]);
-        case 'bsl'
-            xlim([-0.05 1.05])
-            ylim([0.5 1.0]);
-    end
-
-    if strcmp(type, 'whisk')
-        ylim([0 100]);
-        xlim([0 num_quantiles + 1]);
-        ax.YAxis.Scale = 'log';
-    end
-    ax.XAxis.FontSize = 28;
-    ax.YAxis.FontSize = 28;
-    set(gca,'linewidth', 3, 'TickDir','out'); % The only other option is 'in'
-    set(gca,'box','off')
-    set(gca,'TickLength',[0.02, 0.02])
+   
+    ax = gca;
+    apply_generic(gca, 'tick_length', 0.02)
+    
     xlabel('Freeze Duration (s)');
     colormap(col.vars.(param)(2:end,:));
     clim([0.5 idx_quant + 0.5])
@@ -167,7 +182,7 @@ for idx_param = param_list
         colorbar(ax, 'northoutside', 'Ticks', 1:num_quantiles, 'TickLabels', cell_vec, 'FontSize', 18, 'LineWidth', 2, 'TickLength', 0.1, 'TickDirection', 'none');
 
     elseif strcmp(param, 'nloom')
-        cell_vec = {'1-5', '6-10', ; '11-15', '16-20'};
+        cell_vec = {'1-5', '6-10', '11-15', '16-20'};
         colorbar(ax, 'northoutside', 'Ticks', 1:num_quantiles, 'TickLabels', cell_vec, 'FontSize', 18, 'LineWidth', 2, 'TickLength', 0.1, 'TickDirection', 'none');
 
     elseif strcmp(param, 'sloom')
@@ -179,9 +194,6 @@ for idx_param = param_list
         colorbar(ax, 'northoutside', 'Ticks', 1:num_quantiles, 'TickLabels', cell_vec, 'FontSize', 18, 'LineWidth', 2, 'TickLength', 0.1, 'TickDirection', 'none');
     end
 
-    text(ax.XLim(2)/2, 1, param_str, 'HorizontalAlignment','center','VerticalAlignment','bottom','FontSize', 20, 'Color', col.vars.(param)(idx_quant,:));
-
-
     nexttile(1, [3 1])
 
     if strcmp(param, 'avg_fs_1s_norm') || strcmp(param, 'avg_sm_freeze_norm') || strcmp(param, 'onsets_loomaligned_norm')
@@ -191,7 +203,7 @@ for idx_param = param_list
             fill_between(xi(xi >= thresholds(idx_quant) & xi < thresholds(idx_quant + 1)) , zeros(length(xi(xi >= thresholds(idx_quant) & xi < thresholds(idx_quant + 1))), 1), f(xi >= thresholds(idx_quant) & xi < thresholds(idx_quant + 1)),[], 'FaceColor',col.vars.(param)(1 + idx_quant,:),'LineStyle','none')
             % plot(xi,f)
         end
-        xlim([0 3])
+        xlim([0 2])
         xticks(0:3)
 
     elseif strcmp(param, 'nloom') || strcmp(param, 'sloom') || strcmp(param, 'moving_flies')
@@ -210,8 +222,6 @@ for idx_param = param_list
     ax.XAxis.FontSize = 18;
     set(gca,'linewidth', 2, 'TickDir','out'); % The only other option is 'in'
     set(gca,'box','off')
-
-    disp('-------')
 
     if export
     figure_title = sprintf('fd_%s_%s', param, moment);

@@ -6,7 +6,7 @@ median_dur_per_fly = accumarray( ...
     fly_idx, ...
     bouts_spontaneous.durations_s, ...
     [], ...
-    @mean);
+    @median);
 
 id_code = 'imm2_mob2_pc4';
 paths_out = path_generator('folder', '/spontaneous_process', 'bouts_id', id_code, 'imfirst', false);
@@ -27,18 +27,19 @@ sorted_colors = fly_colors(sorted_i, :);
 sorted_medians = median_dur_per_fly(sorted_i);
 
 nexttile
-yyaxis left
+%yyaxis left
 
 bar(sort(counts_x_fly), 'EdgeColor', 'none', 'FaceColor', 'flat', 'CData', sorted_colors)
 xlabel('Flies')
 ylabel('Counts')
+ax = gca;
+apply_generic(ax)
 hold on
 yyaxis right
 plot(1:length(sorted_medians), repmat(0.1, length(sorted_medians), 1), 'r-.')
 plot(sorted_medians, 'r')
+ylabel('Median Duration', 'FontSize', 20)
 
-ax = gca;
-apply_generic(ax)
 
 nexttile
 histogram(counts_x_fly, 50, 'EdgeColor', 'none')
