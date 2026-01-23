@@ -53,7 +53,7 @@ lambda_est = table2array(results_bsl.estimates_mean);
 % extra.lambda = lambda_est(~isnan(lambda_est));
 % extra.tndt = 0;
 
-model_results = run_fitting_newer(bouts_proc, points, 'dddm5', paths, 'export', true, 'bads_display', true, 'pass_ndt', false, 'n_bads', 5, 'extra', extra, 'vbmc_exhaustive', false);
+model_results = run_fitting_newer(bouts_proc, points, 'ded3', paths, 'export', true, 'bads_display', true, 'pass_ndt', false, 'n_bads', 5, 'extra', extra, 'vbmc_exhaustive', false);
 
 %%
 

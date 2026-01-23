@@ -39,10 +39,20 @@ for i = 1:numel(param_blocks)
     lb = [lb, block_lb];
     ub = [ub, block_ub];
 end
+
 lb = lb(~isnan(lb));
 ub = ub(~isnan(ub));
+
+% Default plausible bounds
 plb = lb + 0.1;
 pub = ub - 0.1;
+
+% Detect fixed parameters
+fixed_idx = (lb == ub);
+
+% For fixed parameters, force PLB and PUB to match
+plb(fixed_idx) = lb(fixed_idx);
+pub(fixed_idx) = ub(fixed_idx);
 
 
 end
