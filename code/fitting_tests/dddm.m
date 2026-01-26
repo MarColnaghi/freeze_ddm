@@ -8,6 +8,7 @@ threshold_imm = 2; threshold_mob = 2; threshold_pc = 4; id_code = sprintf('imm%d
 paths = path_generator('folder', 'fitting_tests/dddm', 'bouts_id', id_code);
 load(fullfile(paths.dataset, 'bouts.mat'));
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le');
+motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 
 % Only save useful variables in the table
 y = table;
@@ -16,7 +17,6 @@ y.fs = bouts_proc.avg_fs_1s_norm;
 y.ln = bouts_proc.nloom_norm;
 y.ls = bouts_proc.sloom_norm;
 y.intercept = ones(height(y),1);   % N‑by‑1 column of ones
-y.smp = bouts_proc.avg_sm_freeze_norm;
 predictors = y.Properties.VariableNames;
 
 ncomp_vars = table();
@@ -26,7 +26,8 @@ link_logistic = @(x) 1./(1 + exp(-x));     % log link for bound height
 % For mu 1
 model.mu1 = struct( ...
     'predictors', {{ ...
-    struct('name', 'sm')}}, ...
+    struct('name', 'sm') ...
+    }}, ...
     'ground_truth', 0.9, ...
     'link', link_linear ...
     );
@@ -42,7 +43,7 @@ model.theta1 = struct( ...
 % For mu 2
 model.mu2 = struct( ...
     'predictors', {{ ...
-    struct('name', 'sm'), ...
+    struct('name', 'sm') ...
     }}, ...
     'ground_truth', 0.8, ...
     'link', link_linear ...
@@ -60,7 +61,7 @@ model.theta2 = struct( ...
 
 model.pmix = struct( ...
     'predictors', {{ ...
-    struct('name', 'smp'), ...
+    struct('name', 'smp') ...
     struct('name', 'fs') ...
     struct('name', 'ls') ...
     }}, ...
@@ -73,17 +74,12 @@ model.tndt = struct( ...
     'predictors', {{ ...
     struct('name', 'intercept') ...
     }}, ...
-    'ground_truth', 0.2, ...
+    'ground_truth', 0, ...
     'link', link_linear ...
     );
 
-[gt, lbl] = get_ground_truth_vector(model);
-x = gt(~isnan(gt));
-gt_table = array2table(gt, 'VariableNames', lbl);
-ncomp_vars = evaluate_model(model, gt_table, y);
-
 % Specify the seed
-sim_params.rng = 15;
+sim_params.rng = 101;
 rng(sim_params.rng);
 
 % General simulation parameters
@@ -109,7 +105,31 @@ rt.ig = nan(sim_params.n_trials, 1);
 trial_type = nan(sim_params.n_trials, 1);
 
 % Extract Social Motion TimeSeries
-chunk_len = length(sim_params.time_vector);
+total_length = 30;
+chunk_len = points.censoring * 60;
+sm_pre = nan(height(bouts_proc), total_length);
+
+for idx_trials = 1:height(bouts_proc)
+
+    ons = bouts_proc.onsets(idx_trials);
+    off = bouts_proc.ends(idx_trials) - 1;
+    sum_motion = motion_cache(bouts_proc.fly(idx_trials));
+    sm_during{idx_trials} = sum_motion(ons:ons + chunk_len) ./ 10;
+
+    sum_motion = motion_cache(bouts_proc.fly(idx_trials));
+
+    sm_pre(idx_trials, :) = sum_motion(ons - total_length:ons - 1) ./ 10;
+end
+
+% Add the social motion
+soc_mot_array = cell2mat(sm_during)';
+extra.soc_mot_array = soc_mot_array;
+y.smp = mean(sm_pre, 2);
+
+[gt, lbl] = get_ground_truth_vector(model);
+x = gt(~isnan(gt));
+gt_table = array2table(gt, 'VariableNames', lbl);
+ncomp_vars = evaluate_model(model, gt_table, y);
 
 tic
 for idx_trials = 1:sim_params.n_trials
@@ -173,17 +193,20 @@ points.truncation = 0;
 %  Now we added our vector column to the bouts table.
 bouts_proc.durations_s = rt.st;
 bouts_proc.sm = bouts_proc.avg_sm_freeze_norm;
-bouts_proc.smp = bouts_proc.avg_sm_freeze_norm;
+bouts_proc.smp = mean(sm_pre, 2);
+bouts_proc.avg_sm_pre_norm = mean(sm_pre, 2);
 bouts_proc.fs = bouts_proc.avg_fs_1s_norm;
 bouts_proc.ls = bouts_proc.sloom_norm;
 bouts_proc.ln = bouts_proc.nloom_norm;
 bouts_proc.intercept = ones(height(y),1);
 
-% model_results = run_fitting_newer(bouts_proc, points, 'dddm1', paths, 'export', true, 'extra', [], 'ground_truth', gt_table);
-% %plot_fit('freezes', bouts_proc, 'results', model_results)
-% %plot_fit('results', model_results, 'conditions', true)
-% 
-% plot_estimates('results', model_results)
+model_results = run_fitting_newer(bouts_proc, points, 'dddm2', paths, 'export', true, 'extra', [], 'ground_truth', gt_table);
+[fh, ax, ax_inset] = fd_conditions('results', model_results, 'no_y', true, 'vis', 'on');
+overlay_fits(fh, ax, ax_inset, 'results', model_results, 'export', true, 'extra', extra);
+%plot_fit('freezes', bouts_proc, 'results', model_results)
+%plot_fit('results', model_results, 'conditions', true)
+
+plot_estimates('results', model_results)
 
 %%
 model_results = run_fitting_newer(bouts_proc, points, 'dddm3', paths, 'export', true, 'extra', [], 'ground_truth', gt_table);

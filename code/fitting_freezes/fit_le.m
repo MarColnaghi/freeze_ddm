@@ -46,6 +46,8 @@ for idx_trials = 1:height(bouts_proc)
 end
 
 bouts_proc.avg_sm_pre_norm = mean(sm_pre, 2);
+bouts_proc.avg_sm_pre_norm = mean(sm_pre, 2);
+
 soc_mot_array = cell2mat(sm_during)';
 extra.soc_mot_array = soc_mot_array;
 results_bsl = importdata('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/fitting_freezes/bsl/exp0/run07/fit_results_exp0.mat');

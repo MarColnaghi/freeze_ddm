@@ -283,14 +283,15 @@ if strcmp('iid', iid)
         epsN = 1e-12;
 
         if ~isempty(points.truncation)
-            trunc_factor = @(inds) max(F(points.truncation, inds), epsN) ;
+            trunc_factor = @(inds) max(F(points.truncation - 1/fs, inds), epsN) ;
         else
             trunc_factor = @(inds) ones(size(ts(inds)))';
         end
 
-        g(bet) = f(ts(bet), bet) ./ trunc_factor(bet);
+        g(bet) = f(ts(bet), bet) ./ trunc_factor(bet)  * fs;
         g(abo) = F(points.censoring, abo) ./ trunc_factor(abo);
 
+        x
         g      = max(g, epsN);
         log_g  = log(g);
 
@@ -312,15 +313,15 @@ if strcmp('iid', iid)
         epsN = 1e-12;
 
         if ~isempty(points.truncation)
-            trunc_factor = @(inds) max(F(points.truncation, inds), epsN) ;
+            trunc_factor = @(inds) max(F(points.truncation - 1/fs, inds), epsN) ;
         else
             trunc_factor = @(inds) ones(size(ts(inds)))';
         end
 
-        g(bet) = f(ts(bet), bet) ./ trunc_factor(bet);
+        g(bet) = f(ts(bet), bet) ./ trunc_factor(bet) * fs;
         g(abo) = F(points.censoring, abo) ./ trunc_factor(abo);
 
-        g      = max(g, epsN);
+        g      = max(g, 1e-12);
         log_g  = log(g);
 
     elseif  strcmp('ded', tok{1})
