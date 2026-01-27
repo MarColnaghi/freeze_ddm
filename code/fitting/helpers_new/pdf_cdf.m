@@ -15,6 +15,12 @@ all_cdf.kde = @(z, extra) interp1(extra.xkde, extra.Fkde, z, 'linear', 0);
 all_pdf.ed = @(ts, theta, mu, ndt, fs) ed_vectorized_trials(ts - ndt, theta, mu, fs, 'pdf');
 all_cdf.ed = @(ts, theta, mu, ndt, fs) ed_vectorized_trials(ts - ndt, theta, mu, fs, 'cdf');
 
+all_pdf.ed_stoch_ndt = @(ts, theta, mu, mu_nd, fs) ...
+    ed_pdf_stochastic_ndt(ts, theta, mu, mu_nd, fs);
+
+all_cdf.ed_stoch_ndt = @(ts, theta, mu, mu_nd, fs) ...
+    ed_cdf_stochastic_ndt(ts, theta, mu, mu_nd, fs);
+
 % Initialize empty structs
 pdf = struct();
 cdf = struct();

@@ -126,7 +126,7 @@ toc
 rt.ed(rt.ed > points.censoring) = 13;
 rt.ed(isnan(rt.ed)) = sim_params.T + sim_params.dt; 
 points.censoring = sim_params.T;
-points.truncation = 0;
+points.truncation = .3421;
 
 fh = figure('color', 'w', 'Position', [100, 100, 600, 300]);
 tiledlayout(1, 1, 'TileSpacing', 'compact', 'Padding', 'loose')

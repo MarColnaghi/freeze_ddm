@@ -1,12 +1,5 @@
 function [nll, f, fd] = nll_fly_ddm_newer(params, bouts, points, model_num, iid, plot_flag, extra)
 
-% fd = freeze_durations
-% y1 = average_motion post to the freeze onset
-% y2 = average_motion previous to the freeze onset
-% y3 = speed_focal
-% y4 = loom_number
-% y5 = speed of the loom
-
 if nargin < 7
     extra = [];
 end
@@ -98,6 +91,11 @@ end
 
 function [log_g] = comp_loglikelihood(x, bouts_individual_fly, points, model_func, iid, tok, extra)
 
+t0   = points.truncation;
+C    = points.censoring;
+epsN = 1e-12;
+fs = 60;
+
 bif = bouts_individual_fly;
 
 ts = bif.durations_s;
@@ -113,11 +111,6 @@ model = model_func();
 if isfield(extra, 'tndt') && (strcmp('ed', tok{1}) || strcmp('ded', tok{1}))
     model = rmfield(model, 'tndt');
 end
-
-% if isfield(extra, 'lambda') && (strcmp('exp', tok{1}) || strcmp('expsddm', tok{1}) || strcmp('expdddm', tok{1}))
-%     model = rmfield(model, 'lambda');
-%     x = x(2:end);
-% end
 
 [gt, lbl] = get_ground_truth_vector(model);
 lbl = lbl(~isnan(gt));
@@ -143,8 +136,8 @@ if ~isfield(model, 'tndt')
     end
 end
 
-% assess freeze duration categories
-bet = bif.durations_s <= points.censoring;
+below = bif.durations_s < out.tndt;
+bet = bif.durations_s >= out.tndt & bif.durations_s <= points.censoring;
 abo = bif.durations_s > points.censoring;
 
 g = zeros(size(ts));
@@ -153,33 +146,28 @@ if strcmp('iid', iid)
 
     if  strcmp('sddm', tok{1})
 
-        bet = bif.durations_s > out.tndt & bif.durations_s <= points.censoring;
-
-        % pdf and cdf for single bound ddm
         [pdf, cdf] = pdf_cdf({'ddm'});
+
+        pdf_ddm_raw = pdf.ddm;
+        cdf_ddm_raw = cdf.ddm;
+
+        pdf.ddm = @(ts, mu, theta, ndt) guard_ddm(pdf_ddm_raw, ts, mu, theta, ndt);
+        cdf.ddm = @(ts, mu, theta, ndt) guard_ddm(cdf_ddm_raw, ts, mu, theta, ndt);
 
         f = @(ts, inds) pdf.ddm(ts, out.mu(inds), out.theta(inds), out.tndt(inds));
         F = @(ts, inds) cdf.ddm(ts, out.mu(inds), out.theta(inds), out.tndt(inds));
 
-        if ~isempty(points.truncation) && points.truncation > out.tndt(1)
-            trunc_factor = @(inds) 1 - F(points.truncation, inds);
-        else
-            trunc_factor = @(inds) ones(size(ts(inds)));
-        end
+        trunc_factor = @(inds) max(1 - F(t0, inds), epsN);
 
         g(bet) = f(ts(bet), bet) ./ trunc_factor(bet);
-        g(abo) = (1 - F(points.censoring, abo)) ./ trunc_factor(abo);
+        g(abo) = (1 - F(C, abo)) ./ trunc_factor(abo);
 
-        g = max(g, 1e-5);
+        g = max(g, epsN);
         log_g = log(g);
 
     elseif  strcmp('dddm', tok{1})
 
-        bet = bif.durations_s >= points.truncation  & bif.durations_s <= points.censoring;
-        abo = bif.durations_s > points.censoring;
-
-        % pdf and cdf for single bound ddm
-        [pdf, cdf] = pdf_cdf({'ddm','kde'});
+        [pdf, cdf] = pdf_cdf({'ddm'});
 
         pdf_ddm_raw = pdf.ddm;
         cdf_ddm_raw = cdf.ddm;
@@ -192,26 +180,16 @@ if strcmp('iid', iid)
         F = @(ts, inds) out.pmix(inds) .* cdf.ddm(ts, out.mu1(inds), out.theta1(inds), out.tndt(inds)) + ...
             (1 - out.pmix(inds)) .* cdf.ddm(ts, out.mu2(inds), out.theta2(inds), out.tndt(inds));
 
-        t0   = points.truncation;
-        C    = points.censoring;
-        epsN = 1e-12;
-
-        % One consistent truncation factor: 1 - F_mix(t0) per index
         trunc_factor = @(inds) max(1 - F(t0, inds), epsN);
 
         g(bet) = f(ts(bet), bet) ./ trunc_factor(bet);
-        g(abo) = (1 - F(points.censoring, abo)) ./ trunc_factor(abo);
+        g(abo) = (1 - F(C, abo)) ./ trunc_factor(abo);
 
-        g = max(g, 1e-12);
+        g = max(g, epsN);
         log_g = log(g);
 
     elseif  strcmp('ksddm', tok{1})
 
-        below = bif.durations_s <  out.tndt;
-        bet   = bif.durations_s >= out.tndt & bif.durations_s <= points.censoring;
-        abo   = bif.durations_s >  points.censoring;
-
-        % pdf and cdf (UNtruncated) for the two components
         [pdf, cdf] = pdf_cdf({'ddm','kde'});
 
         pdf_ddm_raw = pdf.ddm;
@@ -230,10 +208,6 @@ if strcmp('iid', iid)
         f = @(ts, inds, extra) f_ddm(ts, inds) + f_kde(ts, inds, extra);
         F = @(t,  inds, extra) F_ddm(t,  inds) + F_kde(t,  inds, extra);
 
-        t0   = points.truncation;
-        C    = points.censoring;
-        epsN = 1e-12;
-
         % One consistent truncation factor: 1 - F_mix(t0) per index
         trunc_factor = @(inds) max(1 - F(t0, inds, extra), epsN);
 
@@ -243,56 +217,37 @@ if strcmp('iid', iid)
         g(bet)     = f(ts(bet),   bet,   extra)     ./ trunc_factor(bet);
         g(abo)     = (1 - F(C, abo, extra))         ./ trunc_factor(abo);
 
-        g      = max(g, 1e-5);
+        g      = max(g, epsN);
         log_g  = log(g);
 
     elseif  strcmp('exp', tok{1})
 
-        % pdf and cdf for single bound ddm
         [pdf, cdf] = pdf_cdf({'ddm', 'exp'});
 
         f = @(ts, inds) pdf.exp(ts, out.lambda(inds));
         F = @(ts, inds) cdf.exp(ts, out.lambda(inds));
 
-        if ~isempty(points.truncation)
-            trunc_factor = @(inds) 1 - F(points.truncation, inds);
-        else
-            trunc_factor = @(inds) ones(size(ts(inds)));
-        end
+        trunc_factor = @(inds) max(1 - F(t0, inds, extra), epsN);
 
         g(bet) = f(ts(bet), bet) ./ trunc_factor(bet);
-        g(abo) = (1 - F(points.censoring, abo)) ./ trunc_factor(abo);
+        g(abo) = (1 - F(C, abo)) ./ trunc_factor(abo);
 
-        epsN = 1e-12;
         g      = max(g, epsN);
         log_g  = log(g);
 
     elseif  strcmp('ed', tok{1})
-
-        fs = 60;
-
-        below = bif.durations_s <=  out.tndt;
-        bet   = bif.durations_s > out.tndt & bif.durations_s <= points.censoring;
-        abo   = bif.durations_s >  points.censoring;
 
         [pdf, cdf] = pdf_cdf({'ed'});
 
         f = @(ts, inds) pdf.ed(ts, out.theta(inds), out.mu(inds, :), out.tndt(inds), fs);
         F = @(ts, inds) cdf.ed(ts, out.theta(inds), out.mu(inds, :), out.tndt(inds), fs);
 
-        epsN = 1e-12;
-
-        if ~isempty(points.truncation)
-            trunc_factor = @(inds) max(F(points.truncation - 1/fs, inds), epsN) ;
-        else
-            trunc_factor = @(inds) ones(size(ts(inds)))';
-        end
+        trunc_factor = @(inds) max(F(t0 - 1/fs, inds), epsN) ;
 
         g(bet) = f(ts(bet), bet) ./ trunc_factor(bet)  * fs;
-        g(abo) = F(points.censoring, abo) ./ trunc_factor(abo);
+        g(abo) = F(C, abo) ./ trunc_factor(abo);
 
-        x
-        g      = max(g, epsN);
+        g      = max(g, 1e-4);
         log_g  = log(g);
 
     elseif  strcmp('simed', tok{1})
