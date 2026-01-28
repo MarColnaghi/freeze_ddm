@@ -40,6 +40,18 @@ temp.time_since_last = vertcat(time_since_last{:});
 cum_freeze_time = splitapply(@(x) {cumsum([0; x(1:end - 1)])}, temp.durations, G);
 temp.cum_freeze_time = vertcat(cum_freeze_time{:});
 
+% 1. Duration of the previous freeze
+% Logic: Shift durations by 1. First element is NaN.
+calc_prev_dur = @(x) {[NaN; x(1:end-1)]};
+prev_dur = splitapply(calc_prev_dur, temp.durations, G);
+temp.prev_freeze_dur = vertcat(prev_dur{:});
+
+% 2. Average duration of freezes up until that freeze (Running Mean of History)
+% Logic: Cumulative Sum of previous durations / Count of previous durations
+% The first element is NaN because there is no history.
+calc_avg_hist = @(x) {[NaN; cumsum(x(1:end-1)) ./ (1:numel(x)-1)']};
+avg_history = splitapply(calc_avg_hist, temp.durations, G);
+temp.avg_history_dur = vertcat(avg_history{:});
 
 % Select period: bsl or loom
 if strcmp(opt.Results.period, 'bsl')

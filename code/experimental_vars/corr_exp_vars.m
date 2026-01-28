@@ -1,6 +1,6 @@
+id_code = 'imm2_mob2_pc4';
 paths_out = path_generator('folder', 'descriptive/fd_durs', 'bouts_id', id_code, 'imfirst', false);
 
-id_code = 'imm2_mob2_pc4';
 col = cmapper();
 thresholds = define_thresholds;
 thresholds.le_window_fl = [5 40];
