@@ -45,6 +45,7 @@ bouts.bout_with_loom = zeros(0); % bout had a loom presentation inside
 bouts.frozen_start = zeros(0); % bout had a loom presentation inside
 
 bouts.avg_sm = zeros(0); % average focal fly velocity between loom start and freeze start
+bouts.avg_ss = zeros(0); % average focal fly velocity between loom start and freeze start
 bouts.avg_fs = zeros(0); % average focal fly velocity between one second before loom until loom
 bouts.avg_fs_1s = zeros(0); % average focal fly velocity between one second before loom until loom
 bouts.avg_pc = zeros(0); % average focal fly velocity between one second before freeze until freeze
@@ -178,6 +179,7 @@ for dataset = 1
 
                 capped_lengths = min(run_lengths, 630);
                 z.avg_sm = compute_means(Fly1.sum_motion(1:end), onsets, onsets + capped_lengths - 1);
+                z.avg_ss = compute_means(Fly1.sum_speed(1:end), onsets, onsets + capped_lengths - 1);
 
                 l.ts_sm = arrayfun(@(start_idx, end_idx) ...
                     Fly1.sum_motion(start_idx:end_idx), ...

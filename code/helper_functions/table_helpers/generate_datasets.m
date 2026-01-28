@@ -1,11 +1,11 @@
 clear all
 col = cmapper();
 thresholds = define_thresholds();
-imfirst = true;
+imfirst = false;
 
-for threshold_imm = 1
+for threshold_imm = 4:-1:2
     % for threshold_mob =  4:-1:1
-        for threshold_pc = 1
+        for threshold_pc = 4
 
             close all
 
@@ -20,11 +20,8 @@ for threshold_imm = 1
             if isfile(fullfile(paths.dataset, 'bouts.mat'))
                 disp('already have this dataset')
             else
-                if imfirst
-                    [bouts] = load_flies_new(thresholds, 'paths', paths, 'save', 'bouts', 'edit_filename', false, 'imfirst', imfirst);
-                else
-                    [bouts] = load_flies_new(thresholds, 'paths', paths, 'save', 'bouts', 'edit_filename', false, 'imfirst', imfirst);
-                end
+
+                [bouts] = load_flies_new(thresholds, 'paths', paths, 'save', 'bouts', 'edit_filename', false, 'imfirst', imfirst);
             end
         end
         %end

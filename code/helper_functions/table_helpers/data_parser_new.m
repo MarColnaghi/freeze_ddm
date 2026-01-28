@@ -5,7 +5,7 @@ function [temp] = data_parser_new(bouts, varargin)
 
 opt = inputParser;
 addParameter(opt, 'type', 'immobility');
-addParameter(opt, 'period', 'loom');
+addParameter(opt, 'period', '');
 addParameter(opt, 'window', '');
 addParameter(opt, 'nloom', []);
 addParameter(opt, 'sloom', []);
@@ -20,6 +20,26 @@ elseif strcmp(opt.Results.type, 'mobility')
 else
     temp = bouts;
 end
+
+% Additional filters
+temp = temp(temp.durations >= opt.Results.min_dur, :);
+
+% Calculate the number of freezes per each fly.
+[G, ~] = findgroups(temp.fly);
+cell_array = splitapply(@(x) {(1:numel(x))'}, temp.fly, G);
+temp.n_generated_freezes = vertcat(cell_array{:});
+
+% Time since last time freeze
+% Define a function that calculates Diff(Start_i - End_i-1)
+% The first element is always NaN
+calc_interval = @(o, e) {[o(1); o(2:end) - e(1:end-1)]};
+time_since_last = splitapply(calc_interval, temp.onsets, temp.ends, G);
+temp.time_since_last = vertcat(time_since_last{:});
+
+% Calculate cumulative time spent freezing
+cum_freeze_time = splitapply(@(x) {cumsum([0; x(1:end - 1)])}, temp.durations, G);
+temp.cum_freeze_time = vertcat(cum_freeze_time{:});
+
 
 % Select period: bsl or loom
 if strcmp(opt.Results.period, 'bsl')
@@ -45,9 +65,6 @@ end
 if ~isempty(opt.Results.sloom)
     temp = temp(temp.sloom == [opt.Results.sloom], :);
 end
-
-% Additional filters
-temp = temp(temp.durations >= opt.Results.min_dur, :);
 
 % Rescale all the Variables
 temp.durations_s = temp.durations/60;
