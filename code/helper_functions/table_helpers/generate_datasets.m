@@ -3,7 +3,7 @@ col = cmapper();
 thresholds = define_thresholds();
 imfirst = false;
 
-for threshold_imm = 4:-1:2
+for threshold_imm = 5:-1:2
     % for threshold_mob =  4:-1:1
         for threshold_pc = 4
 

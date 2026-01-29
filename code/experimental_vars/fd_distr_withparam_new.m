@@ -100,7 +100,7 @@ for idx_param = params
 
     %% ===================== Export =====================
     if export
-        exporter(fh,paths,sprintf('fd_%s_%s.pdf',param,period))
+        exporter(fh, paths, sprintf('fd_%s_%s.pdf', param, period))
     end
 end
 end
@@ -131,7 +131,7 @@ if ismember(param,{'nloom','sloom','moving_flies'})
     bh = bar(1:max(quantiles),histcounts(quantiles), ...
         'FaceColor','flat','EdgeColor','none');
     bh.CData = cmap(2:end,:);
-    xlim([0.5 max(quantiles)+0.5])
+    xlim([.5 max(quantiles) + .5])
     xticks([])
 else
     % ---- Adaptive binning (Freedman–Diaconis)
@@ -151,7 +151,7 @@ else
         mask = centers>=thresholds(q) & centers<thresholds(q+1);
         b.CData(mask,:) = repmat(cmap(1+q,:),sum(mask),1);
     end
-end
+
 
 % ---- Robust x-limits for long tails
 lo = prctile(data,1);
@@ -160,7 +160,7 @@ if lo < hi
     xlim([lo hi])
 end
 end
-
+end
 % ---------------------------------------------------------------------
 
 function plot_duration_distribution(durations,qmask,cmap,nq,type,period)

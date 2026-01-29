@@ -14,4 +14,4 @@ bouts_spontaneous = data_parser_new(bouts, 'period', 'bsl', 'window', 'le', 'typ
 bouts_le = data_parser_new(bouts, 'period', 'loom', 'window', 'le', 'type', 'immobility', 'nloom', 2:20, 'min_dur', 30);
 bouts_all = data_parser_new(bouts, 'min_dur', 30);
 
-fd_distr_withparam_new('bouts', bouts_le, 'type', 'ecdf', 'param', {'avg_history_dur'}); %, 'avg_ss', 'cum_freeze_time', 'avg_fs_1s_norm', 'n_generated_freezes'})
+fd_distr_withparam_new('bouts', bouts_le, 'type', 'ecdf', 'param', {'cum_freeze_time'}, 'export', true); %, 'avg_ss', 'cum_freeze_time', 'avg_fs_1s_norm', 'n_generated_freezes'})

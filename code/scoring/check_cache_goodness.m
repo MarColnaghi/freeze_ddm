@@ -5,7 +5,7 @@ pixel_cache = importdata(fullfile(paths.cache_path, 'pixel_cache.mat'));
 loom_cache = importdata(fullfile(paths.cache_path, 'loom_cache.mat'));
 motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 thresholds = define_thresholds;
-fly_id = 22;
+fly_id = 517;
 fly_pc = ~pixel_cache(fly_id);
 fly_loom = loom_cache(fly_id);
 loom_frames = find(diff(fly_loom) == 1) + 1;
@@ -35,7 +35,7 @@ if include_old
 
 end
 
-id_code = 'imm2_mob2_pc4';
+id_code = 'imm3_mob3_pc4';
 types = {'fill_in_combinations_imfirst', 'fill_in_combinations_mobfirst'};
 
 

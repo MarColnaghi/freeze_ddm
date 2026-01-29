@@ -6,19 +6,19 @@ thresholds = define_thresholds;
 thresholds.le_window_fl = [5 40];
 thresholds.le_window_sl = [15 50];
 
+Tmax = 10.5;
+Ttrunc = 0.5;
+
 bouts = importdata(fullfile(paths_out.dataset, 'bouts.mat'));
 bouts = bouts_formatting(bouts, thresholds);
 
 paths_out = path_generator('folder', '/spontaneous_process', 'bouts_id', id_code, 'imfirst', false);
-bouts_le = data_parser_new(bouts, 'period', 'loom', 'window', 'le', 'type', 'immobility', 'nloom', 2:20, 'min_dur', 30);
+bouts_le = data_parser_new(bouts, 'period', 'loom', 'window', 'le', 'type', 'immobility', 'nloom', 2:20, 'min_dur', Ttrunc * 60);
 
 T = bouts_le;
 
-Tmax = 10.5;
-Ttrunc = 0.5;
-
-% Apply truncation
-% T = T(T.durations_s > Ttrunc, :);
+% Apply truncation and clamping of the censored data
+T = T(T.durations_s >= Ttrunc, :);
 % T.durations_s(T.durations_s > Tmax) = Tmax;
 
 pct_censored = sum(T.durations_s > Tmax) / height(T) * 100;
@@ -30,12 +30,9 @@ disp(['Censored Data: ' num2str(pct_censored) '%']);
 %% 2. PREPROCESSING: Z-SCORE EVERYTHING
 T_fit = T;
 
-% 1. Fix Response Scale (Use Milliseconds to prevent "Badly Scaled" warning)
-T_fit.durations_ms = T_fit.durations_s * 1000;
-
-% 2. Define ALL predictors (Added 'avg_ss' here)
+% 2. Define ALL predictors
 preds = {'nloom', 'avg_fs_1s', 'moving_flies', 'sloom', 'avg_sm', 'avg_ss', ...
-         'time_since_last', 'n_generated_freezes', 'cum_freeze_time'};
+         'time_since_last', 'n_generated_freezes', 'cum_freeze_time', 'avg_history_dur'};
 
 scale_map = struct();
 
@@ -44,7 +41,13 @@ for p = 1:length(preds)
     
     % Force Double
     raw_col = double(T.(col_name));
-    
+    find(isnan(T.(col_name)))
+    [rows, columns] = find(isnan(matrix));
+    unique(rows);
+    unique(columns);
+    T(unique(rows), :) = [];
+    find(isnan(T.(col_name)))
+
     mu = mean(raw_col, 'omitnan');
     sigma = std(raw_col, 'omitnan');
     
@@ -68,13 +71,10 @@ end
 
 disp('Fitting GLMM...');
 
-% UPDATED FORMULA: 
-% 1. Uses 'durations_ms' (stable scaling)
-% 2. Includes Random Effects '(1|fly)' (required for fitglme)
-formula_mixed = 'durations_s ~ 1 + nloom + sloom + avg_sm + avg_fs_1s + moving_flies + cum_freeze_time + (1 | fly)';
+formula_mixed = 'durations_s ~ 1 + nloom + sloom + avg_sm + avg_ss + avg_fs_1s + time_since_last + avg_history_dur + (1 | fly)';
 
 glmm = fitglme(T_fit, formula_mixed, ...
-    'Distribution', 'InverseGaussian', ...
+    'Distribution', 'Gamma', ...
     'Link', 'log', ...       
     'CovariancePattern', 'Diagonal');
 

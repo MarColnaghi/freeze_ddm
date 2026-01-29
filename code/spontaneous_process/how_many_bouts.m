@@ -1,12 +1,6 @@
 % This script shows how many bouts are there per fly, and a summary of the
 % distribution of counts at the population level
 
-% Median duration per fly
-median_dur_per_fly = accumarray( ...
-    fly_idx, ...
-    bouts_spontaneous.durations_s, ...
-    [], ...
-    @median);
 
 id_code = 'imm2_mob2_pc4';
 paths_out = path_generator('folder', '/spontaneous_process', 'bouts_id', id_code, 'imfirst', false);
@@ -19,6 +13,14 @@ bouts_spontaneous = data_parser_new(bouts, 'period', 'bsl', 'window', 'all', 'ty
 
 [counts_x_fly] = histcounts(bouts_spontaneous.fly, 0.5:1:max(bouts_spontaneous.fly) + 0.5);
 [~, ~, fly_idx] = unique(bouts_spontaneous.fly, 'stable');
+
+% Median duration per fly
+median_dur_per_fly = accumarray( ...
+    fly_idx, ...
+    bouts_spontaneous.durations_s, ...
+    [], ...
+    @median);
+
 fly_moving = accumarray(fly_idx, bouts_spontaneous.moving_flies, [], @mode);
 fly_colors = col.vars.moving_flies(fly_moving + 1, :);
 
