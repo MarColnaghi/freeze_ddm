@@ -15,6 +15,7 @@ addParameter(opt, 'xlims', []);
 addParameter(opt, 'ylims', []); 
 addParameter(opt, 'xticks', []); 
 addParameter(opt, 'yticks', []); 
+addParameter(opt, 'box', 'off'); 
 
 parse(opt, varargin{:});
 
@@ -31,12 +32,13 @@ xlims = opt.Results.xlims;
 ylims = opt.Results.ylims;
 xthicks = opt.Results.xticks;
 ythicks = opt.Results.yticks;
+box = opt.Results.box;
 
 ax.XAxis.FontSize = fontsize;
 ax.ZAxis.FontSize = fontsize;
 ax.YAxis.FontSize = fontsize;
 set(ax,'linewidth', line_width, 'TickDir','out');
-set(ax,'box','off')
+set(ax,'box', box)
 set(ax,'TickLength',[tick_length, tick_length])
 
 if ~isempty(xlims)

@@ -10,6 +10,8 @@ addParameter(opt, 'window', '');
 addParameter(opt, 'nloom', []);
 addParameter(opt, 'sloom', []);
 addParameter(opt, 'min_dur', 0);
+addParameter(opt, 'exclude_flies', false);
+
 parse(opt, varargin{:});
 
 % Select immobility bouts
@@ -52,6 +54,17 @@ temp.prev_freeze_dur = vertcat(prev_dur{:});
 calc_avg_hist = @(x) {[NaN; cumsum(x(1:end-1)) ./ (1:numel(x)-1)']};
 avg_history = splitapply(calc_avg_hist, temp.durations, G);
 temp.avg_history_dur = vertcat(avg_history{:});
+
+if opt.Results.exclude_flies
+    % Only baseline immobility bouts
+    bsl = bouts(bouts.type == 1 & bouts.period == 0, :);
+    [G, fly_ids] = findgroups(bsl.fly);
+    total_bsl_freeze = splitapply(@sum, bsl.durations, G);  % in frames
+    thr = 150 * 60;  % e.g. 10 seconds in frames
+    bad_flies = fly_ids(total_bsl_freeze > thr);
+    temp = temp(~ismember(temp.fly, bad_flies), :);
+    fprintf('Excluded %d flies due to high baseline freezing\n', bad_flies);
+end
 
 % Select period: bsl or loom
 if strcmp(opt.Results.period, 'bsl')

@@ -1,85 +1,160 @@
-%% Random Effects Correlation Matrix Heatmap
+%% Bout-level Predictor Correlation Matrix (Pooled Across Flies)
+%
+% This script computes a correlation matrix across immobility bouts,
+% treating each bout as an independent observation.
+%
+% Fly identity is intentionally ignored.
+%
+% Purpose:
+%   - Diagnose collinearity between candidate predictors
+%   - Identify redundant or bookkeeping-derived variables
+%   - Sanity-check feature construction before model inclusion
+%
+% This analysis is NOT:
+%   - A fly-level analysis
+%   - A hierarchical or random-effects correlation
+%   - Intended for inference about individual differences
+%
 
-disp('Generating random effects correlation heatmap...');
+disp('Generating bout-level predictor correlation heatmap...');
+paths_out = path_generator('folder', 'experimental_vars', 'bouts_id', id_code, 'imfirst', false);
 
 % =========================================================================
-% 1. CONFIGURATION (can be ignored)
-%    Get the table
+% 1. CONFIGURATION
 % =========================================================================
+
 id_code = 'imm3_mob3_pc4';
-paths_out = path_generator('folder', 'descriptive/fd_durs', 'bouts_id', id_code, 'imfirst', false);
 
-% col = cmapper();
+% Threshold definitions
 thresholds = define_thresholds;
 thresholds.le_window_fl = [5 40];
 thresholds.le_window_sl = [15 50];
 
-Tmax = 10.5;
+% Duration limits (seconds)
+Tmax   = 10.5;
 Ttrunc = 0.5;
+
+% =========================================================================
+% 2. LOAD AND PREPROCESS BOUT DATA
+% =========================================================================
 
 bouts = importdata(fullfile(paths_out.dataset, 'bouts.mat'));
 bouts = bouts_formatting(bouts, thresholds);
 
-paths_out = path_generator('folder', '/spontaneous_process', 'bouts_id', id_code, 'imfirst', false);
-bouts_le = data_parser_new(bouts, 'period', 'loom', 'window', 'le', 'type', 'immobility', 'nloom', 2:20, 'min_dur', Ttrunc * 60);
+% Select immobility bouts during loom period, late window
+bouts_le = data_parser_new( ...
+    bouts, ...
+    'period', 'loom', ...
+    'window', 'le', ...
+    'type', 'immobility', ...
+    'nloom', 2:20, ...
+    'min_dur', Ttrunc * 60);
 
 T = bouts_le;
 
-% % --- Dynamically find the subject-level group name from your configuration ---
-% subject_level_struct_idx = find(cellfun(@(s) isfield(s, 'is_subject_level') && s.is_subject_level, random_effects_structure));
-% if isempty(subject_level_struct_idx)
-%     error('Plotting requires one grouping variable to be tagged with ''is_subject_level = true''.');
-% end
-% subject_level_group_name = random_effects_structure{subject_level_struct_idx}.group;
+% =========================================================================
+% 3. EXTRACT BOUT-LEVEL PREDICTOR MATRIX
+% =========================================================================
+%
+% Rows   = individual immobility bouts
+% Columns = predictor variables
+%
+% Data are pooled across flies and loom presentations.
+
+predictor_names = { ...
+    'avg_fs_1s', ...
+    'sloom', ...
+    'moving_flies', ...
+    'avg_sm', ...
+    'avg_ss', ...
+    'time_since_last', ...
+    'nloom', ...
+    'n_generated_freezes', ...
+    'cum_freeze_time', ...
+    'avg_history_dur'};
+
+matrix = T{:, predictor_names};
+
+% Remove rows with any NaNs (pairwise deletion would obscure structure)
+[nan_rows, ~] = find(isnan(matrix));
+matrix(unique(nan_rows), :) = [];
+
 
 % =========================================================================
-% 2. EXTRACT DATA FROM THE TABLE
+% 4. COMPUTE BOUT-LEVEL CORRELATION MATRIX
 % =========================================================================
+%
+% Correlations are computed across bouts, not across flies.
+% This is intended for multicollinearity diagnostics only.
 
+[corr_matrix, P] = corr(matrix, 'Rows', 'Pairwise', 'Type', 'Pearson');
 
-% --- Get the names of the fields ---
-re_coeff_names = {'nloom', 'avg_fs_1s', 'moving_flies', 'sloom', 'avg_sm', 'avg_ss', ...
-    'time_since_last', 'n_generated_freezes', 'cum_freeze_time', 'avg_history_dur'};
-matrix = bouts_le{:, re_coeff_names};
-[rows, columns] = find(isnan(matrix));
-unique(rows);
-unique(columns);
-matrix(unique(rows), :) = [];
+% Compute distance based on correlation
+dist_metric = 1 - abs(corr_matrix);
+link = linkage(squareform(dist_metric), 'ward');
+leaf_order = optimalleaforder(link, squareform(dist_metric));
 
-% --- Get the Covariance Matrix ---
-% This is the raw covariance matrix for this random effect group.
-% cov_matrix = cov(matrix);
-
-% --- Convert Covariance to Correlation ---
-% A correlation matrix is much easier to interpret than a covariance matrix
-% because all values are standardized to be between -1 and 1.
-[corr_matrix] = corrcoef(matrix);
+% Reorder everything
+corr_matrix = corr_matrix(leaf_order, leaf_order);
+predictor_names = predictor_names(leaf_order);
 
 % =========================================================================
-% 3. CREATE THE HEATMAP PLOT
+% 5. VISUALIZE CORRELATION MATRIX
 % =========================================================================
 
-figure('color', 'w', 'Name', 'Random Effects Correlation Matrix');
-re_coeff_names = cellfun(@(x) strrep(x, '_', '\_'), re_coeff_names, 'UniformOutput', false);
-re_coeff_names = cellfun(@(x) strrep(x, '\_\_', '*'), re_coeff_names, 'UniformOutput', false);
+fh = figure('Position', [100 100 800 800], 'Color', 'w');
+t = tiledlayout(1, 1, 'TileSpacing', 'compact', 'Padding', 'loose');
 
-h = heatmap(re_coeff_names, re_coeff_names, corr_matrix);
+% Pretty labels (escape underscores for heatmap)
+labels = cellfun(@(x) strrep(x, '_', '\_'), ...
+                 predictor_names, ...
+                 'UniformOutput', false);
 
-% --- Format the plot for clarity ---
-h.Title = sprintf('Random Effects Correlation Matrix for Group: ''%s''', subject_level_group_name);
+labels = cellfun(@(x) strrep(x, '\_\_', '*'), ...
+                 labels, ...
+                 'UniformOutput', false);
 
-% Setting color limits from -1 to 1 is crucial for interpreting correlations.
-h.ColorLimits = [-1, 1];
+imagesc(corr_matrix, [-1 1])
+axis square
+hold on
+xticklabels(strrep(predictor_names,'_','\_'))
+yticklabels(strrep(predictor_names,'_','\_'))
+apply_generic(gca, 'box', 'on', 'font_size', 16, 'line_width', 2)
 
-% using 'redbluecmap' from the Mapping Toolbox (diverging colormap).
-h.Colormap = redbluecmap;
+cmap = cbrewer2('div', 'RdBu', 60, 'pchip');
+colormap(flipud(cmap))   % blue = negative, red = positive (usual convention)
+cb = colorbar;
+cb.Ticks = -1:0.5:1;
+cb.TickDirection = 'out';
+cb.LineWidth = 2;
+cb.FontSize = 16;
+cb.Label.String = 'Pearson r';
+cb.Label.FontSize = 18;
 
-h.XLabel = 'Random Effect';
-h.YLabel = 'Random Effect';
+n = size(corr_matrix, 1);
 
-% Adjust text size if labels overlap
-if length(re_coeff_names) > 8
-    h.FontSize = 8;
+for i = 1:n
+    for j = 1:n
+        val = corr_matrix(i,j);
+
+        % Skip NaNs just in case
+        if isnan(val), continue, end
+
+        % Choose text color for contrast
+        if abs(val) > 0.6
+            txt_col = 'w';
+        else
+            txt_col = 'k';
+        end
+
+        text(j, i, sprintf('%.3f', val), ...
+            'HorizontalAlignment', 'center', ...
+            'VerticalAlignment', 'middle', ...
+            'FontSize', 12, ...
+            'Color', txt_col);
+    end
 end
 
-disp('Correlation matrix plot created successfully.');
+
+disp('Bout-level correlation matrix plotted successfully.');
+exporter(fh, paths_out, 'corr_matrix.pdf')

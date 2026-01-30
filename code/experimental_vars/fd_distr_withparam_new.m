@@ -1,4 +1,4 @@
-function fd_distr_withparam_new(varargin)
+function fh = fd_distr_withparam_new(varargin)
 
 %% ===================== Parse inputs =====================
 opt = inputParser;
@@ -8,6 +8,7 @@ addParameter(opt,'period',[]);
 addParameter(opt,'paths','descr/fd_distr');
 addParameter(opt,'params',{'avg_sm_freeze_norm','avg_fs_1s_norm','sloom','nloom'});
 addParameter(opt,'type','ecdf');
+addParameter(opt,'check_quantiles',false);
 
 parse(opt,varargin{:});
 
@@ -17,6 +18,7 @@ period = opt.Results.period;
 paths = opt.Results.paths;
 params = opt.Results.params;
 type = opt.Results.type;
+check_quantiles = opt.Results.check_quantiles;
 
 %% ===================== Infer period =====================
 if isempty(period)
@@ -33,6 +35,46 @@ for idx_param = params
 
     [num_quantiles, thresholds] = param_settings(param, bouts_proc);
     quantiles = discretize(bouts_proc.(param), thresholds);
+
+    if check_quantiles && ismember('sloom_norm', bouts_proc.Properties.VariableNames)
+
+        fprintf('\nParam: %s\n', param);
+
+        u_sloom = unique(bouts_proc.sloom_norm);
+
+        thr_by_sloom = nan(numel(u_sloom), num_quantiles+1);
+
+        for i = 1:numel(u_sloom)
+            s = u_sloom(i);
+            idx = bouts_proc.sloom_norm == s;
+
+            data_s = bouts_proc.(param)(idx);
+
+            if numel(data_s) < num_quantiles
+                warning('Not enough data for sloom = %.2f', s);
+                continue
+            end
+
+            thr_by_sloom(i,:) = quantile( ...
+                data_s, linspace(0,1,num_quantiles+1));
+
+            fprintf('  sloom = %.2f | ', s);
+            fprintf('%.3f ', thr_by_sloom(i,:));
+            fprintf('\n');
+        end
+
+        % ---- Optional plot (very helpful)
+        figure('Color','w'); hold on
+        for i = 1:numel(u_sloom)
+            plot(0:num_quantiles, thr_by_sloom(i,:), '-o', ...
+                'DisplayName', sprintf('sloom = %.2f', u_sloom(i)));
+        end
+        xlabel('Quantile index')
+        ylabel(strrep(param,'_',' '))
+        title(sprintf('Quantile thresholds by loom speed: %s', param), ...
+            'Interpreter','none')
+        legend('Location','best')
+    end
 
     col  = cmapper([], num_quantiles);
     cmap = get_var_cmap(col, param);   % SAFE ACCESS
