@@ -1,7 +1,7 @@
+%% 1. SETUP & LOADING
 id_code = 'imm3_mob3_pc4';
 paths_out = path_generator('folder', 'descriptive/fd_durs', 'bouts_id', id_code, 'imfirst', false);
 
-% col = cmapper();
 thresholds = define_thresholds;
 thresholds.le_window_fl = [5 40];
 thresholds.le_window_sl = [15 50];
@@ -9,77 +9,103 @@ thresholds.le_window_sl = [15 50];
 Tmax = 10.5;
 Ttrunc = 0.5;
 
+% Load and Format
 bouts = importdata(fullfile(paths_out.dataset, 'bouts.mat'));
 bouts = bouts_formatting(bouts, thresholds);
 
+% Parse Data
 paths_out = path_generator('folder', '/spontaneous_process', 'bouts_id', id_code, 'imfirst', false);
-bouts_le = data_parser_new(bouts, 'period', 'loom', 'window', 'le', 'type', 'immobility', 'nloom', 2:20, 'min_dur', Ttrunc * 60);
+T = data_parser_new(bouts, 'period', 'loom', 'window', 'le', ...
+    'type', 'immobility', 'nloom', 2:20, 'min_dur', Ttrunc * 60);
 
-T = bouts_le;
-
-% Apply truncation and clamping of the censored data
+% Filter durations
 T = T(T.durations_s >= Ttrunc, :);
-% T.durations_s(T.durations_s > Tmax) = Tmax;
 
-pct_censored = sum(T.durations_s > Tmax) / height(T) * 100;
-disp(['Censored Data: ' num2str(pct_censored) '%']);
+% Check Censoring (Informational only)
+pct_censored = sum(T.durations_s >= Tmax) / height(T) * 100;
+disp(['Censored Data: ' num2str(pct_censored, '%.2f') '%']);
+T.durations_s(T.durations_s >= Tmax) = 12;
 
-% apply log transform?
-% T.durations_s = log(T.durations_s);
 
-%% 2. PREPROCESSING: Z-SCORE EVERYTHING
-T_fit = T;
-
-% 2. Define ALL predictors
+% 2. PREPROCESSING
+% Define Predictors
 preds = {'nloom', 'avg_fs_1s', 'moving_flies', 'sloom', 'avg_sm', 'avg_ss', ...
          'time_since_last', 'n_generated_freezes', 'cum_freeze_time', 'avg_history_dur'};
 
+% --- FIX: Remove NaNs from ALL predictors BEFORE Z-scoring ---
+% This ensures all columns stay aligned
+rows_with_nans = false(height(T), 1);
+for p = 1:length(preds)
+    col_name = preds{p};
+    % Ensure double and check for NaNs
+    T.(col_name) = double(T.(col_name)); 
+    rows_with_nans = rows_with_nans | isnan(T.(col_name));
+end
+
+if any(rows_with_nans)
+    disp(['Removing ' num2str(sum(rows_with_nans)) ' rows containing NaNs.']);
+    T(rows_with_nans, :) = [];
+end
+
+% --- Z-SCORE ---
+T_fit = T;
 scale_map = struct();
 
 for p = 1:length(preds)
     col_name = preds{p};
+    raw_col = T.(col_name);
     
-    % Force Double
-    raw_col = double(T.(col_name));
-    find(isnan(T.(col_name)))
-    [rows, columns] = find(isnan(matrix));
-    unique(rows);
-    unique(columns);
-    T(unique(rows), :) = [];
-    find(isnan(T.(col_name)))
-
     mu = mean(raw_col, 'omitnan');
     sigma = std(raw_col, 'omitnan');
     
-    % Handle constants
+    % Handle constant columns to avoid divide-by-zero
     if sigma < 1e-12
-        z_vals = zeros(size(raw_col));
-        sigma = 1; 
-    else
-        z_vals = (raw_col - mu) / sigma;
+        sigma = 1;
+        warning(['Predictor ' col_name ' is constant. Z-scores will be 0.']);
     end
     
-    % OVERWRITE column in T_fit with Z-scored data
-    T_fit.(col_name) = z_vals;
+    % Apply Z-score
+    T_fit.(col_name) = (raw_col - mu) / sigma;
     
-    % Store parameters for later
-    scale_map.(col_name).Mu = mu;       % Save scalar (efficient)
-    scale_map.(col_name).Sigma = sigma; % Save scalar
+    % Store mapping
+    scale_map.(col_name).Mu = mu;
+    scale_map.(col_name).Sigma = sigma;
 end
 
-%% 3. FITTING GLMM
-
+% 3. FITTING GLMM
 disp('Fitting GLMM...');
 
-formula_mixed = 'durations_s ~ 1 + nloom + sloom + avg_sm + avg_ss + avg_fs_1s + time_since_last + avg_history_dur + (1 | fly)';
+% Formula: Consider checking for collinearity between predictors like 
+% 'nloom' vs 'sloom' or 'avg_sm' vs 'avg_ss' before fitting.
 
-glmm = fitglme(T_fit, formula_mixed, ...
-    'Distribution', 'Gamma', ...
-    'Link', 'log', ...       
-    'CovariancePattern', 'Diagonal');
+T_fit.log_duration = log(T_fit.durations_s);
 
-disp(glmm);
+formula_mixed = 'durations_s ~ 1 + sloom + avg_sm + avg_fs_1s + time_since_last + avg_history_dur + nloom + moving_flies + avg_ss + (1 | fly)';
 
+formula_mixed = 'durations_s ~ 1 + sloom + avg_sm + avg_fs_1s + time_since_last + avg_history_dur';
+
+formula_mixed = 'durations_s ~ 1 + sloom + avg_sm + avg_fs_1s + time_since_last + avg_history_dur + nloom + moving_flies + avg_ss';
+
+
+glmm_opts = statset('fitglme');
+glmm_opts.MaxIter = 10000000;        % Increase from default (likely 100 based on your error)
+glmm_opts.Display = 'iter';      % Print progress to command window (optional, helps debugging)
+
+try
+    glmm = fitglme(T_fit, formula_mixed, ...
+        'Distribution', 'Gamma', ...
+        'Link', 'log', ...
+        'FitMethod', 'Laplace', ...         % <--- CHANGE THIS (Defaults to MPL)
+        'CovariancePattern', 'Diagonal', ...
+        'OptimizerOptions', glmm_opts); % <--- Use the correct parameter name here
+    disp(glmm);
+
+catch ME
+    disp('GLMM Fitting Failed:');
+    disp(ME.message);
+end
+
+T_fit.log_duration = log(T_fit.durations_s);
 %% OLD PLOTTING CODE
 
 
@@ -221,3 +247,15 @@ for i = 1:n_betas_toplot
 end
 ylabel('t-values'); xlim([0, n_betas_toplot+1]); view([90 90]);
 ha(2).XTick = plot_xticks; ha(2).XTickLabel = plot_labels; ha(2).XGrid = 'on';
+
+%%
+
+% 1. Plot Residuals vs. Fitted Values (The most important check)
+figure;
+plotResiduals(glmm, 'fitted', 'ResidualType', 'Pearson');
+title('Residuals vs. Fitted Values (Look for a random cloud)');
+
+% 2. Check for Normality
+figure;
+plotResiduals(glmm, 'probability', 'ResidualType', 'Pearson');
+title('Normal Probability Plot (Points should hug the line)');

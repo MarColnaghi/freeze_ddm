@@ -119,14 +119,14 @@ axis square
 hold on
 xticklabels(strrep(predictor_names,'_','\_'))
 yticklabels(strrep(predictor_names,'_','\_'))
-apply_generic(gca, 'box', 'on', 'font_size', 16, 'line_width', 2)
+apply_generic(gca, 'box', 'on', 'font_size', 16, 'line_width', 1.5)
 
 cmap = cbrewer2('div', 'RdBu', 60, 'pchip');
 colormap(flipud(cmap))   % blue = negative, red = positive (usual convention)
 cb = colorbar;
 cb.Ticks = -1:0.5:1;
 cb.TickDirection = 'out';
-cb.LineWidth = 2;
+cb.LineWidth = 1.5;
 cb.FontSize = 16;
 cb.Label.String = 'Pearson r';
 cb.Label.FontSize = 18;
