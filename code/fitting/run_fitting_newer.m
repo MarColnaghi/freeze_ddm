@@ -45,7 +45,7 @@ fprintf('We are trying to recover a model \n');
 %% Model Setup
 model_str = sprintf('model_%s', idx_model);
 model_out = eval(model_str);
-[LB, PLB, PUB, UB] = extract_bounds_from_model(model_out);
+[LB, PLB, PUB, UB, prior_info] = extract_bounds_from_model(model_out);
 
 %% Objective Function
 
@@ -127,7 +127,9 @@ end
 
 %% VBMC Optimization
 llfun = @(x) -nll_fly_ddm_newer(x, surrogate, points, model_str, 'iid', 'n', extra);
-lpriorfun = @(x) msplinetrapezlogpdf(x, LB, PLB, PUB, UB);
+lpriorfun = @(x) structured_prior(x, prior_info, LB, PLB, PUB, UB);
+
+% lpriorfun = @(x) msplinetrapezlogpdf(x, LB, PLB, PUB, UB);
 postfun = @(x) lpostfun(x, llfun, lpriorfun);
 
 options_vbmc.Display = 'iter';
@@ -242,3 +244,32 @@ function create_output_dirs(paths)
     % Assign the updated paths back to base workspace (if needed)
     assignin('caller', 'paths', paths);
 end
+
+
+function lp = structured_prior(x, prior_spec, LB, PLB, PUB, UB)
+
+lp = 0;
+
+for i = 1:numel(x)
+
+    switch prior_spec(i).type
+
+        case 'trapezoidal'
+            lp = lp + msplinetrapezlogpdf( ...
+                x(i), LB(i), PLB(i), PUB(i), UB(i));
+
+        case 'exponential'
+            if x(i) < LB(i) || x(i) > UB(i)
+                lp = -Inf;
+                return
+            end
+            
+            lambda = prior_spec(i).lambda;
+            lp = lp + log(lambda) - lambda * x(i);
+
+        otherwise
+            error('Unknown prior type: %s', prior_spec(i).type)
+    end
+end
+end
+

@@ -220,7 +220,7 @@ bouts_proc.ln = bouts_proc.nloom_norm;
 bouts_proc.intercept = ones(height(y),1);
 
 tic 
-model_results = run_fitting_newer(bouts_proc, points, 'dddm2', paths, 'export', true, 'extra', [], 'ground_truth', gt_table);
+model_results = run_fitting_newer(bouts_proc, points, 'dddm2', paths, 'export', true, 'extra', [], 'ground_truth', gt_table, 'n_bads', 1);
 toc
 [fh, ax, ax_inset] = fd_conditions('results', model_results, 'no_y', true, 'vis', 'on');
 overlay_fits(fh, ax, ax_inset, 'results', model_results, 'export', true, 'extra', extra);

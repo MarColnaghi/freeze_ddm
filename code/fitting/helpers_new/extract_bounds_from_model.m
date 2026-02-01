@@ -1,56 +1,58 @@
-function [lb, plb, pub, ub] = extract_bounds_from_model(model)
-% ------------------------------------------------------------
-% Extracts lower and upper bounds for all active predictors
-% in the model, in the order they would appear in x
-%
-% Returns:
-%   lb: [N x 1] vector of lower bounds
-%   ub: [N x 1] vector of upper bounds
-% ------------------------------------------------------------
+function [lb, plb, pub, ub, prior_info] = extract_bounds_from_model(model)
 
 lb = [];
 ub = [];
+prior_info = struct('type', {}, 'lambda', {});
 
-param_blocks = fieldnames(model);  % e.g. {'mu1', 'theta1', 'tndt1'}
+param_blocks = fieldnames(model);
 base_names = {'sm', 'smp', 'fs', 'ln', 'ls', 'tsl', 'intercept'};
 
 for i = 1:numel(param_blocks)
     block = model.(param_blocks{i});
     preds = block.predictors;
 
-    % Temporary storage for one parameter block
     block_lb = nan(1, numel(base_names));
     block_ub = nan(1, numel(base_names));
+    block_prior = repmat(struct('type','trapezoidal','lambda',[]), ...
+                         1, numel(base_names));
 
-    % Match predictor names to base_names
     for j = 1:numel(preds)
-        pred_name = preds{j}.name;   % assuming each predictor has a .name field like 'sm', 'fs', etc.
-        bounds = preds{j}.bounds;
+        pred = preds{j};
+        pred_name = pred.name;
+        bounds = pred.bounds;
 
-        % Find where this predictor fits in base_names
         idx = find(strcmp(base_names, pred_name));
-        if ~isempty(idx)
-            block_lb(idx) = bounds(1);
-            block_ub(idx) = bounds(2);
+        if isempty(idx)
+            continue
+        end
+
+        block_lb(idx) = bounds(1);
+        block_ub(idx) = bounds(2);
+
+        % ---- NEW: read prior info if present
+        if isfield(pred, 'prior')
+            block_prior(idx).type = pred.prior;
+
+            if strcmp(pred.prior, 'exponential')
+                block_prior(idx).lambda = pred.lambda;
+                
+            end
         end
     end
 
-    % Concatenate block bounds in the correct order
-    lb = [lb, block_lb];
-    ub = [ub, block_ub];
+    % Append only active parameters
+    active = ~isnan(block_lb);
+
+    lb = [lb, block_lb(active)];
+    ub = [ub, block_ub(active)];
+    prior_info = [prior_info, block_prior(active)];
 end
 
-lb = lb(~isnan(lb));
-ub = ub(~isnan(ub));
-
-% Default plausible bounds
+% Plausible bounds
 plb = lb + 0.1;
 pub = ub - 0.1;
 
-% Detect fixed parameters
 fixed_idx = (lb == ub);
-
-% For fixed parameters, force PLB and PUB to match
 plb(fixed_idx) = lb(fixed_idx);
 pub(fixed_idx) = ub(fixed_idx);
 
