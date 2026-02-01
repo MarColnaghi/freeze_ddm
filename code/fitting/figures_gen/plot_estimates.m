@@ -46,9 +46,13 @@ if isempty(figure_handle)
     result = cellfun(@(suf) ['$$\beta^{' suf '}$$'], ...
         c, 'UniformOutput', false);
 
+    col  = cmapper([], 0);
+
     for idx_param = 1:length(xx)
-    fill([xx(idx_param) - 0.3, xx(idx_param) - 0.3, xx(idx_param) + 0.3, xx(idx_param) + 0.3], ...
-        [ylimits, fliplr(ylimits)], '','FaceColor', col.vars.(suffixes{idx_param}), 'LineStyle', 'none', 'FaceAlpha', 0.3,'HandleVisibility','off');
+        param = suffixes{idx_param};
+        cmap = get_var_cmap(col, param);
+        fill([xx(idx_param) - 0.3, xx(idx_param) - 0.3, xx(idx_param) + 0.3, xx(idx_param) + 0.3], ...
+            [ylimits, fliplr(ylimits)], '','FaceColor', cmap, 'LineStyle', 'none', 'FaceAlpha', 0.3,'HandleVisibility','off');
     end
 
     xticklabels(result);
@@ -90,6 +94,7 @@ if export
     exporter(fh, paths, 'estimates.pdf')
 end
 
+end
 
 function [suffixes, prefixes] = extract_dep(results)
 
@@ -97,3 +102,13 @@ params = results.Properties.VariableNames;
 parts_str = cellfun(@(s) split(s, '_'), params, 'UniformOutput', false);
 suffixes = cellfun(@(parts) parts{end}, parts_str, 'UniformOutput', false);
 prefixes = cellfun(@(concat) concat{1:end-1}, parts_str, 'UniformOutput', false);
+
+end
+
+function cmap = get_var_cmap(col,varname)
+if isfield(col.vars,varname)
+    cmap = col.vars.(varname);
+else
+    cmap = col.vars.default;
+end
+end

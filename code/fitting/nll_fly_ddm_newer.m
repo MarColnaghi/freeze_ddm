@@ -22,6 +22,7 @@ if strcmp(plot_flag, 'p')
     tbl.fs = zeros(num_times, 1);
     tbl.ln = zeros(num_times, 1);
     tbl.ls = zeros(num_times, 1);
+    tbl.tsl = zeros(num_times, 1);
     tbl.intercept = zeros(num_times, 1);
 
     f = zeros(num_times, 1);
@@ -37,6 +38,7 @@ if strcmp(plot_flag, 'p')
         tbl.fs(:) = bouts.fs(idx_bout);
         tbl.ln(:) = bouts.ln(idx_bout);
         tbl.ls(:) = bouts.ls(idx_bout);
+        tbl.tsl(:) = bouts.tsl(idx_bout);
         tbl.intercept(:) = bouts.intercept(idx_bout);
 
         if strcmp('ed', tok{1}) || strcmp('ded', tok{1})
@@ -105,6 +107,8 @@ y.smp = bif.smp;
 y.fs = bif.fs;
 y.ln = bif.ln;
 y.ls = bif.ls;
+y.tsl = bif.tsl;
+
 y.intercept = bif.intercept;
 
 model = model_func();

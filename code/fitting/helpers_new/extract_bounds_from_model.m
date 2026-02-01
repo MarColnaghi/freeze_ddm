@@ -12,7 +12,7 @@ lb = [];
 ub = [];
 
 param_blocks = fieldnames(model);  % e.g. {'mu1', 'theta1', 'tndt1'}
-base_names = {'sm', 'smp', 'fs', 'ln', 'ls', 'intercept'};
+base_names = {'sm', 'smp', 'fs', 'ln', 'ls', 'tsl', 'intercept'};
 
 for i = 1:numel(param_blocks)
     block = model.(param_blocks{i});

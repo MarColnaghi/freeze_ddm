@@ -100,6 +100,7 @@ temp.avg_fs_1s_norm = temp.avg_fs_1s/10;
 temp.sloom_norm = temp.sloom/25;
 temp.nloom_norm = temp.nloom/10;
 temp.onsets_loomaligned_norm = temp.onsets_loomaligned/20;
+temp.time_since_last_norm = temp.time_since_last/400;
 
 % Set Thresholds on Freeze Durations, Social Motion and Speed of the Fly
 motion_max = 2; % outliers

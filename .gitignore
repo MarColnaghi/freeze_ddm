@@ -7,9 +7,12 @@
 # Ignore all MATLAB files by default
 *.mat
 
-# Allow small summary results
+# Allow model_results tree
 !model_results/
-!model_results/fitting_results_*.mat
+!model_results/**/
+
+# Allow summary fitting results anywhere under model_results
+!model_results/**/fitting_results_*.mat
 
 *.pdf
 *.eps

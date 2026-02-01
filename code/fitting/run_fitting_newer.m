@@ -60,6 +60,8 @@ end
 surrogate.fs = surrogate.avg_fs_1s_norm;
 surrogate.ln = surrogate.nloom_norm;
 surrogate.ls = surrogate.sloom_norm;
+surrogate.tsl = surrogate.time_since_last_norm;
+
 surrogate.intercept = ones(height(surrogate), 1);
 llfun = @(x) nll_fly_ddm_newer(x, surrogate, points, model_str, 'iid', 'n', extra);
 
