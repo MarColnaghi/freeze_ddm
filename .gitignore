@@ -2,10 +2,7 @@
 *.png
 *.asv
 *.csv
-*.mat
-
-# Ignore all MATLAB files by default
-*.mat
+*.mat 
 
 # Allow model_results tree
 !model_results/
@@ -14,8 +11,10 @@
 # Allow summary fitting results anywhere under model_results
 !model_results/**/fitting_results_*.mat
 
+# Allow datasets and their contents
 !datasets/
 !datasets/**/
+!datasets/**/*.mat
 
 *.pdf
 *.eps
