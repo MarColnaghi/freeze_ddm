@@ -248,6 +248,14 @@ end
 
 function lp = structured_prior(x, prior_spec, LB, PLB, PUB, UB)
 
+persistent call_count
+if isempty(call_count)
+    call_count = 0;
+end
+call_count = call_count + 1;
+
+plot_every = 50;   % <-- adjust as needed
+
 lp = 0;
 
 for i = 1:numel(x)
@@ -263,7 +271,6 @@ for i = 1:numel(x)
                 lp = -Inf;
                 return
             end
-            
             lambda = prior_spec(i).lambda;
             lp = lp + log(lambda) - lambda * x(i);
 
@@ -271,5 +278,64 @@ for i = 1:numel(x)
             error('Unknown prior type: %s', prior_spec(i).type)
     end
 end
+
+% ---- Diagnostic plotting (occasionally)
+if mod(call_count, plot_every) == 0
+    plot_prior_snapshot(prior_spec, LB, PLB, PUB, UB, x);
 end
+
+end
+
+function plot_prior_snapshot(prior_spec, LB, PLB, PUB, UB, x_curr)
+
+npar = numel(prior_spec);
+clf
+tiledlayout('flow')
+
+for i = 1:npar
+    nexttile; hold on
+
+    xgrid = linspace(LB(i), UB(i), 300);
+    logp = nan(size(xgrid));
+
+    switch prior_spec(i).type
+        case 'exponential'
+            lambda = prior_spec(i).lambda;
+            logp = log(lambda) - lambda * xgrid;
+
+        case 'trapezoidal'
+            logp = arrayfun(@(x) ...
+                msplinetrapezlogpdf(x, LB(i), PLB(i), PUB(i), UB(i)), ...
+                xgrid);
+    end
+
+    % Normalize for visualization
+    p = exp(logp - max(logp));
+    p = p / trapz(xgrid, p);
+
+    plot(xgrid, p, 'k', 'LineWidth', 1.5)
+
+    % --- Plausible bounds
+    yl = ylim;
+    plot([PLB(i) PLB(i)], yl, '--', 'Color',[0.7 0.7 0.7])
+    plot([PUB(i) PUB(i)], yl, '--', 'Color',[0.7 0.7 0.7])
+
+    % --- Current parameter value
+    xc = x_curr(i);
+    plot([xc xc], yl, 'r-', 'LineWidth', 2)
+
+    % --- Visual warning if outside plausible region
+    if xc < PLB(i) || xc > PUB(i)
+        title(sprintf('param %d ⚠', i))
+    else
+        title(sprintf('param %d', i))
+    end
+
+    box on
+end
+
+drawnow limitrate
+end
+
+
 
