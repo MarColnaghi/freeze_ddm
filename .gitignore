@@ -3,7 +3,14 @@
 *.asv
 *.csv
 *.mat
+
+# Ignore all MATLAB files by default
 *.mat
+
+# Allow small summary results
+!model_results/
+!model_results/fitting_results_*.mat
+
 *.pdf
 *.eps
 *.png
