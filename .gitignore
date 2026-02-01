@@ -14,6 +14,9 @@
 # Allow summary fitting results anywhere under model_results
 !model_results/**/fitting_results_*.mat
 
+!datasets/
+!datasets/**/
+
 *.pdf
 *.eps
 *.png

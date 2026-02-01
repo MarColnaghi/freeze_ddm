@@ -5,7 +5,7 @@ clear all
 % Load the table first. We will take advantage of an already existing
 % dataset.
 threshold_imm = 2; threshold_mob = 2; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
-paths = path_generator('folder', 'fitting_tests/dddm', 'bouts_id', id_code);
+paths = path_generator('folder', fullfile('fitting_tests','dddm'), 'bouts_id', id_code);
 load(fullfile(paths.dataset, 'bouts.mat'));
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le');
 motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
@@ -79,7 +79,7 @@ model.tndt = struct( ...
     );
 
 % Specify the seed
-sim_params.rng = 101;
+sim_params.rng = 567800;
 rng(sim_params.rng);
 
 % General simulation parameters
@@ -95,7 +95,7 @@ sim_params.eval_trials = sim_params.n_trials;
 sim_params.num_sims = 20000;
 
 % Censoring/Truncation
-points.truncation = 0;
+points.truncation = 0.5;
 points.censoring = 10.5;
 
 % Initialize outputs
@@ -152,6 +152,28 @@ for idx_trials = 1:sim_params.n_trials
     [rt.st(idx_trials), traj_st] = drift_diff_new('mu', mu_s, 'theta', theta_s, ...
         'z', sim_params.z, 'dt', sim_params.dt, 'T', sim_params.T, 'ndt', tndt_s);
 
+%     % ---- Apply drift scale ----
+%     sim_signal_coarse = ones(length(sim_params.dt)) * mu_s;
+% 
+%     % ---- Interpolate to FINE grid ----
+%     fine_signal = interp1(t_coarse(:), sim_signal_coarse(:), ...
+%                           t_fine(:), 'nearest');
+%     fine_signal(isnan(fine_signal)) = sim_signal_coarse(end);
+% 
+%     % ---- Simulation parameter vector (trial-wise) ----
+%     sim_params_vec = [ ...
+%         sim.dt, ...
+%         fixed.sigma_sq, ...
+%         fixed.x0, ...
+%         theta_i, ...
+%         lambda_i ];
+% 
+%     % ---- Unique RNG seed per trial ----
+%     unique_seed   = uint64(idx_bout * 1000 + randi([1 60]));
+%     trial_seed(idx_bout) = unique_seed;
+% 
+%     % ---- Run high-resolution DDM simulation ----
+%     res = sim_ddm_seeded(fine_signal, sim_params_vec, 1, unique_seed);
 
     mu_ig = theta_s ./ mu_s;
     lambda_ig = theta_s .^ 2;
@@ -188,10 +210,10 @@ xlabel('|t_{simul} - t_{sampled}| (s)'); ylabel('pdf')
 
 rt.st(isnan(rt.st)) = sim_params.T + 1; 
 points.censoring = sim_params.T;
-points.truncation = 0;
+points.truncation = 0.05;
 
 %  Now we added our vector column to the bouts table.
-bouts_proc.durations_s = rt.st;
+bouts_proc.durations_s = rt.ig;
 bouts_proc.sm = bouts_proc.avg_sm_freeze_norm;
 bouts_proc.smp = mean(sm_pre, 2);
 bouts_proc.avg_sm_pre_norm = mean(sm_pre, 2);
