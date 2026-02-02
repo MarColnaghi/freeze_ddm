@@ -25,3 +25,4 @@ model_results/*
 # Allow datasets folder and .mat files inside
 datasets/**
 !datasets/**/*.mat
+

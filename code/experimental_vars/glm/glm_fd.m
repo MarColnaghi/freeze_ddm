@@ -1,6 +1,6 @@
 %% 1. SETUP & LOADING
 id_code = 'imm3_mob3_pc4';
-paths_out = path_generator('folder', 'descriptive/fd_durs', 'bouts_id', id_code, 'imfirst', false);
+paths_out = path_generator('folder', 'experimental_vars/glm', 'bouts_id', id_code, 'imfirst', false);
 
 thresholds = define_thresholds;
 thresholds.le_window_fl = [5 40];
@@ -14,7 +14,7 @@ bouts = importdata(fullfile(paths_out.dataset, 'bouts.mat'));
 bouts = bouts_formatting(bouts, thresholds);
 
 % Parse Data
-paths_out = path_generator('folder', '/spontaneous_process', 'bouts_id', id_code, 'imfirst', false);
+paths_out = path_generator('folder', 'experimental_vars/glm', 'bouts_id', id_code, 'imfirst', false);
 T = data_parser_new(bouts, 'period', 'loom', 'window', 'le', ...
     'type', 'immobility', 'nloom', 2:20, 'min_dur', Ttrunc * 60);
 
@@ -24,13 +24,14 @@ T = T(T.durations_s >= Ttrunc, :);
 % Check Censoring (Informational only)
 pct_censored = sum(T.durations_s >= Tmax) / height(T) * 100;
 disp(['Censored Data: ' num2str(pct_censored, '%.2f') '%']);
-T.durations_s(T.durations_s >= Tmax) = 12;
+% T.durations_s(T.durations_s >= Tmax) = 12;
 
 
 % 2. PREPROCESSING
 % Define Predictors
 preds = {'nloom', 'avg_fs_1s', 'moving_flies', 'sloom', 'avg_sm', 'avg_ss', ...
-         'time_since_last', 'n_generated_freezes', 'cum_freeze_time', 'avg_history_dur'};
+    'time_since_last', 'n_generated_freezes', 'cum_freeze_time', 'avg_history_dur'};
+
 
 % --- FIX: Remove NaNs from ALL predictors BEFORE Z-scoring ---
 % This ensures all columns stay aligned
@@ -38,7 +39,7 @@ rows_with_nans = false(height(T), 1);
 for p = 1:length(preds)
     col_name = preds{p};
     % Ensure double and check for NaNs
-    T.(col_name) = double(T.(col_name)); 
+    T.(col_name) = double(T.(col_name));
     rows_with_nans = rows_with_nans | isnan(T.(col_name));
 end
 
@@ -54,19 +55,19 @@ scale_map = struct();
 for p = 1:length(preds)
     col_name = preds{p};
     raw_col = T.(col_name);
-    
+
     mu = mean(raw_col, 'omitnan');
     sigma = std(raw_col, 'omitnan');
-    
+
     % Handle constant columns to avoid divide-by-zero
     if sigma < 1e-12
         sigma = 1;
         warning(['Predictor ' col_name ' is constant. Z-scores will be 0.']);
     end
-    
+
     % Apply Z-score
     T_fit.(col_name) = (raw_col - mu) / sigma;
-    
+
     % Store mapping
     scale_map.(col_name).Mu = mu;
     scale_map.(col_name).Sigma = sigma;
@@ -75,14 +76,14 @@ end
 % 3. FITTING GLMM
 disp('Fitting GLMM...');
 
-% Formula: Consider checking for collinearity between predictors like 
+% Formula: Consider checking for collinearity between predictors like
 % 'nloom' vs 'sloom' or 'avg_sm' vs 'avg_ss' before fitting.
 
 T_fit.log_duration = log(T_fit.durations_s);
 
-formula_mixed = 'durations_s ~ 1 + sloom + avg_sm + avg_fs_1s + time_since_last + avg_history_dur + nloom + moving_flies + avg_ss + (1 | fly)';
+%formula_mixed = 'durations_s ~ 1 + sloom + avg_sm + avg_fs_1s + time_since_last + avg_history_dur + nloom + moving_flies + avg_ss + (1 | fly)';
 
-formula_mixed = 'durations_s ~ 1 + sloom + avg_sm + avg_fs_1s + time_since_last + avg_history_dur';
+% formula_mixed = 'durations_s ~ 1 + sloom + avg_sm + avg_fs_1s + time_since_last + avg_history_dur';
 
 formula_mixed = 'durations_s ~ 1 + sloom + avg_sm + avg_fs_1s + time_since_last + avg_history_dur + nloom + moving_flies + avg_ss';
 
@@ -100,12 +101,14 @@ try
         'OptimizerOptions', glmm_opts); % <--- Use the correct parameter name here
     disp(glmm);
 
+
 catch ME
     disp('GLMM Fitting Failed:');
     disp(ME.message);
 end
 
 T_fit.log_duration = log(T_fit.durations_s);
+
 %% OLD PLOTTING CODE
 
 
@@ -182,10 +185,9 @@ n_groups_toplot = length(common_group_names);
 %    data by name, ensuring correct alignment.
 % =========================================================================
 
-ff = figure('color','w','Name','GLMM results');
+fh = figure('Color','w','Position',[100 100 1200 430]);
 col = get(0,'defaultAxesColorOrder');
-ff.Units = 'centimeters';
-ff.Position = [2 2.5 16 8];
+
 
 ha = tight_subplot(1, 2, [.1 .1], [.15 .05], [.12 .03]);
 for k=1:length(ha)
@@ -202,7 +204,7 @@ plot_labels = cellfun(@(x) strrep(x, '\_\_', '*'), plot_labels, 'UniformOutput',
 
 for i = 1:n_betas_toplot
     pred_name = common_betanames{i};
-    
+
     % Find the index for this predictor in this specific model's list
     beta_idx = find(strcmp(model_results.betanames, pred_name));
     beta_val = model_results.betas(beta_idx);
@@ -223,7 +225,7 @@ for i = 1:n_betas_toplot
     offset = 0;
 
     % Plot point and error bar
-    plot(i + offset, beta_val, '.', 'MarkerSize', 17, 'Color', col(1,:));
+    plot(i + offset, beta_val, '.', 'MarkerSize', 34, 'Color', col(1,:));
     if total_sigma > 0
         errbar(i + offset, beta_val, total_sigma, 'color', col(1,:));
         errbar(i + offset +.05, beta_val, sigma_val, 'color', col(1,:),'linestyle',':');
@@ -231,6 +233,7 @@ for i = 1:n_betas_toplot
 end
 ylabel('Betas'); xlim([0, n_betas_toplot+1]); view([90 90]);
 ha(1).XTick = plot_xticks; ha(1).XTickLabel = plot_labels; ha(1).XGrid = 'on';
+apply_generic(ha(1), 'font_size', 18)
 
 % --- PLOT 2: T-Statistics ---
 axes(ha(2)); hold on;
@@ -243,10 +246,13 @@ for i = 1:n_betas_toplot
     tStat_val = model_results.tStats(tStat_idx);
     % Plotting offset
     offset = 0;
-    plot(i + offset, tStat_val, '.', 'MarkerSize', 17, 'Color', col(1,:));
+    plot(i + offset, tStat_val, '.', 'MarkerSize', 34, 'Color', col(1,:));
 end
 ylabel('t-values'); xlim([0, n_betas_toplot+1]); view([90 90]);
 ha(2).XTick = plot_xticks; ha(2).XTickLabel = plot_labels; ha(2).XGrid = 'on';
+
+apply_generic(ha(2), 'font_size', 18)
+exporter(fh, paths_out, 'glm_results.pdf')
 
 %%
 
