@@ -120,7 +120,7 @@ end
 lbl = lbl(~isnan(gt));
 gt_table = array2table(x, 'VariableNames', lbl);
 
-if strcmp('ed', tok{1}) || strcmp('ded', tok{1})
+if strcmp('ed', tok{1}) || strcmp('ded', tok{1}) || strcmp('sddmtv', tok{1})
     if isfield(extra, 'soc_mot_array')
         if size(extra.soc_mot_array, 1) == 1
             y.sm = repmat(extra.soc_mot_array, height(y), 1);
@@ -474,7 +474,7 @@ if strcmp('iid', iid)
 
         parfor idx_bouts = 1:height(bif)
             params = [out.lambda(idx_bouts), out.theta(idx_bouts), out.tndt(idx_bouts)];
-            scaled_drift = extra.soc_mot_array(idx_bouts, :) .* x(1);
+            scaled_drift = out.mu(idx_bouts, :); %extra.soc_mot_array(idx_bouts, :) .* x(1);
             pr = param_res(out.theta(idx_bouts), points);
             g(idx_bouts) = ddm_freeze_loglik_from_trace_ultrafast(params, scaled_drift, pr, ts(idx_bouts));
 
