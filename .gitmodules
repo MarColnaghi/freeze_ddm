@@ -1,0 +1,6 @@
+[submodule "code/fitting/bads"]
+	path = code/fitting/bads
+	url = https://github.com/acerbilab/bads.git
+[submodule "code/fitting/vbmc"]
+	path = code/fitting/vbmc
+	url = https://github.com/acerbilab/vbmc.git
