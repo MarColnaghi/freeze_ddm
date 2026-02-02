@@ -4,3 +4,6 @@
 [submodule "code/fitting/vbmc"]
 	path = code/fitting/vbmc
 	url = https://github.com/acerbilab/vbmc.git
+[submodule "code/helper_functions/graphical_helpers/cbrewer2"]
+	path = code/helper_functions/graphical_helpers/cbrewer2
+	url = https://github.com/scottclowe/cbrewer2.git
