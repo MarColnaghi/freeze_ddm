@@ -2,7 +2,7 @@ clearvars
 
 % 3. Trial table (like y in mixture script)
 threshold_imm = 2; threshold_mob = 2; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
-paths = path_generator('folder', 'fitting_tests/dddm', 'bouts_id', id_code);
+paths = path_generator('folder', fullfile('fitting_tests','dddm'), 'bouts_id', id_code);
 load(fullfile(paths.dataset, 'bouts.mat'));
 
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', 'nloom', 2:20);
@@ -56,7 +56,7 @@ gt_table  = array2table(gt, 'VariableNames', lbl);
 
 ncomp_vars = evaluate_model(model, gt_table, y);
 
-col = cmapper();
+% col = cmapper();
 
 % Load the Motion Cache
 motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
@@ -66,7 +66,7 @@ fixed.dt       = 1/60;
 fixed.dx       = 0.01;
 fixed.sigma_sq = 1.0;
 fixed.x0       = 0.0;
-fixed.T_trunc  = 0.3;
+fixed.T_trunc  = 0.05;
 fixed.T_max    = 10.5;
 
 % 7. Fine simulation parameters
