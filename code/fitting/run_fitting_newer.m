@@ -226,22 +226,22 @@ function create_output_dirs(paths)
             end
         end
     end
-
     if isempty(run_nums)
         next_run = 1;
     else
         next_run = max(run_nums) + 1;
     end
 
-    run_name = sprintf('run%02d', next_run);
+    timestamp = string(datetime('now', 'Format', 'ddMMyy_HHmm'));
+
+    run_name = sprintf('run%02d_%s', next_run, timestamp);
+
     paths.results = fullfile(paths.results, run_name);
     mkdir(paths.results);
 
-    % Also update figure path to match the new run
     paths.fig = fullfile(paths.fig, run_name);
     mkdir(paths.fig);
 
-    % Assign the updated paths back to base workspace (if needed)
     assignin('caller', 'paths', paths);
 end
 

@@ -1,24 +1,27 @@
-*.pdf
-*.png
-*.asv
-*.csv
-*.mat 
-
-# Allow model_results tree
-!model_results/
-!model_results/**/
-
-# Allow summary fitting results anywhere under model_results
-!model_results/**/fitting_results_*.mat
-
-# Allow datasets and their contents
-!datasets/
-!datasets/**/
-!datasets/**/*.mat
-
+# General file types to ignore
 *.pdf
 *.eps
 *.png
 *.txt
+*.asv
+*.csv
+*.mat
 .DS_Store
 **.DS_Store
+
+# Ignore your figures folder completely
+figures/
+
+# Ignore model results folder
+model_results/
+
+# Optional: ignore Google Drive temp files anywhere
+*.tmp.drivedownload
+
+# Ignore model_results but allow specific subfiles
+model_results/*
+!model_results/**/fitting_results_*.mat
+
+# Allow datasets folder and .mat files inside
+datasets/**
+!datasets/**/*.mat
