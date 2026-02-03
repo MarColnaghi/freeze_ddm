@@ -5,13 +5,13 @@ clearvars
 % Load the table first. We will take advantage of an already existing
 % dataset.
 threshold_imm = 2; threshold_mob = 2; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
-paths = path_generator('folder', 'fitting_freezes/le', 'bouts_id', id_code, 'imfirst', false);
+paths = path_generator('folder', fullfile('fitting_freezes','le'), 'bouts_id', id_code, 'imfirst', false);
 bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
 motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 
 thresholds = define_thresholds;
-thresholds.le_window_fl = [5 40];
-thresholds.le_window_sl = [15 50];
+% thresholds.le_window_fl = [5 40];
+% thresholds.le_window_sl = [15 50];
 
 bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
 bouts = bouts_formatting(bouts, thresholds);
@@ -55,7 +55,7 @@ lambda_est = table2array(results_bsl.estimates_mean);
 % extra.lambda = lambda_est(~isnan(lambda_est));
 % extra.tndt = 0;
 
-model_results = run_fitting_newer(bouts_proc, points, 'dddm9', paths, 'export', true, 'bads_display', true, 'pass_ndt', false, 'n_bads', 1, 'extra', extra, 'vbmc_exhaustive', false);
+model_results = run_fitting_newer(bouts_proc, points, 'dddm2', paths, 'export', true, 'bads_display', true, 'pass_ndt', false, 'n_bads', 1, 'extra', extra, 'vbmc_exhaustive', false);
 
 %%
 

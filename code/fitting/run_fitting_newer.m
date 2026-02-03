@@ -129,7 +129,7 @@ end
 llfun = @(x) -nll_fly_ddm_newer(x, surrogate, points, model_str, 'iid', 'n', extra);
 lpriorfun = @(x) structured_prior(x, prior_info, LB, PLB, PUB, UB);
 
-% lpriorfun = @(x) msplinetrapezlogpdf(x, LB, PLB, PUB, UB);
+lpriorfun = @(x) msplinetrapezlogpdf(x, LB, PLB, PUB, UB);
 postfun = @(x) lpostfun(x, llfun, lpriorfun);
 
 options_vbmc.Display = 'iter';

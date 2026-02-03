@@ -1,5 +1,5 @@
 clearvars
-paths = path_generator('folder', '/social_motion');
+paths = path_generator('folder', 'social_motion');
 motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 pixel_cache = importdata(fullfile(paths.cache_path, 'pixel_cache.mat'));
 loom_cache = importdata(fullfile(paths.cache_path, 'loom_cache.mat'));
