@@ -96,8 +96,16 @@ switch opt.Results.type
                     sum_motion = motion_cache(bouts_le.fly(idx_bouts));
 
                     freeze_sig = sum_motion(ons:off) ./ 10;
-                    sm_output(idx_bouts, 1:numel(freeze_sig)) = freeze_sig;
+                    L = numel(freeze_sig);
+
+                    switch opt.Results.align
+                        case 'onset'
+                            sm_output(idx_bouts, 1:L) = freeze_sig;
+                        case 'offset'
+                            sm_output(idx_bouts, end-L+1:end) = freeze_sig;
+                    end
                 end
+
         end
 
 

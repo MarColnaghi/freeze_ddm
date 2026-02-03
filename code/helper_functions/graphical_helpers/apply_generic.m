@@ -16,6 +16,8 @@ addParameter(opt, 'ylims', []);
 addParameter(opt, 'xticks', []); 
 addParameter(opt, 'yticks', []); 
 addParameter(opt, 'box', 'off'); 
+addParameter(opt, 'ypos', []); 
+addParameter(opt, 'xpos', []); 
 
 parse(opt, varargin{:});
 
@@ -33,6 +35,8 @@ ylims = opt.Results.ylims;
 xthicks = opt.Results.xticks;
 ythicks = opt.Results.yticks;
 box = opt.Results.box;
+ypos = opt.Results.ypos;
+xpos = opt.Results.xpos;
 
 ax.XAxis.FontSize = fontsize;
 ax.ZAxis.FontSize = fontsize;
@@ -79,4 +83,12 @@ end
 
 if no_yaxis
     ax.YAxis.Visible = 'off';
+end
+
+if ~isempty(ypos)
+    set(gca, 'YAxisLocation', ypos)
+end
+
+if ~isempty(xpos)
+    set(gca, 'XAxisLocation', xpos)
 end
