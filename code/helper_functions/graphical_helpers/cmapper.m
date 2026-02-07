@@ -127,6 +127,10 @@ col.areas(11,:) = [87 167 115]/255;
 col.loom = pal.blue(round(end/2),:);
 col.bsl  = 'k';
 
+%%
+
+col.n_mov_flies = cbrewer2('RdBu', 5);
+
 end
 
 function cmap = get_var_cmap(col, varname)

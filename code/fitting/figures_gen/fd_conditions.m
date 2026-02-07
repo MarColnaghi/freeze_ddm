@@ -83,8 +83,8 @@ for idx_sm = 1:3
 
             %             fdd = RTD{1,1};
             %trapz(xxi, fdd)
-            trapz(xxi(xxi >= 0.3), ks(xxi >= 0.3))
-            trapz(xxi(xxi >= 0.3), ks_noc(xxi >= 0.3))
+           % trapz(xxi(xxi >= 0.3), ks(xxi >= 0.3))
+           % trapz(xxi(xxi >= 0.3), ks_noc(xxi >= 0.3))
 
             pause(.2);
 
