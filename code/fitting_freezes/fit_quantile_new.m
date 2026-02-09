@@ -6,15 +6,15 @@ paths = path_generator('folder', 'fitting_freezes/le/quantiles', 'bouts_id', id_
 load(fullfile(paths.dataset, 'bouts.mat'));
 
 thresholds = define_thresholds;
-thresholds.le_window_fl = [1 60];
-thresholds.le_window_sl = [1 60];
-% thresholds.le_window_fl = [5 40];
-% thresholds.le_window_sl = [15 50];
+%thresholds.le_window_fl = [1 60];
+%thresholds.le_window_sl = [1 60];
+thresholds.le_window_fl = [5 40];
+thresholds.le_window_sl = [15 50];
 
 bouts = bouts_formatting(bouts, thresholds);
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', 'nloom', 2:20);
 points.censoring = 10.5;
-points.truncation = 0.3;
+points.truncation = 0.5;
 
 motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 

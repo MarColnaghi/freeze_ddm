@@ -386,3 +386,112 @@ uistack(sp_imgsc, 'top');
 % Save figure
 exporter(fh, paths, sprintf('raster_bw_%d.pdf', n_moving))
 exporter(fh, paths, sprintf('raster_bw_%d.eps', n_moving))
+
+%%
+
+
+mov_flies = 2;
+ts_proc = ts(ts.moving_flies == mov_flies, :);
+
+points.censoring = 10.5;
+points.truncation = 0.5;
+
+thresholds = define_thresholds;
+thresholds.le_window_fl = [5 40];
+thresholds.le_window_sl = [15 50];
+
+bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
+bouts = bouts_formatting(bouts, thresholds);
+bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'all', 'nloom', 1:20, 'min_dur', 30);
+bouts_proc = bouts_proc(bouts_proc.sloom == ls & bouts_proc.moving_flies == mov_flies, :);
+
+selected_flies = ts_proc.fly;
+
+% Optional: define time resolution
+dt = 0.1;   % adjust to your data (e.g. 1 frame, 0.04 s, etc.)
+
+% Find global max time to size vectors
+Tmax = max(bouts_proc.ends);
+tvec = 0:dt:Tmax;
+
+% Preallocate output as a struct (one field per fly)
+fly_sm = struct;
+
+for f = 1:numel(selected_flies)
+
+    fly_id = selected_flies(f);
+
+    % Get bouts for this fly (may be empty)
+    fly_bouts = bouts_proc(bouts_proc.fly == fly_id, :);
+
+    % Initialize vector
+    sm_vec = nan(size(tvec));   % or zeros(size(tvec))
+
+    % Only fill if the fly actually has bouts
+    if ~isempty(fly_bouts)
+        for b = 1:height(fly_bouts)
+            onset  = fly_bouts.onsets(b);
+            offset = fly_bouts.ends(b);
+            sm_val = fly_bouts.avg_sm_freeze_norm(b);
+
+            idx = tvec >= onset & tvec <= offset;
+            sm_vec(idx) = sm_val;
+        end
+    end
+
+    % Store output
+    fly_sm(f).fly = fly_id;
+    fly_sm(f).t = tvec;
+    fly_sm(f).avg_sm_vec = sm_vec;
+end
+
+n_flies = numel(fly_sm);
+n_t     = numel(fly_sm(1).t);
+
+SM_mat = nan(n_flies, n_t);
+
+tvec = fly_sm(1).t;
+for f = 1:n_flies
+    SM_mat(f, :) = fly_sm(f).avg_sm_vec;
+end
+
+fh = figure('color', 'w', 'Position', [100 200 860 290]);
+tl = tiledlayout(1, 1, 'TileSpacing', 'compact', 'Padding', 'loose');
+
+col.n_mov_flies = colorcet('I2','N', 5);
+
+nexttile
+hold on
+ax(2) = gca;
+
+sm_img = imagesc(ax(2), tvec, 1:n_flies, SM_mat);
+
+% Colormap + limits
+clim([0 0.001])   % adjust to your avg_sm_freeze_norm range
+
+% % Transparency: hide NaNs
+set(sm_img, 'AlphaData', ~isnan(SM_mat));
+colormap(ax(2), cbrewer2('Reds', []));
+
+% apply_generic(ax(2), 'xtick', [0, 18000, size(fr_mat, 2)], 'ytick', [1, size(fr_mat, 1)], 'ylim', [- 10 size(fr_mat, 1) + 10], 'xlim', [16200, size(fr_mat, 2)])
+apply_generic(ax(2), 'xticks', [0, 18000, size(ts_proc.freeze, 2)], 'no_yticks', true, 'ylim', [-1 size(ts_proc.freeze, 1) + 1], 'xlim', [16200, size(ts_proc.freeze, 2)], 'font_size', 28)
+xticklabels([0 5 10]);
+ylabel('Flies')
+xlabel('Time (s)')
+ax(2).XLabel.Position(2) = -10;
+
+%cb1 = colorbar(ax(2)); cb1.Visible = 'off';
+cb2 = colorbar(ax(2), 'southoutside', 'FontSize', 18, 'LineWidth', 2, 'TickLength', 0.1, 'TickDirection', 'none');
+%text(length(fs_mat), size(fs_mat, 1)/2, 'Avg. Social Motion', 'HorizontalAlignment','center','VerticalAlignment','top','FontSize', 18, 'Rotation', 90)
+
+% Add lines for median_loom_ts array
+for i = 1:length(median_loom_ts)
+    line([median_loom_ts(i), median_loom_ts(i)], [-4, size(ts_proc.freeze, 1) + 4], 'Color', col_nloom.vars.nloom(10 + i, :), 'LineWidth', 1.5, 'LineStyle', '-', 'clipping', 'off');
+end
+
+for idx_moving = 0:4
+    fill([ax(2).XLim(2)+200,ax(2).XLim(2)+200,ax(2).XLim(2)+1000,ax(2).XLim(2)+1000], [length(find(ts_proc.moving_flies <= idx_moving)) length(find(ts_proc.moving_flies <= idx_moving - 1)) length(find(ts_proc.moving_flies <= idx_moving - 1))   length(find(ts_proc.moving_flies <= idx_moving))], ...
+        col.n_mov_flies(idx_moving + 1,:), 'EdgeColor','none', 'Clipping', 'off');
+end
+
+%exporter(fh, paths, 'raster_sm.pdf')
