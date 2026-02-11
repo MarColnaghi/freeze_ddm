@@ -44,6 +44,7 @@ ax.YAxis.FontSize = fontsize;
 set(ax,'linewidth', line_width, 'TickDir','out');
 set(ax,'box', box)
 set(ax,'TickLength',[tick_length, tick_length])
+set(ax,'Color', 'none')
 
 if ~isempty(xlims)
     xlim(xlims)

@@ -152,6 +152,8 @@ if strcmp('iid', iid)
 
         [pdf, cdf] = pdf_cdf({'ddm'});
 
+        out.tndt = zeros(size(out, 1), 1);
+
         pdf_ddm_raw = pdf.ddm;
         cdf_ddm_raw = cdf.ddm;
 

@@ -46,6 +46,11 @@ col.processes.contam = '#E69665';
 col.period.bsl  = col.processes.contam;
 col.period.loom = '#778EE4';
 
+%%%
+
+col.param.theta = '#0000FF';
+col.param.mu = '#DF3365';
+
 %% =====================================================================
 %% Model colors
 %% =====================================================================

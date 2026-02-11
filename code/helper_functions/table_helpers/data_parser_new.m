@@ -103,7 +103,7 @@ temp.onsets_loomaligned_norm = temp.onsets_loomaligned/20;
 temp.time_since_last_norm = temp.time_since_last/400;
 
 % Set Thresholds on Freeze Durations, Social Motion and Speed of the Fly
-motion_max = 2; % outliers
+motion_max = 1; % outliers
 speed_max = 2; % outliers
 
 % Threshold the Dataset

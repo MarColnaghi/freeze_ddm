@@ -18,11 +18,11 @@ points.truncation = 0.5;
 
 motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 
-model_2_fit = 'dddm0';
+model_2_fit = 'sddm0';
 
 kde_estimates = importdata(fullfile('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/fitting_freezes/bsl/kde_spontaneous', id_code, 'kde_estimates_bsl.mat'));
 [~,idx] = unique(kde_estimates.Fkde, 'last');
-extra.Fkde = kde_estimates.Fkde(idx); extra.xkde = kde_estimates.xkde(idx); extra.fkde = kde_estimates.fkde(idx); 
+extra.Fkde = kde_estimates.Fkde(idx); extra.xkde = kde_estimates.xkde(idx); extra.fkde = kde_estimates.fkde(idx);
 
 % Extract Social Motion TimeSeries
 chunk_len = points.censoring * 60;
@@ -51,15 +51,15 @@ tiledlayout(2, 1, 'TileSpacing', 'loose')
 
 nexttile
 histogram(bouts_proc.avg_fs_1s_norm, 0:0.02:3, 'FaceColor', col.vars.fs(round(end/2), :), 'EdgeColor', 'none')
-quant.avg_fs_1s_norm = prctile(bouts_proc.avg_fs_1s_norm, [0, 25, 50, 75, 100]); quant.avg_fs_1s_norm(1) = 0; quant.avg_fs_1s_norm(end) = 2; 
-quant.avg_fs_1s_norm = [0 0.45 0.7 1.0 2.2]; 
+quant.avg_fs_1s_norm = prctile(bouts_proc.avg_fs_1s_norm, [0, 25, 50, 75, 100]); quant.avg_fs_1s_norm(1) = 0; quant.avg_fs_1s_norm(end) = 2;
+quant.avg_fs_1s_norm = [0 0.45 0.7 1.0 2.2];
 xline(quant.avg_fs_1s_norm);
 apply_generic(gca, 'xlim', [0 2])
 
 nexttile
 histogram(bouts_proc.avg_sm_freeze_norm, 0:0.02:3, 'FaceColor', col.vars.sm(round(end/2), :), 'EdgeColor', 'none');
-quant.avg_sm_freeze_norm = prctile(bouts_proc.avg_sm_freeze_norm, [0, 25, 50, 75, 100]); quant.avg_sm_freeze_norm(1) = 0; quant.avg_sm_freeze_norm(end) = 2; 
-quant.avg_sm_freeze_norm = [0, .25, 0.45, 0.8, 1.85]; 
+quant.avg_sm_freeze_norm = prctile(bouts_proc.avg_sm_freeze_norm, [0, 25, 50, 75, 100]); quant.avg_sm_freeze_norm(1) = 0; quant.avg_sm_freeze_norm(end) = 1.2;
+quant.avg_sm_freeze_norm = [0, .25, 0.45, 0.8, 1.85];
 xline(quant.avg_sm_freeze_norm);
 apply_generic(gca, 'xlim', [0 2])
 
@@ -69,8 +69,9 @@ quant.nloom_norm = [-0.05 0.55 1.05 1.55 2.05];
 % of SOCIAL MOTION
 
 n_quantiles = 4;
+quant.avg_sm_freeze_norm = prctile(bouts_proc.avg_sm_freeze_norm, [0, 25, 50, 75, 100]); quant.avg_sm_freeze_norm(1) = 0; quant.avg_sm_freeze_norm(end) = 2;
 n_looms = length(unique(bouts_proc.sloom_norm));
-n_params = 6;
+n_params = 3;
 estimates = nan(n_quantiles, n_looms, n_params);
 x = nan(n_quantiles, n_looms);
 % vars = {'avg_sm_freeze_norm', 'avg_fs_1s_norm', 'nloom_norm'};
@@ -157,41 +158,88 @@ for idx_vars = vars
     end
 end
 
+%%
+fh = figure('color','w','Position',[100,100, 550, 350]);
+tiledlayout(1, 2, 'TileSpacing', 'loose', 'Padding', 'compact')
+
+
+for idx_params = 1:2
+    nexttile
+    hold on
+    xvals = mean(x, 2);          % should be 4x1
+    yvals = estimates(:, 2, idx_params);
+
+    % build color matrix (one row per point)
+    C = repmat([0.7 0.7 0.7], numel(xvals), 1);
+
+    for q = 1:4
+        C(q, :) = col.vars.sm(1 + q, :);
+    end
+
+    % scatter(mean(x, 2), estimates(:, 1, idx_params), 50, 'r', 'filled')
+    scatter(mean(x, 2), estimates(:, 2, idx_params), 140, 'k', 'filled')
+    axis square
+
+    xlim([0 2])
+    xticks(mean(x, 2))
+    xticklabels({'Q1', 'Q2', 'Q3', 'Q4'})
+
+    if idx_params == 1
+        ylim([-0. 1])
+        yticks([0 0.5 1])
+        ylabel('Evidence Strength ($\mu$)', 'Interpreter', 'latex', 'Color', col.param.mu)
+
+    elseif idx_params == 2
+        ylim([0.5 2.0])
+        ylabel('Bound Distance ($\theta$)', 'Interpreter', 'latex', 'Color', col.param.theta)
+
+    end
+
+    apply_generic(gca, 'xlim', [0 1])
+
+end
+
+exporter(fh, paths, 'quartile_fitting.pdf')
+
+
+
+
+%%
 
 % Now you should fit a model for each quantile
 % of LOOM NUMBER
 function create_output_dirs(paths)
-    % Ensure base directories exist
-    if ~exist(paths.fig, 'dir'), mkdir(paths.fig); end
-    if ~exist(paths.results, 'dir'), mkdir(paths.results); end
+% Ensure base directories exist
+if ~exist(paths.fig, 'dir'), mkdir(paths.fig); end
+if ~exist(paths.results, 'dir'), mkdir(paths.results); end
 
-    % Auto-incrementing run folder inside results
-    run_folders = dir(fullfile(paths.results, 'run*'));
-    run_nums = [];
+% Auto-incrementing run folder inside results
+run_folders = dir(fullfile(paths.results, 'run*'));
+run_nums = [];
 
-    for i = 1:length(run_folders)
-        if run_folders(i).isdir
-            tokens = regexp(run_folders(i).name, '^run(\d+)$', 'tokens');
-            if ~isempty(tokens)
-                run_nums(end+1) = str2double(tokens{1}{1}); %#ok<AGROW>
-            end
+for i = 1:length(run_folders)
+    if run_folders(i).isdir
+        tokens = regexp(run_folders(i).name, '^run(\d+)$', 'tokens');
+        if ~isempty(tokens)
+            run_nums(end+1) = str2double(tokens{1}{1}); %#ok<AGROW>
         end
     end
+end
 
-    if isempty(run_nums)
-        next_run = 1;
-    else
-        next_run = max(run_nums) + 1;
-    end
+if isempty(run_nums)
+    next_run = 1;
+else
+    next_run = max(run_nums) + 1;
+end
 
-    run_name = sprintf('run%02d', next_run);
-    paths.results = fullfile(paths.results, run_name);
-    mkdir(paths.results);
+run_name = sprintf('run%02d', next_run);
+paths.results = fullfile(paths.results, run_name);
+mkdir(paths.results);
 
-    % Also update figure path to match the new run
-    paths.fig = fullfile(paths.fig, run_name);
-    mkdir(paths.fig);
+% Also update figure path to match the new run
+paths.fig = fullfile(paths.fig, run_name);
+mkdir(paths.fig);
 
-    % Assign the updated paths back to base workspace (if needed)
-    assignin('caller', 'paths', paths);
+% Assign the updated paths back to base workspace (if needed)
+assignin('caller', 'paths', paths);
 end

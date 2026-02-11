@@ -117,7 +117,7 @@ ax(1) = gca;
 ax(1).Color = 'none';
 apply_generic(ax(1), 'no_x', false, 'xticks', [0, 18000, size(fr_mat, 2)], 'ytick', [0 1], 'ylim', [-0.1 1.1], 'xlim', [16200, size(fr_mat, 2)], 'font_size', 32, 'xpos', 'top')
 ylabel({'Total Fraction', 'Freezing'}, 'FontSize', 28)
-xlabel('Time (s)')
+xlabel('Time (min)')
 xticklabels({0 5 10})
 
 for i = 1:length(median_loom_ts)
@@ -133,8 +133,11 @@ colormap(ax(2), ('gray'));
 % apply_generic(ax(2), 'xtick', [0, 18000, size(fr_mat, 2)], 'ytick', [1, size(fr_mat, 1)], 'ylim', [- 10 size(fr_mat, 1) + 10], 'xlim', [16200, size(fr_mat, 2)])
 apply_generic(ax(2), 'xticks', [0, 18000, size(fr_mat, 2)], 'no_yticks', true, 'ylim', [- 10 size(fr_mat, 1) + 10], 'xlim', [16200, size(fr_mat, 2)], 'font_size', 32)
 xticklabels({});
-ylabel('Flies')
+ylabel('Focal Flies')
 % xlabel('Time (s)')
+set(ax(2) ,'Layer', 'Top')
+ax(1).XLabel.Position(2) = 1.25;
+ax(2).YLabel.Position(1) = ax(2).YLabel.Position(1) - 1000;
 
 % Add lines for median_loom_ts array
 for i = 1:length(median_loom_ts)
@@ -142,7 +145,7 @@ for i = 1:length(median_loom_ts)
 end
 
 for idx_moving = 0:4
-    fill([ax(2).XLim(2)+200,ax(2).XLim(2)+200,ax(2).XLim(2)+1000,ax(2).XLim(2)+1000], [length(find(ts.moving_flies <= idx_moving)) length(find(ts.moving_flies <= idx_moving - 1)) length(find(ts.moving_flies <= idx_moving - 1))   length(find(ts.moving_flies <= idx_moving))], ...
+    fill([ax(2).XLim(1)-200,ax(2).XLim(1)-200,ax(2).XLim(1)-1000,ax(2).XLim(1)-1000], [length(find(ts.moving_flies <= idx_moving)) length(find(ts.moving_flies <= idx_moving - 1)) length(find(ts.moving_flies <= idx_moving - 1))   length(find(ts.moving_flies <= idx_moving))], ...
         col.n_mov_flies(idx_moving + 1,:), 'EdgeColor','none', 'Clipping', 'off');
 end
 
@@ -252,12 +255,12 @@ colormap(ax(2), cbrewer2('Reds', []));
 % apply_generic(ax(2), 'xtick', [0, 18000, size(fr_mat, 2)], 'ytick', [1, size(fr_mat, 1)], 'ylim', [- 10 size(fr_mat, 1) + 10], 'xlim', [16200, size(fr_mat, 2)])
 apply_generic(ax(2), 'xticks', [0, 18000, size(ts_proc.freeze, 2)], 'no_yticks', true, 'ylim', [-1 size(ts_proc.freeze, 1) + 1], 'xlim', [16200, size(ts_proc.freeze, 2)], 'font_size', 28)
 xticklabels([0 5 10]);
-ylabel('Flies')
-xlabel('Time (s)')
+ylabel('Focal Flies')
+xlabel('Time (min)')
 ax(2).XLabel.Position(2) = -10;
 
 %cb1 = colorbar(ax(2)); cb1.Visible = 'off';
-cb2 = colorbar(ax(2), 'southoutside', 'FontSize', 18, 'LineWidth', 2, 'TickLength', 0.1, 'TickDirection', 'none');
+%cb2 = colorbar(ax(2), 'southoutside', 'FontSize', 18, 'LineWidth', 2, 'TickLength', 0.1, 'TickDirection', 'none');
 %text(length(fs_mat), size(fs_mat, 1)/2, 'Avg. Social Motion', 'HorizontalAlignment','center','VerticalAlignment','top','FontSize', 18, 'Rotation', 90)
 
 % Add lines for median_loom_ts array
@@ -266,9 +269,11 @@ for i = 1:length(median_loom_ts)
 end
 
 for idx_moving = 0:4
-    fill([ax(2).XLim(2)+200,ax(2).XLim(2)+200,ax(2).XLim(2)+1000,ax(2).XLim(2)+1000], [length(find(ts_proc.moving_flies <= idx_moving)) length(find(ts_proc.moving_flies <= idx_moving - 1)) length(find(ts_proc.moving_flies <= idx_moving - 1))   length(find(ts_proc.moving_flies <= idx_moving))], ...
+    fill([ax(2).XLim(1)-200,ax(2).XLim(1)-200,ax(2).XLim(1)-1000,ax(2).XLim(1)-1000], [length(find(ts_proc.moving_flies <= idx_moving)) length(find(ts_proc.moving_flies <= idx_moving - 1)) length(find(ts_proc.moving_flies <= idx_moving - 1))   length(find(ts_proc.moving_flies <= idx_moving))], ...
         col.n_mov_flies(idx_moving + 1,:), 'EdgeColor','none', 'Clipping', 'off');
 end
+
+ax(2).YLabel.Position(1) = ax(2).YLabel.Position(1) - 1000;
 
 exporter(fh, paths, 'raster_sm.pdf')
 
@@ -477,7 +482,7 @@ colormap(ax(2), cbrewer2('Reds', []));
 apply_generic(ax(2), 'xticks', [0, 18000, size(ts_proc.freeze, 2)], 'no_yticks', true, 'ylim', [-1 size(ts_proc.freeze, 1) + 1], 'xlim', [16200, size(ts_proc.freeze, 2)], 'font_size', 28)
 xticklabels([0 5 10]);
 ylabel('Flies')
-xlabel('Time (s)')
+xlabel('Time (min)')
 ax(2).XLabel.Position(2) = -10;
 
 %cb1 = colorbar(ax(2)); cb1.Visible = 'off';
