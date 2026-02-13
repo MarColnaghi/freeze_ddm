@@ -8,8 +8,8 @@ load(fullfile(paths.dataset, 'bouts.mat'));
 thresholds = define_thresholds;
 %thresholds.le_window_fl = [1 60];
 %thresholds.le_window_sl = [1 60];
-thresholds.le_window_fl = [5 40];
-thresholds.le_window_sl = [15 50];
+thresholds.le_window_fl = [0 45];
+thresholds.le_window_sl = [10 55];
 
 bouts = bouts_formatting(bouts, thresholds);
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', 'nloom', 2:20);
@@ -176,7 +176,7 @@ for idx_params = 1:2
         C(q, :) = col.vars.sm(1 + q, :);
     end
 
-    % scatter(mean(x, 2), estimates(:, 1, idx_params), 50, 'r', 'filled')
+    scatter(mean(x, 2), estimates(:, 1, idx_params), 140, 'r', 'filled')
     scatter(mean(x, 2), estimates(:, 2, idx_params), 140, 'k', 'filled')
     axis square
 
@@ -190,7 +190,7 @@ for idx_params = 1:2
         ylabel('Evidence Strength ($\mu$)', 'Interpreter', 'latex', 'Color', col.param.mu)
 
     elseif idx_params == 2
-        ylim([0.5 2.0])
+        ylim([0 2.0])
         ylabel('Bound Distance ($\theta$)', 'Interpreter', 'latex', 'Color', col.param.theta)
 
     end
@@ -199,7 +199,7 @@ for idx_params = 1:2
 
 end
 
-exporter(fh, paths, 'quartile_fitting.pdf')
+exporter(fh, paths, 'quartile_fitting_with_ls.pdf')
 
 
 

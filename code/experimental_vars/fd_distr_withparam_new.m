@@ -9,16 +9,18 @@ addParameter(opt,'paths','descr/fd_distr');
 addParameter(opt,'params',{'avg_sm_freeze_norm','avg_fs_1s_norm','sloom','nloom'});
 addParameter(opt,'type','ecdf');
 addParameter(opt,'check_quantiles',false);
+addParameter(opt,'sloom_to_plot','all');
 
 parse(opt,varargin{:});
 
-bouts_proc = opt.Results.bouts;
-export = opt.Results.export;
-period = opt.Results.period;
-paths = opt.Results.paths;
-params = opt.Results.params;
-type = opt.Results.type;
+bouts_proc      = opt.Results.bouts;
+export          = opt.Results.export;
+period          = opt.Results.period;
+paths           = opt.Results.paths;
+params          = opt.Results.params;
+type            = opt.Results.type;
 check_quantiles = opt.Results.check_quantiles;
+sloom_to_plot   = opt.Results.sloom_to_plot;
 
 %% ===================== Infer period =====================
 if isempty(period)
@@ -26,119 +28,140 @@ if isempty(period)
     if numel(u) ~= 1
         error('Mixture of baseline and loom periods');
     end
-    period = ternary(u==1,'loom','bsl');
+    if u == 1
+        period = 'loom';
+    else
+        period = 'bsl';
+    end
 end
+
+%% ===================== Determine which sloom values to plot =====================
+all_sloom = unique(bouts_proc.sloom_norm)';
+
+switch sloom_to_plot
+    case 'all'
+        sloom_vals = all_sloom;
+    case 'slow'
+        sloom_vals = min(all_sloom);
+    case 'fast'
+        sloom_vals = max(all_sloom);
+    otherwise
+        sloom_vals = sloom_to_plot;
+end
+
+n_sloom = numel(sloom_vals);
 
 %% ===================== Loop over parameters =====================
 for idx_param = params
     param = idx_param{1};
+    is_sloom_param = strcmp(param,'sloom');
 
     [num_quantiles, thresholds] = param_settings(param, bouts_proc);
     quantiles = discretize(bouts_proc.(param), thresholds);
 
-    if check_quantiles && ismember('sloom_norm', bouts_proc.Properties.VariableNames)
-
-        fprintf('\nParam: %s\n', param);
-
-        u_sloom = unique(bouts_proc.sloom_norm);
-
-        thr_by_sloom = nan(numel(u_sloom), num_quantiles+1);
-
-        for i = 1:numel(u_sloom)
-            s = u_sloom(i);
-            idx = bouts_proc.sloom_norm == s;
-
-            data_s = bouts_proc.(param)(idx);
-
-            if numel(data_s) < num_quantiles
-                warning('Not enough data for sloom = %.2f', s);
-                continue
-            end
-
-            thr_by_sloom(i,:) = quantile( ...
-                data_s, linspace(0,1,num_quantiles+1));
-
-            fprintf('  sloom = %.2f | ', s);
-            fprintf('%.3f ', thr_by_sloom(i,:));
-            fprintf('\n');
-        end
-
-        % ---- Optional plot (very helpful)
-        figure('Color','w'); hold on
-        for i = 1:numel(u_sloom)
-            plot(0:num_quantiles, thr_by_sloom(i,:), '-o', ...
-                'DisplayName', sprintf('sloom = %.2f', u_sloom(i)));
-        end
-        xlabel('Quantile index')
-        ylabel(strrep(param,'_',' '))
-        title(sprintf('Quantile thresholds by loom speed: %s', param), ...
-            'Interpreter','none')
-        legend('Location','best')
-    end
-
+    %% ===================== Colormap =====================
     col  = cmapper([], num_quantiles);
-    cmap = get_var_cmap(col, param);   % SAFE ACCESS
+    cmap = get_var_cmap(col, param);
 
     %% ===================== Figure =====================
-    fh = figure('Color','w','Position',[100 100 700 500]);
+    if n_sloom == 1 || is_sloom_param
+        fig_width = 380;
+    else
+        fig_width = 500;
+    end
+
+    fh = figure('Color','w','Position',[100 100 fig_width 500]);
     tiledlayout(10,2,'TileSpacing','tight','Padding','compact');
 
-    %% ===================== Tile 1: control variable =====================
+    %% ===================== Control distribution =====================
     nexttile(1,[3 2]); hold on
     plot_control_distribution( ...
         bouts_proc.(param), quantiles, thresholds, cmap, param)
 
     ax = gca;
     pad_ylim(ax,0.075)
-    apply_generic(ax,'no_y',true,'no_x',false,'font_size',18)
+    apply_generic(ax,'no_y',true,'no_x',false,'font_size',20)
+
+    mid_q = ceil(num_quantiles/2) + 1;
+
+    if strcmp(param,'avg_sm_freeze_norm')
+        xlabel('Avg. Social Motion','Interpreter','none','Color',cmap(mid_q,:))
+    elseif strcmp(param,'avg_fs_1s_norm')
+        xlabel('Focal Speed before Loom','Interpreter','none','Color',cmap(mid_q,:))
+    elseif strcmp(param, 'sloom')
+        xlabel('Loom Speed','Interpreter','none','Color',cmap(mid_q,:))
+    end
 
     colormap(cmap(2:end,:));
     clim([0 num_quantiles])
     add_quantile_colorbar(ax,param,num_quantiles)
 
-    ax.XAxis.Exponent = 0;   % disable ×10^n
-    ax.XTickLabelRotation = 0;
+    ax.XAxis.Exponent = 0;
 
     %% ===================== Duration distributions =====================
-    ax_bottom = gobjects(0);
+    ax_bottom = [];
 
-    for idx_sloom = unique(bouts_proc.sloom_norm)'
+    if is_sloom_param
+        % ===== slow & fast loom in SAME tile =====
+        nexttile([7 2]); hold on
 
-        bouts_sloom = bouts_proc(bouts_proc.sloom_norm==idx_sloom,:);
-        qmask = quantiles(bouts_proc.sloom_norm==idx_sloom);
+        for idx_sloom = sloom_vals
+            bouts_sloom = bouts_proc(bouts_proc.sloom_norm==idx_sloom,:);
+            qmask = quantiles(bouts_proc.sloom_norm==idx_sloom);
 
-        nexttile([7 1]); hold on
-        plot_duration_distribution( ...
-            bouts_sloom.durations_s, qmask, ...
-            cmap, num_quantiles, type, period);
+            plot_duration_distribution( ...
+                bouts_sloom.durations_s, qmask, ...
+                cmap, num_quantiles, type, period);
+        end
 
         xlabel('Freeze Duration (s)');
         ylabel(type);
-        apply_generic(gca,'tick_length',0.02,'font_size',20)
+        apply_generic(gca,'tick_length',0.025,'font_size',24, ...
+            'yticks',[0 1],'xticks',[0 10])
 
-        % ---- Condition label
-        txt = ternary(idx_sloom==1,'Slow Loom','Fast Loom');
-        text(gca,1.015,0.015,txt, ...
-            'Units','normalized', ...
-            'FontSize',16, ...
-            'HorizontalAlignment','right', ...
-            'VerticalAlignment','bottom');
+        ax_bottom = gca;
 
-        ax_bottom(end+1) = gca;
+    else
+        % ===== one tile per loom speed =====
+        if n_sloom == 1
+            tile_width = 2;
+        else
+            tile_width = 1;
+        end
+
+        for idx_sloom = sloom_vals
+            bouts_sloom = bouts_proc(bouts_proc.sloom_norm==idx_sloom,:);
+            qmask = quantiles(bouts_proc.sloom_norm==idx_sloom);
+
+            nexttile([7 tile_width]); hold on
+            plot_duration_distribution( ...
+                bouts_sloom.durations_s, qmask, ...
+                cmap, num_quantiles, type, period);
+
+            xlabel('Freeze Duration (s)');
+            ylabel(type);
+            apply_generic(gca,'tick_length',0.025,'font_size',24, ...
+                'yticks',[0 1],'xticks',[0 10])
+
+            if idx_sloom == min(all_sloom)
+                txt = 'Slow Loom';
+            else
+                txt = 'Fast Loom';
+            end
+
+            text(gca,1.015,0.015,txt, ...
+                'Units','normalized', ...
+                'FontSize',16, ...
+                'HorizontalAlignment','right', ...
+                'VerticalAlignment','bottom');
+
+            ax_bottom(end+1) = gca; %#ok<AGROW>
+        end
     end
 
-    if numel(ax_bottom)>1
+    if numel(ax_bottom) > 1
         linkaxes(ax_bottom,'y')
     end
-
-    mid_q = ceil(num_quantiles/2) + 1;  % middle quantile index in the colormap
-    text(ax, 0.98, 0.98, strrep(param,'_',' '), ...
-        'Units','normalized', ...
-        'FontSize', 16, ...
-        'HorizontalAlignment','right', ...
-        'VerticalAlignment','top', ...
-        'Color', cmap(mid_q,:), ...  % color of middle quantile
-        'Interpreter','none');   % prevents underscores from being subscripts
 
     %% ===================== Export =====================
     if export
@@ -173,13 +196,12 @@ if ismember(param,{'nloom','sloom','moving_flies'})
     bh = bar(1:max(quantiles),histcounts(quantiles), ...
         'FaceColor','flat','EdgeColor','none');
     bh.CData = cmap(2:end,:);
-    xlim([.5 max(quantiles) + .5])
+    xlim([.5 max(quantiles)+.5])
     xticks([])
 else
-    % ---- Adaptive binning (Freedman–Diaconis)
     iqr_val = iqr(data);
     if iqr_val > 0
-        bw = 2 * iqr_val / numel(data)^(1/3);
+        bw = 2 * iqr_val / numel(data)^(1/2.1);
         nbins = max(20, ceil(range(data)/bw));
     else
         nbins = 50;
@@ -194,15 +216,14 @@ else
         b.CData(mask,:) = repmat(cmap(1+q,:),sum(mask),1);
     end
 
+    lo = prctile(data,1);
+    hi = prctile(data,99);
+    if lo < hi
+        xlim([lo hi])
+    end
+end
+end
 
-% ---- Robust x-limits for long tails
-lo = prctile(data,1);
-hi = prctile(data,99);
-if lo < hi
-    xlim([lo hi])
-end
-end
-end
 % ---------------------------------------------------------------------
 
 function plot_duration_distribution(durations,qmask,cmap,nq,type,period)
@@ -287,12 +308,6 @@ end
 
 function pad_ylim(ax,fraction)
 yl = ax.YLim;
-p = fraction*diff(yl);
+p = fraction * diff(yl);
 ax.YLim = [yl(1)-p yl(2)+p];
-end
-
-% ---------------------------------------------------------------------
-
-function out = ternary(cond,a,b)
-if cond, out = a; else, out = b; end
 end

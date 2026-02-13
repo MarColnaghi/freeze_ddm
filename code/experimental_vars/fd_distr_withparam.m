@@ -13,10 +13,12 @@ bouts_spontaneous = data_parser_new(bouts, 'period', 'bsl', 'window', 'le', 'typ
 bouts_le = data_parser_new(bouts, 'period', 'loom', 'window', 'le', 'type', 'immobility', 'nloom', 2:20, 'min_dur', 30, 'exclude_flies', true);
 bouts_all = data_parser_new(bouts, 'min_dur', 30, 'exclude_flies', true);
 
-param = {'avg_sm_freeze_norm'};
-period = 'le';
+%%
+'avg_sm_freeze_norm'
+param = {'sloom'}
 type = 'ecdf';
-fh = fd_distr_withparam_new('bouts', bouts_le, 'type', type, 'param', param, 'check_quantiles', true); %, 'avg_ss', 'cum_freeze_time', 'avg_fs_1s_norm', 'n_generated_freezes'})
+ls = 'fast';
+fh = fd_distr_withparam_new('bouts', bouts_le, 'type', type, 'param', param, 'check_quantiles', true);%, 'sloom_to_plot', 'fast'); %, 'avg_ss', 'cum_freeze_time', 'avg_fs_1s_norm', 'n_generated_freezes'})
 
 %% save
-exporter(fh, paths_out, sprintf('%s-%s-%s.pdf', type, param{1}, period));
+exporter(fh, paths_out, sprintf('%s-%s-%s-ls%s.pdf', type, param{1}, period, ls));
