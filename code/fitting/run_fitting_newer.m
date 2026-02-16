@@ -133,7 +133,7 @@ lpriorfun = @(x) msplinetrapezlogpdf(x, LB, PLB, PUB, UB);
 postfun = @(x) lpostfun(x, llfun, lpriorfun);
 
 options_vbmc.Display = 'iter';
-options_vbmc.MaxFunEvals = 1500;
+options_vbmc.MaxFunEvals = 2000;
 
 if vbmc_exhaustive
     options_vbmc.SpecifyTargetNoise = false;

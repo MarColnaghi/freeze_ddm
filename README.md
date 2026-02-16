@@ -1,2 +1,0 @@
-# freeze_ddm
-
