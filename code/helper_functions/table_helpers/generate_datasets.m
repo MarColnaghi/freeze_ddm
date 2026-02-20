@@ -1,7 +1,7 @@
 clear all
 col = cmapper();
 thresholds = define_thresholds();
-imfirst = false;
+imfirst = true;
 
 for threshold_imm = 5:-1:2
     % for threshold_mob =  4:-1:1

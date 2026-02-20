@@ -1,8 +1,8 @@
 function pr = param_res(true_bound, points)
 
 % -- Likelihood / Signal Parameters (Coarse) --
-pr.dt = 1/60;       % 1ms for signal and PDE
-pr.dx = 0.01;
+pr.dt = 1/300;       % 1ms for signal and PDE
+pr.dx = 0.001;
 pr.sigma_sq = 1.0;
 %     pr.bound = 1.0;
 pr.x0 = 0.0;

@@ -188,7 +188,13 @@ for dataset = 1
 
                 z.avg_fs_1s = nan(length(run_lengths), 1);
                 z.avg_fs_1s(onsets >= 61, :) = compute_means(Fly1.velocity(1:end), onsets(onsets >= 61, :) - 60, onsets(onsets >= 61, :) - 1);
+
+                z.avg_fs_loom = nan(length(run_lengths), 1);
+                z.avg_fs_loom(loom_ts_previous > 0) = compute_means(Fly1.velocity(1:end), loom_ts_previous(loom_ts_previous > 0) - 60, loom_ts_previous(loom_ts_previous > 0) - 1);
+
                 z.avg_fs = compute_means(Fly1.velocity(1:end), run_ends - run_lengths, run_ends - 1);
+
+
                 z.avg_pc = compute_means(Fly1.pixelchange(1:end), run_ends - run_lengths, run_ends - 1);
 
                 z.genotype = genotype .* ones(length(run_lengths), 1);

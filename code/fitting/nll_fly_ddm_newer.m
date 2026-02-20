@@ -253,7 +253,7 @@ if strcmp('iid', iid)
         g(bet) = f(ts(bet), bet) ./ trunc_factor(bet)  * fs;
         g(abo) = F(C, abo) ./ trunc_factor(abo);
 
-        g      = max(g, 1e-4);
+        g      = max(g, epsN);
         log_g  = log(g);
 
     elseif  strcmp('simed', tok{1})

@@ -15,7 +15,7 @@ bouts_all = data_parser_new(bouts, 'min_dur', 30, 'exclude_flies', true);
 
 %%
 'avg_sm_freeze_norm'
-param = {'sloom'}
+param = {'avg_fs_loom'}
 type = 'ecdf';
 ls = 'fast';
 fh = fd_distr_withparam_new('bouts', bouts_le, 'type', type, 'param', param, 'check_quantiles', true);%, 'sloom_to_plot', 'fast'); %, 'avg_ss', 'cum_freeze_time', 'avg_fs_1s_norm', 'n_generated_freezes'})

@@ -27,8 +27,8 @@ function [rt, traj, t, det_cum, sto_cum] = drift_diff_new(varargin)
     addParameter(p, 'z',        0,  @(x) validateattributes(x, {'numeric'}, {'scalar'}));
     addParameter(p, 'sigma',    1,  @(x) validateattributes(x, {'numeric'}, {'scalar', 'nonnegative'}));
     addParameter(p, 'dt',       0.01, @(x) validateattributes(x, {'numeric'}, {'scalar', 'positive'}));
-    addParameter(p, 'T',        10,   @(x) validateattributes(x, {'numeric'}, {'scalar', 'positive'}));
-    addParameter(p, 'ndt',      0.3,  @(x) validateattributes(x, {'numeric'}, {'scalar', 'nonnegative'}));
+    addParameter(p, 'T',        10.5,   @(x) validateattributes(x, {'numeric'}, {'scalar', 'positive'}));
+    addParameter(p, 'ndt',      0,  @(x) validateattributes(x, {'numeric'}, {'scalar', 'nonnegative'}));
     addParameter(p, 'truncate', false, @(x) islogical(x));
     addParameter(p, 'seed', []);
 
