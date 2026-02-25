@@ -10,6 +10,8 @@ addParameter(opt, 'window', '');
 addParameter(opt, 'nloom', []);
 addParameter(opt, 'sloom', []);
 addParameter(opt, 'min_dur', 0);
+addParameter(opt, 'max_dur', 9000000000);
+
 addParameter(opt, 'exclude_flies', false);
 
 parse(opt, varargin{:});
@@ -25,6 +27,7 @@ end
 
 % Additional filters
 temp = temp(temp.durations >= opt.Results.min_dur, :);
+temp = temp(temp.durations <= opt.Results.max_dur, :);
 
 % Calculate the number of freezes per each fly.
 [G, ~] = findgroups(temp.fly);
