@@ -5,7 +5,7 @@ pixel_cache = importdata(fullfile(paths.cache_path, 'pixel_cache.mat'));
 loom_cache = importdata(fullfile(paths.cache_path, 'loom_cache.mat'));
 motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 thresholds = define_thresholds;
-fly_id = 517;
+fly_id = 724;
 fly_pc = ~pixel_cache(fly_id);
 fly_loom = loom_cache(fly_id);
 loom_frames = find(diff(fly_loom) == 1) + 1;
@@ -35,7 +35,7 @@ if include_old
 
 end
 
-id_code = 'imm3_mob3_pc4';
+id_code = 'imm2_mob2_pc4';
 types = {'fill_in_combinations_imfirst', 'fill_in_combinations_mobfirst'};
 
 
@@ -44,8 +44,8 @@ for idx_bout_solution = 1:2
     bouts = importdata(fullfile('/Users/marcocolnaghi/PhD/freeze_ddm/datasets', types{idx_bout_solution}, id_code,  'bouts.mat'));
 
     thresholds = define_thresholds;
-    %thresholds.le_window_fl = [5 40];
-    %thresholds.le_window_sl = [15 50];
+%     thresholds.le_window_fl = [0 60];
+%     thresholds.le_window_sl = [0 60];
 
     bouts = bouts_formatting(bouts, thresholds);
     bouts_fly = bouts(bouts.fly == fly_id, :);

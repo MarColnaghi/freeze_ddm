@@ -29,7 +29,7 @@ if nargin == 0
 
     % Define thresholds
     thresholds = define_thresholds;
-    time_window = thresholds.time_window;
+    time_window = [-180 1200]; %thresholds.time_window;
     bouts = bouts_formatting(bouts, thresholds);
 
     % Plot Histogram 2D of Freeze Onset and Freeze Duration
@@ -43,7 +43,7 @@ else
     time_window = thresholds.time_window;
     
     clamp = false;
-    bouts_with_loom = false;
+    bouts_with_loom = 'all';
     zoom =  zoom_flag;
     limits = [0 100];
 end
@@ -116,7 +116,7 @@ for idx_slooms = [unique(bouts.sloom)]'
 
     % Apply Generic Changes
     ax = gca;
-    apply_generic(ax, 20)
+    apply_generic(ax, 'font_size', 20)
     set(ax,'TickLength',[0.02, 0.02])
     grid on
 

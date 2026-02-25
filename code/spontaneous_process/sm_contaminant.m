@@ -2,8 +2,9 @@ fs = 60;
 id_code = 'imm2_mob2_pc4';
 col = cmapper();
 paths_out = path_generator('folder', 'spontaneous_process', 'bouts_id', id_code, 'imfirst', false);
+
 bouts = importdata(fullfile(paths_out.dataset, 'bouts.mat'));
-bouts_spontaneous = data_parser_new(bouts, 'period', 'bsl', 'window', 'all', 'type', 'immobility', 'nloom', 1:20);
+bouts_spontaneous = data_parser_new(bouts, 'period', 'bsl', 'window', 'all', 'type', 'immobility', 'nloom', 2:20);
 bouts_le = data_parser_new(bouts, 'period', 'loom', 'window', 'le', 'type', 'immobility', 'nloom', 2:20, 'min_dur', 30);
 
 sm_spontaneous = extract_sm_from_bouts(bouts_spontaneous, 'type', 'onlyfreeze', 'align', 'offset');
@@ -34,6 +35,9 @@ fill([t_le fliplr(t_le)], ...
 
 plot(t_sp, m_sp, 'LineWidth', 2, 'Color', col.period.bsl)
 plot(t_le, m_le, 'LineWidth', 2, 'Color', col.period.loom)
+
+plot([-median(bouts_spontaneous.durations_s) -median(bouts_spontaneous.durations_s)] ,[0 1], 'Color', col.period.bsl, 'LineStyle', '-.')
+plot([-median(bouts_le.durations_s) -median(bouts_le.durations_s)] ,[0 1], 'Color', col.period.loom, 'LineStyle', '-.')
 
 apply_generic(gca, 'xlim', [-10.1 0.1], 'ylim', [0 1], 'ypos', 'right', 'xticks', -10:2:0)
 ylabel('Social Motion')

@@ -67,17 +67,20 @@ llfun = @(x) nll_fly_ddm_newer(x, surrogate, points, model_str, 'iid', 'n', extr
 
 %% BADS Optimization
 num_iters = n_bads;
+
 if bads_display
     options_bads.Display = 'iter';
 else
     options_bads.Display = 'none';
 end
+
 nvars = numel(PLB);
 x0_all = PLB + rand(num_iters, nvars) .* (PUB - PLB);
 
 eval_param = zeros(num_iters, nvars);
 fval = zeros(num_iters, 1);
 tic
+
 for idx = 1:num_iters
     fprintf('Currently bads run #%d \n', idx)
     [eval_param(idx,:), fval(idx)] = bads(llfun, x0_all(idx,:), LB, UB, PLB, PUB, [], options_bads);
@@ -102,6 +105,30 @@ if pass_ndt
     UB = UB(1:end-1);
 
 end
+
+% Find fixed parameters
+is_fixed = (LB == PLB) & (PLB == PUB) & (PUB == UB);
+
+% Optionally store fixed values
+extra.fixed_param = struct();
+
+idx_params = find(mask);
+
+if any(is_fixed)
+    fixed_names  = lbl(idx_params(is_fixed));
+    fixed_values = LB(is_fixed);
+
+    for i = 1:numel(fixed_names)
+        extra.fixed_param.(fixed_names{i}) = fixed_values(i);
+    end
+end
+
+% Remove fixed parameters from optimization vectors
+eval_param(:, is_fixed) = [];
+LB(is_fixed)  = [];
+PLB(is_fixed) = [];
+PUB(is_fixed) = [];
+UB(is_fixed)  = [];
 
 if ~isempty(ground_truth)
     if width(ground_truth) == width(array2table(estimates, 'VariableNames', lbl))

@@ -66,7 +66,7 @@ fixed.dt       = 1/60;
 fixed.dx       = 0.01;
 fixed.sigma_sq = 1.0;
 fixed.x0       = 0.0;
-fixed.T_trunc  = 0.05;
+fixed.T_trunc  = 0.13;
 fixed.T_max    = 10.5;
 
 % 7. Fine simulation parameters

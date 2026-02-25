@@ -1,5 +1,6 @@
 function [nll, f, fd] = nll_fly_ddm_updated(params, bouts, points, model_num, iid, plot_flag, extra)
-    if nargin < 7, extra = []; end
+    
+if nargin < 7, extra = []; end
     persistent cache
 
     %% =========================

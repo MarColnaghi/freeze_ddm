@@ -10,8 +10,8 @@ bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
 motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 
 thresholds = define_thresholds;
-thresholds.le_window_fl = [5 40];
-thresholds.le_window_sl = [15 50];
+%thresholds.le_window_fl = [5 40];
+%thresholds.le_window_sl = [15 50];
 
 bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
 bouts = bouts_formatting(bouts, thresholds);
@@ -55,7 +55,7 @@ lambda_est = table2array(results_bsl.estimates_mean);
 % extra.lambda = lambda_est(~isnan(lambda_est));
 % extra.tndt = 0;
 
-model_results = run_fitting_newer(bouts_proc, points, 'ed6', paths, 'export', true, 'bads_display', true, 'n_bads', 1, 'extra', extra, 'vbmc_exhaustive', false, 'pass_ndt', true);
+model_results = run_fitting_newer(bouts_proc, points, 'dddim10', paths, 'export', true, 'bads_display', false, 'n_bads', 5, 'extra', extra, 'vbmc_exhaustive', false, 'pass_ndt', false);
 
 %%
 

@@ -112,8 +112,8 @@ y.tsl = bif.tsl;
 y.intercept = bif.intercept;
 
 model = model_func();
-if isfield(extra, 'tndt') && (strcmp('ed', tok{1}) || strcmp('ded', tok{1}))
-    model = rmfield(model, 'tndt');
+if isfield(extra, 'fixed_param')
+    model = rmfield(model, fieldnames(extra.fixed_param));
 end
 
 [gt, lbl] = get_ground_truth_vector(model);
@@ -152,8 +152,6 @@ if strcmp('iid', iid)
 
         [pdf, cdf] = pdf_cdf({'ddm'});
 
-        out.tndt = zeros(size(out, 1), 1);
-
         pdf_ddm_raw = pdf.ddm;
         cdf_ddm_raw = cdf.ddm;
 
@@ -172,6 +170,31 @@ if strcmp('iid', iid)
         log_g = log(g);
 
     elseif  strcmp('dddm', tok{1})
+
+        [pdf, cdf] = pdf_cdf({'ddm'});
+
+        pdf_ddm_raw = pdf.ddm;
+        cdf_ddm_raw = cdf.ddm;
+
+        pdf.ddm = @(ts, mu, theta, ndt) guard_ddm(pdf_ddm_raw, ts, mu, theta, ndt);
+        cdf.ddm = @(ts, mu, theta, ndt) guard_ddm(cdf_ddm_raw, ts, mu, theta, ndt);
+
+        f = @(ts, inds) out.pmix(inds) .* pdf.ddm(ts, out.mu1(inds), out.theta1(inds), out.tndt(inds)) + ...
+            (1 - out.pmix(inds)) .* pdf.ddm(ts, out.mu2(inds), out.theta2(inds), out.tndt(inds));
+        F = @(ts, inds) out.pmix(inds) .* cdf.ddm(ts, out.mu1(inds), out.theta1(inds), out.tndt(inds)) + ...
+            (1 - out.pmix(inds)) .* cdf.ddm(ts, out.mu2(inds), out.theta2(inds), out.tndt(inds));
+
+        trunc_factor = @(inds) max(1 - F(t0, inds), epsN);
+
+        g(bet) = f(ts(bet), bet) ./ trunc_factor(bet);
+        g(abo) = (1 - F(C, abo)) ./ trunc_factor(abo);
+
+        g = max(g, epsN);
+        log_g = log(g);
+
+    elseif  strcmp('dddim', tok{1})
+
+        out.tndt = zeros(height(out), 1);
 
         [pdf, cdf] = pdf_cdf({'ddm'});
 
@@ -490,6 +513,7 @@ end
 end
 
 function y = guard_ddm(fun, t, mu, th, ndt)
+
 % Returns 0 for entries where t <= ndt; calls `fun` otherwise
 mu  = mu(:); th = th(:); ndt = ndt(:);
 if isscalar(t)

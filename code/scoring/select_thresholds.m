@@ -1,5 +1,5 @@
 
-param = {'avg_fs_1s_norm'};
+param = {'avg_fs_loom'};
 id_code = 'imm2_mob2_pc4';
 paths = path_generator('bouts_id', id_code, 'imfirst', false, 'folder', 'descriptive/fd_distr');
 

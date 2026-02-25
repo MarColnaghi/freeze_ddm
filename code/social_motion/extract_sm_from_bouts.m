@@ -31,6 +31,7 @@ switch opt.Results.type
         sm_output = nan(total_flies, total_looms, length(offsets));
 
         for idx_fly = 1:total_flies
+            
             sm_fly = motion_cache(idx_fly);
             freeze_frames = find(diff(loom_cache(idx_fly)) == 1);
             idx_slice = freeze_frames(:) + offsets;
@@ -92,7 +93,8 @@ switch opt.Results.type
 
                 for idx_bouts = 1:total_bouts
                     ons = bouts_le.onsets(idx_bouts);
-                    off = bouts_le.ends(idx_bouts) - 1;
+                    off = bouts_le.ends(idx_bouts);
+                    try
                     sum_motion = motion_cache(bouts_le.fly(idx_bouts));
 
                     freeze_sig = sum_motion(ons:off) ./ 10;
@@ -103,6 +105,9 @@ switch opt.Results.type
                             sm_output(idx_bouts, 1:L) = freeze_sig;
                         case 'offset'
                             sm_output(idx_bouts, end-L+1:end) = freeze_sig;
+                    end
+
+                    catch
                     end
                 end
 
