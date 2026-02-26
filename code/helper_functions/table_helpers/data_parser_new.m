@@ -73,11 +73,11 @@ end
 if strcmp(opt.Results.period, 'bsl')
     temp = temp(temp.period == 0, :);
     temp = temp(temp.nloom < 21, :);
-    temp = temp(temp.frozen_start == 0, :);
+%    temp = temp(temp.frozen_start == 0, :);
 
 elseif strcmp(opt.Results.period, 'loom')
     temp = temp(temp.period == 1, :);
-    temp = temp(temp.frozen_start == 0, :);
+ %   temp = temp(temp.frozen_start == 0, :);
 end
 
 % Select Window: le or not?
@@ -96,14 +96,13 @@ end
 
 % Rescale all the Variables
 temp.durations_s = temp.durations/60;
-temp.latency_s = temp.onsets_loomaligned/60;
-temp.avg_sm_freeze_norm = temp.avg_sm/10;
-temp.avg_fs_freeze_norm = temp.avg_fs/10;
-temp.avg_fs_1s_norm = temp.avg_fs_1s/10;
-temp.sloom_norm = temp.sloom/25;
-temp.nloom_norm = temp.nloom/10;
-temp.onsets_loomaligned_norm = temp.onsets_loomaligned/20;
-temp.time_since_last_norm = temp.time_since_last/400;
+temp.latency = temp.onsets_loomaligned/60;
+temp.sm = temp.avg_sm/10;
+temp.fs = temp.avg_fs_1s/10;
+temp.fs_loom = temp.avg_fs_loom/10;
+temp.ls = temp.sloom/25;
+temp.ln = temp.nloom/10;
+temp.tsl = temp.time_since_last/400;
 
 % Set Thresholds on Freeze Durations, Social Motion and Speed of the Fly
 motion_max = 1.2; % outliers
@@ -111,7 +110,7 @@ speed_max = 2; % outliers
 
 % Threshold the Dataset
 
-temp = temp(temp.avg_sm_freeze_norm <= motion_max & temp.avg_fs_1s_norm <= speed_max, :);
+temp = temp(temp.sm <= motion_max & temp.fs <= speed_max, :);
 
 
 end

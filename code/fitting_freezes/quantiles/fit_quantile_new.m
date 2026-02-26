@@ -6,10 +6,10 @@ paths = path_generator('folder', 'fitting_freezes/le/quantiles', 'bouts_id', id_
 load(fullfile(paths.dataset, 'bouts.mat'));
 
 thresholds = define_thresholds;
-%thresholds.le_window_fl = [1 60];
-%thresholds.le_window_sl = [1 60];
-thresholds.le_window_fl = [0 45];
-thresholds.le_window_sl = [10 55];
+thresholds.le_window_fl = [1 60];
+thresholds.le_window_sl = [1 60];
+% thresholds.le_window_fl = [0 45];
+% thresholds.le_window_sl = [10 55];
 
 bouts = bouts_formatting(bouts, thresholds);
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', 'nloom', 2:20);
@@ -17,8 +17,6 @@ points.censoring = 10.5;
 points.truncation = 0.5;
 
 motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
-
-model_2_fit = 'sddm0';
 
 kde_estimates = importdata(fullfile('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/fitting_freezes/bsl/kde_spontaneous', id_code, 'kde_estimates_bsl.mat'));
 [~,idx] = unique(kde_estimates.Fkde, 'last');
@@ -68,10 +66,17 @@ quant.nloom_norm = [-0.05 0.55 1.05 1.55 2.05];
 %% Now you should fit a model for each quantile
 % of SOCIAL MOTION
 
-n_quantiles = 4;
-quant.avg_sm_freeze_norm = prctile(bouts_proc.avg_sm_freeze_norm, [0, 25, 50, 75, 100]); quant.avg_sm_freeze_norm(1) = 0; quant.avg_sm_freeze_norm(end) = 2;
+model_2_fit = 'dddim0';
+model = str2func(strcat('model_', model_2_fit));
+model_struct = model();
+
+n_quantiles = 3;
+p = linspace(0, 100, n_quantiles + 1);
+
+quant.avg_sm_freeze_norm = prctile(bouts_proc.avg_sm_freeze_norm, p);
 n_looms = length(unique(bouts_proc.sloom_norm));
-n_params = 3;
+n_params = length(fieldnames(model_struct));
+
 estimates = nan(n_quantiles, n_looms, n_params);
 x = nan(n_quantiles, n_looms);
 % vars = {'avg_sm_freeze_norm', 'avg_fs_1s_norm', 'nloom_norm'};
@@ -96,16 +101,26 @@ for idx_vars = vars
             x(idx_quantiles, idx_ln) = median(bouts_quant.(vr));
 
             figure
-            histogram(bouts_quant.durations_s, -1/120:1/5:10.5, 'Normalization', 'pdf')
+            histogram(bouts_quant.durations_s, min(bouts_quant.durations_s):1/6:10.5, 'Normalization', 'pdf')
+            hold on
             drawnow
 
-            model_results = run_fitting_newer(bouts_quant, points, model_2_fit, paths, 'export', false, 'extra', ec, 'pass_ndt', false);
-            model_results.quant = quant.(vr);
+            [~ , estimate] = run_fitting_newer(bouts_quant, points, model_2_fit, paths, 'export', false, 'extra', ec, 'only_bads', true);
 
-            est = table2array(model_results.estimates_mean);
+            estimates(idx_quantiles, idx_ln, :) = estimate;
 
-            estimates(idx_quantiles, idx_ln, :) = est(~isnan(est));
+            bouts_quant.sm = bouts_quant.avg_sm_freeze_norm;
+            bouts_quant.fs = bouts_quant.avg_fs_1s_norm;
+            bouts_quant.ls = bouts_quant.sloom_norm;
+            bouts_quant.smp = bouts_quant.avg_sm_freeze_norm;
+            bouts_quant.ln = bouts_quant.nloom_norm;
+            bouts_quant.tsl = bouts_quant.time_since_last_norm;
 
+            bouts_quant.intercept = ones(height(bouts_quant), 1);
+
+            [~, f, fd] = nll_fly_ddm_newer(estimate, bouts_quant, points, func2str(model), 'iid','p', ec);
+
+            plot(fd, f, 'r--')
         end
     end
 

@@ -1,4 +1,4 @@
-function [model_results] = run_fitting_newer(surrogate, points, idx_model, paths, varargin)
+function [model_results, estimates] = run_fitting_newer(surrogate, points, idx_model, paths, varargin)
 
 % RUN_FITTING_NEWER - Run DDM model fitting with BADS and VBMC
 % Version: Refactored July 2025
@@ -24,8 +24,10 @@ bads_display = opt.Results.bads_display;
 pass_ndt = opt.Results.pass_ndt;
 n_bads = opt.Results.n_bads;
 vbmc_exhaustive = opt.Results.vbmc_exhaustive;
+only_bads = opt.Results.only_bads;
 
 %% Truncation Filter
+
 if isfield(points, 'truncation') && ~isempty(points.truncation)
     mask = surrogate.durations_s >= points.truncation;
     surrogate = surrogate(mask, :);
@@ -40,16 +42,16 @@ end
 
 fprintf('The censoring point is %.2fs \n', points.censoring);
 fprintf('The smallest rt is %.2fs \n', min(surrogate.durations_s));
-fprintf('We are trying to recover a model \n');
 
 %% Model Setup
+
 model_str = sprintf('model_%s', idx_model);
 model_out = eval(model_str);
+
+% Extract the Bounds
 [LB, PLB, PUB, UB, prior_info] = extract_bounds_from_model(model_out);
 
-%% Objective Function
-
-surrogate.sm = surrogate.avg_sm_freeze_norm;
+%% Setting up the table
 
 if ismember('avg_sm_pre_norm', surrogate.Properties.VariableNames)
     surrogate.smp = surrogate.avg_sm_pre_norm;
@@ -57,15 +59,13 @@ else
     surrogate.smp = surrogate.avg_sm_freeze_norm;
 end
 
-surrogate.fs = surrogate.avg_fs_1s_norm;
-surrogate.ln = surrogate.nloom_norm;
-surrogate.ls = surrogate.sloom_norm;
-surrogate.tsl = surrogate.time_since_last_norm;
-
 surrogate.intercept = ones(height(surrogate), 1);
-llfun = @(x) nll_fly_ddm_newer(x, surrogate, points, model_str, 'iid', 'n', extra);
 
 %% BADS Optimization
+
+% Likelihood Function
+llfun = @(x) nll_fly_ddm_newer(x, surrogate, points, model_str, 'iid', 'n', extra);
+
 num_iters = n_bads;
 
 if bads_display
@@ -79,15 +79,14 @@ x0_all = PLB + rand(num_iters, nvars) .* (PUB - PLB);
 
 eval_param = zeros(num_iters, nvars);
 fval = zeros(num_iters, 1);
-tic
 
 for idx = 1:num_iters
     fprintf('Currently bads run #%d \n', idx)
     [eval_param(idx,:), fval(idx)] = bads(llfun, x0_all(idx,:), LB, UB, PLB, PUB, [], options_bads);
-    eval_param(idx,:)
+    fprintf('Estimates: %d \n', eval_param(idx,:))
+    
 end
 
-toc
 [~, best_idx] = sort(fval);
 eval_param = eval_param(best_idx,:); fval = fval(best_idx, :);
 
@@ -96,143 +95,151 @@ estimates = nan(1, length(lbl));
 estimates(find(mask)) = eval_param(1, :);
 temp_table = array2table(estimates, 'VariableNames', lbl);
 
-if pass_ndt
-    extra.tndt = temp_table.tndt_intercept;
-    eval_param = eval_param(:, 1:end-1);
-    LB = LB(1:end-1);
-    PLB = PLB(1:end-1);
-    PUB = PUB(1:end-1);
-    UB = UB(1:end-1);
+if only_bads
+    estimates = eval_param(1, :);
+    model_results = [];
+else
 
-end
 
-% Find fixed parameters
-is_fixed = (LB == PLB) & (PLB == PUB) & (PUB == UB);
+    if pass_ndt
+        extra.tndt = temp_table.tndt_intercept;
+        eval_param = eval_param(:, 1:end-1);
+        LB = LB(1:end-1);
+        PLB = PLB(1:end-1);
+        PUB = PUB(1:end-1);
+        UB = UB(1:end-1);
 
-% Optionally store fixed values
-extra.fixed_param = struct();
-
-idx_params = find(mask);
-
-if any(is_fixed)
-    fixed_names  = lbl(idx_params(is_fixed));
-    fixed_values = LB(is_fixed);
-
-    for i = 1:numel(fixed_names)
-        extra.fixed_param.(fixed_names{i}) = fixed_values(i);
     end
-end
 
-% Remove fixed parameters from optimization vectors
-eval_param(:, is_fixed) = [];
-LB(is_fixed)  = [];
-PLB(is_fixed) = [];
-PUB(is_fixed) = [];
-UB(is_fixed)  = [];
 
-if ~isempty(ground_truth)
-    if width(ground_truth) == width(array2table(estimates, 'VariableNames', lbl))
-        ground_truth = [ground_truth; array2table(estimates, 'VariableNames', lbl)];
-    else
-        try
-        ground_truth = outerjoin(ground_truth, array2table(estimates, 'VariableNames', lbl), 'MergeKeys', true);
-        catch
-            disp('not sharing any parameter')
-            temp = array2table(estimates, 'VariableNames', lbl);
-            temp.(ground_truth.Properties.VariableNames{1}) = nan;
-            ground_truth = outerjoin(ground_truth, temp, 'MergeKeys', true);
+    % Find fixed parameters
+    is_fixed = (LB == PLB) & (PLB == PUB) & (PUB == UB);
+
+    % Optionally store fixed values
+    extra.fixed_param = struct();
+
+    idx_params = find(mask);
+
+    if any(is_fixed)
+        fixed_names  = lbl(idx_params(is_fixed));
+        fixed_values = LB(is_fixed);
+
+        for i = 1:numel(fixed_names)
+            extra.fixed_param.(fixed_names{i}) = fixed_values(i);
         end
     end
-    plc_hold = ground_truth;
-    plc_hold(:, all(ismissing(plc_hold))) = [];
-    disp(plc_hold)
-else
-    starting_point = array2table(estimates, 'VariableNames', lbl);
-    starting_point(:, ismissing(starting_point)) = [];
-    disp(starting_point)
-end
 
-%% VBMC Optimization
-llfun = @(x) -nll_fly_ddm_newer(x, surrogate, points, model_str, 'iid', 'n', extra);
-lpriorfun = @(x) structured_prior(x, prior_info, LB, PLB, PUB, UB);
+    % Remove fixed parameters from optimization vectors
+    eval_param(:, is_fixed) = [];
+    LB(is_fixed)  = [];
+    PLB(is_fixed) = [];
+    PUB(is_fixed) = [];
+    UB(is_fixed)  = [];
 
-lpriorfun = @(x) msplinetrapezlogpdf(x, LB, PLB, PUB, UB);
-postfun = @(x) lpostfun(x, llfun, lpriorfun);
+    if ~isempty(ground_truth)
+        if width(ground_truth) == width(array2table(estimates, 'VariableNames', lbl))
+            ground_truth = [ground_truth; array2table(estimates, 'VariableNames', lbl)];
+        else
+            try
+                ground_truth = outerjoin(ground_truth, array2table(estimates, 'VariableNames', lbl), 'MergeKeys', true);
+            catch
+                disp('not sharing any parameter')
+                temp = array2table(estimates, 'VariableNames', lbl);
+                temp.(ground_truth.Properties.VariableNames{1}) = nan;
+                ground_truth = outerjoin(ground_truth, temp, 'MergeKeys', true);
+            end
+        end
+        plc_hold = ground_truth;
+        plc_hold(:, all(ismissing(plc_hold))) = [];
+        disp(plc_hold)
+    else
+        starting_point = array2table(estimates, 'VariableNames', lbl);
+        starting_point(:, ismissing(starting_point)) = [];
+        disp(starting_point)
+    end
 
-options_vbmc.Display = 'iter';
-options_vbmc.MaxFunEvals = 2000;
+    %% VBMC Optimization
+    llfun = @(x) -nll_fly_ddm_newer(x, surrogate, points, model_str, 'iid', 'n', extra);
+    lpriorfun = @(x) structured_prior(x, prior_info, LB, PLB, PUB, UB);
 
-if vbmc_exhaustive
-    options_vbmc.SpecifyTargetNoise = false;
-    options_vbmc.TolStableCount = 80;
-    options_vbmc.MinFinalComponents = 50;
+    lpriorfun = @(x) msplinetrapezlogpdf(x, LB, PLB, PUB, UB);
+    postfun = @(x) lpostfun(x, llfun, lpriorfun);
 
-    % 1. Force a high-resolution initial map
-    options_vbmc.FunEvalStart = 5;
-    % 2. Force it to run longer (don't stop on stability early)
-    options_vbmc.MinFunEvals = 250;
-    % 3. Force higher precision before declaring convergence
-    % options_vbmc.TolImprovement = 0.004;
-    % 4. Start with a more complex mixture model (smoother tails)
-    options_vbmc.Kwarmup = 5;
-end
+    options_vbmc.Display = 'iter';
+    options_vbmc.MaxFunEvals = 800;
 
-[VP, ELBO, ELBO_SD] = vbmc(postfun, eval_param(1,:), LB, UB, PLB, PUB, options_vbmc);
-[x_mean, x_sigma] = vbmc_moments(VP);
-x_std = sqrt(diag(x_sigma));
-vbmc_plot(VP);
+    if vbmc_exhaustive
+        options_vbmc.SpecifyTargetNoise = false;
+        options_vbmc.TolStableCount = 80;
+        options_vbmc.MinFinalComponents = 50;
 
-%% Store Fit Results
-model_results = struct;
-model_results.elbo = [ELBO, ELBO_SD];
-model_results.elbo_normalized = [ELBO, ELBO_SD] ./ height(surrogate);
-model_results.time = datetime;
+        % 1. Force a high-resolution initial map
+        options_vbmc.FunEvalStart = 5;
+        % 2. Force it to run longer (don't stop on stability early)
+        options_vbmc.MinFunEvals = 250;
+        % 3. Force higher precision before declaring convergence
+        % options_vbmc.TolImprovement = 0.004;
+        % 4. Start with a more complex mixture model (smoother tails)
+        options_vbmc.Kwarmup = 5;
+    end
 
-[~, lbl, mask] = get_ground_truth_vector(model_out);
-estimates_mean = nan(1, length(lbl));
-estimates_std = nan(1, length(lbl));
+    [VP, ELBO, ELBO_SD] = vbmc(postfun, eval_param(1,:), LB, UB, PLB, PUB, options_vbmc);
+    [x_mean, x_sigma] = vbmc_moments(VP);
+    x_std = sqrt(diag(x_sigma));
+    vbmc_plot(VP);
 
-if pass_ndt
-    x_mean = [x_mean extra.tndt];
-    x_std  = [x_std; 0];
-end
+    %% Store Fit Results
+    model_results = struct;
+    model_results.elbo = [ELBO, ELBO_SD];
+    model_results.elbo_normalized = [ELBO, ELBO_SD] ./ height(surrogate);
+    model_results.time = datetime;
 
-estimates_mean(find(mask)) = x_mean;
-estimates_std(find(mask)) = x_std;
+    [~, lbl, mask] = get_ground_truth_vector(model_out);
+    estimates_mean = nan(1, length(lbl));
+    estimates_std = nan(1, length(lbl));
 
-model_results.estimates_mean = array2table(estimates_mean, 'VariableNames', lbl);
-model_results.estimates_std = array2table(estimates_std, 'VariableNames', lbl);
+    if pass_ndt
+        x_mean = [x_mean extra.tndt];
+        x_std  = [x_std; 0];
+    end
 
-model_results.points.truncation = points.truncation;
-model_results.points.censoring = points.censoring;
+    estimates_mean(find(mask)) = x_mean;
+    estimates_std(find(mask)) = x_std;
 
-model_results.starting_position = eval_param(1,:);
+    model_results.estimates_mean = array2table(estimates_mean, 'VariableNames', lbl);
+    model_results.estimates_std = array2table(estimates_std, 'VariableNames', lbl);
 
-model_results.fitted_model = idx_model;
-model_results.vp = VP;
+    model_results.points.truncation = points.truncation;
+    model_results.points.censoring = points.censoring;
 
-if ~isempty(ground_truth)
-    model_results.ground_truth = ground_truth;
+    model_results.starting_position = eval_param(1,:);
 
-end
+    model_results.fitted_model = idx_model;
+    model_results.vp = VP;
 
-%plot_params_new(model, paths, model_result)
+    if ~isempty(ground_truth)
+        model_results.ground_truth = ground_truth;
 
-%% Export Results
-if export_results
-    
-    %% Prepare Paths
-    paths.fig = fullfile(paths.fig, idx_model);
-    paths.results = fullfile(paths.results, idx_model);
-    create_output_dirs(paths);
-    model_results.bouts_path = paths.results; model_results.fig_path = paths.fig;
+    end
 
-    model_results.motion_cache_path = fullfile(paths.cache_path, 'motion_cache.mat');
+    %plot_params_new(model, paths, model_result)
 
-    save(fullfile(paths.results, sprintf('fit_results_%s.mat', idx_model)), '-struct', 'model_results');
-    save(fullfile(paths.results, 'surrogate.mat'), 'surrogate');
-    save(fullfile(paths.results, 'extra.mat'), 'extra');
+    %% Export Results
+    if export_results
 
+        %% Prepare Paths
+        paths.fig = fullfile(paths.fig, idx_model);
+        paths.results = fullfile(paths.results, idx_model);
+        create_output_dirs(paths);
+        model_results.bouts_path = paths.results; model_results.fig_path = paths.fig;
+
+        model_results.motion_cache_path = fullfile(paths.cache_path, 'motion_cache.mat');
+
+        save(fullfile(paths.results, sprintf('fit_results_%s.mat', idx_model)), '-struct', 'model_results');
+        save(fullfile(paths.results, 'surrogate.mat'), 'surrogate');
+        save(fullfile(paths.results, 'extra.mat'), 'extra');
+
+    end
 end
 end
 
