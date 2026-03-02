@@ -1,5 +1,6 @@
 function [model_results] = run_fitting_updated(surrogate, points, idx_model, paths, varargin)
 
+
 % RUN_FITTING_NEWER - Run DDM model fitting with BADS and VBMC
 % Version: Refactored July 2025
 
@@ -7,7 +8,7 @@ function [model_results] = run_fitting_updated(surrogate, points, idx_model, pat
 opt = inputParser;
 addParameter(opt, 'extra', []);
 addParameter(opt, 'export', false);
-addParameter(opt, 'bads_display', false);
+addParameter(opt, 'bads_display', 'iter');
 addParameter(opt, 'pass_ndt', false);
 
 addParameter(opt, 'ground_truth', []);
@@ -24,8 +25,10 @@ bads_display = opt.Results.bads_display;
 pass_ndt = opt.Results.pass_ndt;
 n_bads = opt.Results.n_bads;
 vbmc_exhaustive = opt.Results.vbmc_exhaustive;
+only_bads = opt.Results.only_bads;
 
 %% Truncation Filter
+
 if isfield(points, 'truncation') && ~isempty(points.truncation)
     mask = surrogate.durations_s >= points.truncation;
     surrogate = surrogate(mask, :);
@@ -40,51 +43,64 @@ end
 
 fprintf('The censoring point is %.2fs \n', points.censoring);
 fprintf('The smallest rt is %.2fs \n', min(surrogate.durations_s));
-fprintf('We are trying to recover a model \n');
 
 %% Model Setup
-model_str = sprintf('model_%s', idx_model);
-model_out = eval(model_str);
-[LB, PLB, PUB, UB] = extract_bounds_from_model(model_out);
+model_func = str2func(sprintf('model_%s', idx_model));
+model_obj = model_func();
 
-%% Objective Function
+% Extract the Bounds
+[LB, PLB, PUB, UB, ~] = extract_bounds_from_model_new(model_obj);
+[~, lbl] = get_ground_truth_vector_new(model_obj);
 
-surrogate.sm = surrogate.avg_sm_freeze_norm;
+%% Setting up the table
 
-if ismember('avg_sm_pre_norm', surrogate.Properties.VariableNames)
-    surrogate.smp = surrogate.avg_sm_pre_norm;
-else
-    surrogate.smp = surrogate.avg_sm_freeze_norm;
-end
-
-surrogate.fs = surrogate.avg_fs_1s_norm;
-surrogate.ln = surrogate.nloom_norm;
-surrogate.ls = surrogate.sloom_norm;
 surrogate.intercept = ones(height(surrogate), 1);
-llfun = @(x) nll_fly_ddm_updated(x, surrogate, points, model_str, 'iid', 'n', extra);
+if ~ismember('smp', surrogate.Properties.VariableNames)
+    surrogate.smp = surrogate.sm;
+end
 
 %% BADS Optimization
-num_iters = n_bads;
-if bads_display
-    options_bads.Display = 'iter';
-else
-    options_bads.Display = 'none';
-end
-nvars = numel(PLB);
-x0_all = PLB + rand(num_iters, nvars) .* (PUB - PLB);
 
+fprintf('Building optimized likelihood factory...\n');
+
+llfun = likelihood_factory_working(model_func, surrogate, points);
+% Optimization Options
+num_iters = n_bads;
+options_bads = bads('defaults');
+options_bads.Display = bads_display; % Or 'none'
+
+nvars = numel(PLB);
 eval_param = zeros(num_iters, nvars);
 fval = zeros(num_iters, 1);
+
 tic
 for idx = 1:num_iters
-    fprintf('Currently bads run #%d \n', idx)
-    [eval_param(idx,:), fval(idx)] = bads(llfun, x0_all(idx,:), LB, UB, PLB, PUB, [], options_bads);
-    eval_param(idx,:)
+    fprintf('\n--- Starting BADS run #%d/%d ---\n', idx, num_iters);
+    
+    % Random starting point within Plausible Bounds
+    x0 = PLB + rand(1, nvars) .* (PUB - PLB);
+    
+    % Run Optimizer
+    [eval_param(idx,:), fval(idx)] = bads(llfun, x0, LB, UB, PLB, PUB, [], options_bads);
+    
+    % --- PRINT RESULTS FOR THIS RUN ---
+    fprintf('Run #%d Finished. Final NLL: %.4f\n', idx, fval(idx));
+    
+    % Create a temporary table just for a slick display
+    res_table = array2table(eval_param(idx,:), 'VariableNames', lbl);
+    disp('Evaluated Parameters:');
+    disp(res_table); 
+    fprintf('--------------------------------------\n');
 end
-
 toc
-[~, best_idx] = sort(fval);
-eval_param = eval_param(best_idx,:); fval = fval(best_idx, :);
+
+% Sort results
+[fval, best_idx] = sort(fval);
+eval_param = eval_param(best_idx, :);
+
+model_results.best_x = eval_param(1,:);
+model_results.best_fval = fval(1);
+
 
 [~, lbl, mask] = get_ground_truth_vector(model_out);
 estimates = nan(1, length(lbl));

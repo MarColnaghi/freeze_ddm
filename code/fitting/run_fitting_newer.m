@@ -53,10 +53,10 @@ model_out = eval(model_str);
 
 %% Setting up the table
 
-if ismember('avg_sm_pre_norm', surrogate.Properties.VariableNames)
-    surrogate.smp = surrogate.avg_sm_pre_norm;
+if ismember('smp', surrogate.Properties.VariableNames)
+    surrogate.smp = surrogate.smp;
 else
-    surrogate.smp = surrogate.avg_sm_freeze_norm;
+    surrogate.smp = surrogate.sm;
 end
 
 surrogate.intercept = ones(height(surrogate), 1);
@@ -80,12 +80,14 @@ x0_all = PLB + rand(num_iters, nvars) .* (PUB - PLB);
 eval_param = zeros(num_iters, nvars);
 fval = zeros(num_iters, 1);
 
+tic 
 for idx = 1:num_iters
     fprintf('Currently bads run #%d \n', idx)
     [eval_param(idx,:), fval(idx)] = bads(llfun, x0_all(idx,:), LB, UB, PLB, PUB, [], options_bads);
     fprintf('Estimates: %d \n', eval_param(idx,:))
     
 end
+toc
 
 [~, best_idx] = sort(fval);
 eval_param = eval_param(best_idx,:); fval = fval(best_idx, :);

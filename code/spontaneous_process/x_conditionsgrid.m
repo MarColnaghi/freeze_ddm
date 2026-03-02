@@ -16,7 +16,7 @@ for idx_sm = 1:3
             nexttile(t)
             hold on
 
-            exp_generated = exprnd(1/9, 500000, 1); % + exprnd(1/9, 500000, 1);
+            exp_generated = exprnd(1/9, 5000000, 1); % + exprnd(1/9, 500000, 1);
             exp_generated = exp_generated(exp_generated >= min(bouts_spontaneous.durations_s));
             histogram(exp_generated * 60, 1:1:630, 'Normalization', 'probability', 'EdgeColor', 'k', 'FaceAlpha', 0.3, 'DisplayStyle', 'stairs')
 

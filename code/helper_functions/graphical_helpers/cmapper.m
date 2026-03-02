@@ -136,6 +136,10 @@ col.bsl  = 'k';
 
 col.n_mov_flies = cbrewer2('RdBu', 5);
 
+%%
+col.stationary_sm = '#FF595E';
+col.timevarying_sm = '#1982C4';
+
 end
 
 function cmap = get_var_cmap(col, varname)

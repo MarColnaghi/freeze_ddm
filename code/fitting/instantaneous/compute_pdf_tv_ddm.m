@@ -1,5 +1,9 @@
 function [pdf] = compute_pdf_tv_ddm(out, points)
 
+if ~isfield(out, 'tndt')
+    out.tndt = zeros(height(out), 1);
+end
+
 pr = param_res(out.theta1, points);
 out_s = ddm_pdf_from_trace([0, out.theta1 out.tndt], out.mu1, pr);
 

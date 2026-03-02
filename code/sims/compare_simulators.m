@@ -21,7 +21,7 @@ sm_signal_us = interp1(time_vector(:), sm_signal', time_vector_us(:), 'nearest')
 param_res(true_bound, points)
 
 idx_trial = 6786;
-n_sims = 300000;
+n_sims = 50000;
 mu_tv = sm_signal_us(1:end-1 , idx_trial) * beta_drift;
 sim_params_vec = [dt, 1, 0, true_bound, 0];
 

@@ -10,14 +10,14 @@ load(fullfile(paths.dataset, 'bouts.mat'));
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le');
 motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 
-% Only save useful variables in the table
-y = table;
-y.sm = bouts_proc.avg_sm_freeze_norm;
-y.fs = bouts_proc.avg_fs_1s_norm;
-y.ln = bouts_proc.nloom_norm;
-y.ls = bouts_proc.sloom_norm;
-y.intercept = ones(height(y),1);   % N‑by‑1 column of ones
-predictors = y.Properties.VariableNames;
+% % Only save useful variables in the table
+% y = table;
+% y.sm = bouts_proc.avg_sm_freeze_norm;
+% y.fs = bouts_proc.avg_fs_1s_norm;
+% y.ln = bouts_proc.nloom_norm;
+% y.ls = bouts_proc.sloom_norm;
+% y.intercept = ones(height(y),1);   % N‑by‑1 column of ones
+% predictors = y.Properties.VariableNames;
 
 ncomp_vars = table();
 link_linear = @(x) x;     % log link for bound height
@@ -73,12 +73,12 @@ model.tndt = struct( ...
     'predictors', {{ ...
     struct('name', 'intercept') ...
     }}, ...
-    'ground_truth', 0.0, ...
+    'ground_truth', 0.3, ...
     'link', link_linear ...
     );
 
 % Specify the seed
-sim_params.rng = 567800;
+sim_params.rng = 213;
 rng(sim_params.rng);
 
 % General simulation parameters
@@ -89,7 +89,7 @@ sim_params.time_vector = 0:sim_params.dt:sim_params.T;
 sim_params.z = 0;
 
 points.censoring = sim_params.T;
-points.truncation = 0.02;
+points.truncation = 0;
 
 % Simulation settings
 sim_params.kde_grid = 0:1/1200:120;
@@ -124,10 +124,11 @@ soc_mot_array = cell2mat(sm_during)';
 extra.soc_mot_array = soc_mot_array;
 y.smp = mean(sm_pre, 2);
 
+bouts_proc.intercept = ones(height(bouts_proc), 1);
 [gt, lbl] = get_ground_truth_vector(model);
 x = gt(~isnan(gt));
 gt_table = array2table(gt, 'VariableNames', lbl);
-ncomp_vars = evaluate_model(model, gt_table, y);
+ncomp_vars = evaluate_model(model, gt_table, bouts_proc);
 
 tic
 for idx_trials = 1:sim_params.n_trials
@@ -181,6 +182,7 @@ for idx_trials = 1:sim_params.n_trials
     rt.ig(idx_trials) = rt.decision(idx_trials) + tndt_s;
 
 end
+
 toc
 
 rt = [rt ncomp_vars];
@@ -206,21 +208,17 @@ xlabel('|t_{simul} - t_{sampled}| (s)'); ylabel('pdf')
 
 % For some simulation it will go past ddm_params.T, so we need to censor those.
 
-
-%  Now we added our vector column to the bouts table.
+%  Now we added our vector column to the bouts table.yo
 bouts_proc.durations_s = rt.ig;
-bouts_proc.sm = bouts_proc.avg_sm_freeze_norm;
-bouts_proc.smp = mean(sm_pre, 2);
-bouts_proc.avg_sm_pre_norm = mean(sm_pre, 2);
-bouts_proc.fs = bouts_proc.avg_fs_1s_norm;
-bouts_proc.ls = bouts_proc.sloom_norm;
-bouts_proc.ln = bouts_proc.nloom_norm;
-bouts_proc.intercept = ones(height(y),1);
 
 tic 
-model_results = run_fitting_newer(bouts_proc, points, 'dddim2', paths, 'export', true, 'extra', [], 'ground_truth', gt_table, 'n_bads', 1);
+model_results = run_fitting_updated(bouts_proc, points, '1', paths, 'export', true, 'extra', [], 'ground_truth', gt_table, 'n_bads', 8, 'bads_display', 'none');
+
+model_results = run_fitting_updated(bouts_proc, points, '2', paths, 'export', true, 'extra', [], 'ground_truth', gt_table, 'n_bads', 8, 'bads_display', 'none');
+model_results = run_fitting_newer(bouts_proc, points, 'dddm2', paths, 'export', true, 'extra', [], 'ground_truth', gt_table, 'n_bads', 8, 'bads_display', false);
 toc
 
+%%
 [fh, ax, ax_inset] = fd_conditions('results', model_results, 'no_y', true, 'vis', 'on');
 overlay_fits(fh, ax, ax_inset, 'results', model_results, 'export', true, 'extra', extra);
 %plot_fit('freezes', bouts_proc, 'results', model_results)

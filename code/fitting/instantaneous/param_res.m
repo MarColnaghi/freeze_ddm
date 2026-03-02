@@ -1,14 +1,14 @@
 function pr = param_res(true_bound, points)
 
 % -- Likelihood / Signal Parameters (Coarse) --
-pr.dt = 1/300;       % 1ms for signal and PDE
-pr.dx = 0.001;
+pr.dt = 1/60;       % 1ms for signal and PDE
+pr.dx = 0.00025;
 pr.sigma_sq = 1.0;
 %     pr.bound = 1.0;
 pr.x0 = 0.0;
 
 % PDE Grid Setup
-x_min = -7;
+x_min = -8;
 grid_size = round((true_bound - x_min) / pr.dx) + 1;
 start_idx = round((pr.x0 - x_min) / pr.dx) + 1;
 

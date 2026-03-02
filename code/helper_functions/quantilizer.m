@@ -19,16 +19,16 @@ else
 end
 
 % Select Loom
-mask_sloom = bouts.sloom_norm == idx_loom_speeds;
+mask_sloom = bouts.ls == idx_loom_speeds;
 bouts_sloom = bouts(mask_sloom, :);
 first_mask = find(mask_sloom);
 
 % Compute quantiles and discretize
-thr_sm = quantile(bouts_sloom.avg_sm_freeze_norm, linspace(0, 1, quant.sm + 1));
-quant_sm = discretize(bouts_sloom.avg_sm_freeze_norm, thr_sm);
+thr_sm = quantile(bouts_sloom.sm, linspace(0, 1, quant.sm + 1));
+quant_sm = discretize(bouts_sloom.sm, thr_sm);
 
-thr_fs = quantile(bouts_sloom.avg_fs_1s_norm, linspace(0, 1, quant.fs + 1));
-quant_fs = discretize(bouts_sloom.avg_fs_1s_norm, thr_fs);
+thr_fs = quantile(bouts_sloom.fs, linspace(0, 1, quant.fs + 1));
+quant_fs = discretize(bouts_sloom.fs, thr_fs);
 
 % Final selection
 if isfield(idx_quanti, 'ln')

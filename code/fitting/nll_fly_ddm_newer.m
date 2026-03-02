@@ -256,7 +256,7 @@ if strcmp('iid', iid)
         f = @(ts, inds) pdf.exp(ts, out.lambda(inds));
         F = @(ts, inds) cdf.exp(ts, out.lambda(inds));
 
-        trunc_factor = @(inds) max(1 - F(t0, inds, extra), epsN);
+        trunc_factor = @(inds) max(1 - F(t0, inds), epsN);
 
         g(bet) = f(ts(bet), bet) ./ trunc_factor(bet);
         g(abo) = (1 - F(C, abo)) ./ trunc_factor(abo);
