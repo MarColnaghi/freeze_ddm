@@ -4,7 +4,7 @@ model_list = {'dddim2'};
 run_list   = {'run01_010326_1800'};
 
 paths_analysis = path_generator('folder', fullfile('momentary_integration','alternative_test', model_list{1}, run_list{1}));
-
+paths_analysis.fig = fullfile(paths_analysis.fig, 'examples');
 col = cmapper('', 2);
 
 ll = struct2table(importdata(fullfile(paths_analysis.results, 'll_table.mat')));
