@@ -1,5 +1,6 @@
 function [pdf] = compute_pdf_tv_ddm(out, points)
-    % Set default NDT if missing
+    
+% Set default NDT if missing
     if ~isfield(out, 'tndt')
         out.tndt = zeros(height(out), 1);
     end

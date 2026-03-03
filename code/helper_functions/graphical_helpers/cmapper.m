@@ -136,6 +136,8 @@ col.bsl  = 'k';
 
 col.n_mov_flies = cbrewer2('RdBu', 5);
 
+col.ll = cbrewer2('RdBu', 5);
+
 %%
 col.stationary_sm = '#FF595E';
 col.timevarying_sm = '#1982C4';
