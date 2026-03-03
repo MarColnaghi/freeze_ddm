@@ -38,15 +38,15 @@ map_idx = round(interp1(linspace(-max_lim, max_lim, cmap_size), 1:cmap_size, dif
 % 4. Extract the specific colors for your bouts
 bout_colors = col_map(map_idx, :);
 
-selection = 'random';
+selection = 'best';
 
 if strcmp(selection, 'best')
-    selected = i(end - items + 1:end)';
+    selected = i(end - items + 2:end)';
 elseif strcmp(selection, 'worst')
-    selected = i(1:items)';
+    selected = i(1:items - 1)';
 elseif strcmp(selection, 'random')
     % 1. Pick 16 random indices from the pool of available bout indices
-    rand_indices = randperm(n_bouts, items); 
+    rand_indices = randperm(n_bouts, items - 1); 
     
     % 2. Extract the actual 'diff' values for these specific bouts
     rand_diffs = diff(rand_indices);
@@ -99,10 +99,8 @@ for idx_selected_bout = selected %
     plot(pdf_ddm_st.t, pdf_ddm_st.ddm, 'LineWidth', 1.4, 'Color', col.stationary_sm)
     stem(fd(end), pdf_ddm_st.survival, 'Color', col.stationary_sm)
 
-    trapz(fd(1:end - 1), f(1:end - 1)) + f(end)
     trapz(pdf_ddm_tv.t(pdf_ddm_tv.t >= data(1).results.points.truncation), pdf_ddm_tv.ddm(pdf_ddm_tv.t >= data(1).results.points.truncation)) + pdf_ddm_tv.survival
-
-
+    trapz(pdf_ddm_st.t(pdf_ddm_st.t >= data(1).results.points.truncation), pdf_ddm_st.ddm(pdf_ddm_st.t >= data(1).results.points.truncation)) + pdf_ddm_st.survival
 
     ylabel('density')
 
@@ -155,48 +153,49 @@ for idx_selected_bout = selected %
 
     % Use scatter_y_pos for the marker
     scatter(dur_s, scatter_y_pos, 125, 'filled', '^', ...
-        'Clipping', 'off', 'MarkerFaceColor', bout_colors(idx_selected_bout, :))
+        'Clipping', 'off', 'MarkerFaceColor', bout_colors(idx_selected_bout, :), 'MarkerEdgeColor', 'k')
 
     
 end
 
 
-exporter(fh, paths_analysis, sprintf('examples_%s_%d.pdf', selection, selected(1)))
+nexttile(items) % This jumps to the 16th tile (bottom right)
+hold on
 
-% --- Create a separate Legend/Scale Figure ---
-f_leg = figure('Color', 'w', 'Position', [100, 100, 400, 200]);
-tiledlayout(2, 1, 'TileSpacing', 'none')
-nexttile(2)
-ax_leg = gca; % Thin bar in the middle
+% 1. Plot Histogram (Top half of the tile)
+% We use a normalized Y-scale to fit both plots in one tile
+[counts, centers] = histcounts(diff, -2:0.02:2);
+max_c = max(counts);
+start_pos = 0.2;
+% Shift histogram up so it sits above the colorbar
+fill([centers(1), centers], [start_pos, (counts/max_c)*0.5 + start_pos,start_pos], ...
+     'k', 'EdgeColor', 'none');
 
-% 1. Create a dummy imagesc to represent the RdBu scale
-% We use a horizontal gradient from -max_lim to max_lim
+% 2. Plot Colorbar Scale (Bottom half of the tile)
 x_range = linspace(-max_lim, max_lim, 256);
-imagesc(x_range, [0 1], x_range); 
-colormap(ax_leg, col_map); % Apply the RdBu map here
-set(ax_leg, 'YTick', [], 'XAxisLocation', 'bottom');
+imagesc(x_range, -0.4, x_range); 
+colormap(gca, col_map); % Ensure the RdBu map is applied to this tile
 
-% 2. Add the selected bouts as markers on this scale
-hold on;
-for k = 1:length(selected)
-    idx_bout = selected(k);
-    val_diff = diff(idx_bout);
-    % Plot a marker at the exact difference value on the scale
-    scatter(val_diff, -0.4, 65, 'filled', '^', ...
-        'MarkerFaceColor', 'k', 'MarkerEdgeColor', 'w');
+% 3. Add markers for the selected bouts
+for idx_selected_bout = selected
+    % Get the specific delta LL for this bout to place it on the x-axis
+    val_diff = diff(idx_selected_bout); 
+    
+    % Use idx_selected_bout to pull the EXACT color used in the main loop
+    scatter(val_diff, start_pos - 0.05, 40, 'filled', '^', ...
+        'MarkerFaceColor', bout_colors(idx_selected_bout, :), ... 
+        'MarkerEdgeColor', 'k', ...
+        'Clipping', 'off');
 end
 
-% 3. Labels and formatting
-xlabel('\Delta Log-Likelihood');
-xlim([-max_lim, max_lim]);
-
-apply_generic(ax_leg, 'no_y', true)
-
-nexttile(1)
+% 4. Formatting the Legend Tile
 ax = gca;
-histogram(c, -3:0.02:3, 'EdgeColor', 'none', 'FaceColor', 'k')
 xlim([-max_lim, max_lim]);
-apply_generic(ax, 'no_y', true, 'no_x', true)
+ylim([-0.1, 1]);
+xlabel('\Delta LL (tv - st)', 'FontSize', 12);
+set(gca, 'YTick', [], 'Box', 'off', 'Color', 'none');
+apply_generic(ax, 'no_y', true, 'font_size', 20)
+
 
 % 4. Save this separate legend
-exporter(f_leg, paths_analysis, sprintf('legend_%s_%d.pdf', selection, selected(1)));
+exporter(fh, paths_analysis, sprintf('examples_%s_%d.pdf', selection, selected(1)))
