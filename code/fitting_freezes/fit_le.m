@@ -10,8 +10,8 @@ bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
 motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 
 thresholds = define_thresholds;
-%thresholds.le_window_fl = [5 40];
-%thresholds.le_window_sl = [15 50];
+thresholds.le_window_fl = [5 40];
+thresholds.le_window_sl = [15 50];
 
 bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
 bouts = bouts_formatting(bouts, thresholds);
