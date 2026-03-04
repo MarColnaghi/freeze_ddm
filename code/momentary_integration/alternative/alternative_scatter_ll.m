@@ -19,7 +19,7 @@ xlim([-50 height(ll) + 50])
 ax = gca;
 
 [sorted_deltall, idx_deltall_tv] = sort(ll.tv - ll.st);
-idx_crossing = find(sorted_deltall > 0);
+idx_crossing = find(sorted_deltall > 0, 1);
 
 fh = figure('color','w','Position',[100, 100, 500, 500]);
 tiledlayout(1, 1, 'TileSpacing', 'compact', 'Padding', 'compact')
