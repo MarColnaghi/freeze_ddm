@@ -42,7 +42,7 @@ fill([min_val, max_val, max_val], [min_val, min_val, max_val], ...
 
 % 4. Plot the reference line and scatter on top
 plot([min_val max_val], [min_val max_val], 'k--', 'LineWidth', 1)
-scatter(ll.st, ll.tv, 25, 'k', 'filled', 'MarkerFaceAlpha', 0.2)
+scatter(ll.st, ll.st_theory, 25, 1:length(ll.st), 'filled', 'MarkerFaceAlpha', 0.2)
 
 % 5. Adjust labels and axis
 axis square
@@ -51,3 +51,48 @@ ylim([min_val, max_val])
 xlabel('stationary LL')
 ylabel('time-varying LL')
 apply_generic(gca)
+
+
+%%
+
+% --- 1. Identify the outliers ---
+% Calculate the absolute deviation from the diagonal
+ll.deviation = abs(ll.st - ll.st_theory);
+
+% Define a threshold (e.g., 0.5 units) or use the indices you found via inspection
+% If you want to grab the specific points you saw (e.g. index 450 to 500):
+problematic_idx = find(ll.deviation > 0.025); 
+
+% Display the metadata for these specific bouts
+disp('Bouts with significant deviation from theory:');
+disp(data(1).table(problematic_idx, :));
+
+% --- 2. Visualization with Annotated Deviations ---
+fh = figure('color','w','Position',[100, 100, 600, 600]);
+ax = axes('NextPlot', 'add', 'Box', 'off', 'TickDir', 'out');
+
+% Background Triangles (Model comparison context)
+min_val = -10; max_val = 3;
+fill([min_val, min_val, max_val], [min_val, max_val, max_val], ...
+    hex2rgb(col.timevarying_sm), 'FaceAlpha', 0.1, 'EdgeColor', 'none');
+fill([min_val, max_val, max_val], [min_val, min_val, max_val], ...
+    hex2rgb(col.stationary_sm), 'FaceAlpha', 0.1, 'EdgeColor', 'none');
+
+% Plot Diagonal
+plot([min_val max_val], [min_val max_val], 'k:', 'LineWidth', 1.5)
+
+% Scatter points - Color by Deviation to make them pop
+scatter(ll.st, ll.st_theory, 30, ll.deviation, 'filled', 'MarkerFaceAlpha', 0.5);
+colormap(ax, colorcet('R2')); % Linear highlight for the outliers
+cb = colorbar; cb.Label.String = 'Abs Deviation from Theory';
+
+% Highlight your "inspected" points specifically (optional)
+plot(ll.st(problematic_idx), ll.st_theory(problematic_idx), 'ro', 'MarkerSize', 8);
+
+% Labels
+xlabel('Stationary LL (Computed)');
+ylabel('Stationary LL (Theoretical)');
+title('Verification of Stationary Model Likelihoods');
+axis square; grid on;
+xlim([min_val, max_val]); ylim([min_val, max_val]);
+apply_generic(ax);

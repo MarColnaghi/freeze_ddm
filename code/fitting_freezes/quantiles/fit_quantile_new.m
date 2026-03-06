@@ -1,9 +1,10 @@
 clearvars
 
 col = cmapper();
-threshold_imm = 3; threshold_mob = 3; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
+threshold_imm = 2; threshold_mob = 2; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
 paths = path_generator('folder', 'fitting_freezes/le/quantiles', 'bouts_id', id_code);
-load(fullfile(paths.dataset, 'bouts.mat'));
+bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
+motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 
 thresholds = define_thresholds;
 %thresholds.le_window_fl = [1 60];
@@ -13,31 +14,19 @@ thresholds = define_thresholds;
 
 bouts = bouts_formatting(bouts, thresholds);
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', 'nloom', 2:20);
-points.censoring = 10.5;
-points.truncation = 0.3;
 
-motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
-
-kde_estimates = importdata(fullfile('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/fitting_freezes/bsl/kde_spontaneous', id_code, 'kde_estimates_bsl.mat'));
-[~,idx] = unique(kde_estimates.Fkde, 'last');
-extra.Fkde = kde_estimates.Fkde(idx); extra.xkde = kde_estimates.xkde(idx); extra.fkde = kde_estimates.fkde(idx);
-
-% Extract Social Motion TimeSeries
-chunk_len = points.censoring * 60;
 total_length = 30;
 
-for idx_trials = 1:height(bouts_proc)
+[mean_sm_before_freeze, mean_sm_during_freeze] = extract_sm_columns(bouts_proc, motion_cache, 'chunk_dur', total_length);
+bouts_proc.smp = mean_sm_before_freeze;
 
-    ons = bouts_proc.onsets(idx_trials);
-    sum_motion = motion_cache(bouts_proc.fly(idx_trials)) ./ 10;
-    sm_during{idx_trials} = sum_motion(ons:ons + chunk_len) ./ 10;
+% At some point we should modify this piece of code and unify
+% extract_sm_columns and extract_sm_from_bouts.
 
-    sum_motion = motion_cache(bouts_proc.fly(idx_trials));
+% sm_before_freeze = mean(extract_sm_from_bouts(bouts_proc, 'type', 'onsets', 'window', [-31 -1]), 2);
 
-    sm_pre(idx_trials, :) = sum_motion(ons - total_length:ons - 1) ./ 10;
-end
-
-bouts_proc.smp = mean(sm_pre, 2);
+points.censoring = 10.5;
+points.truncation = 0.5;
 
 extra.soc_mot_array = cell2mat(sm_during)';
 

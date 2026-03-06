@@ -73,11 +73,11 @@ end
 if strcmp(opt.Results.period, 'bsl')
     temp = temp(temp.period == 0, :);
     temp = temp(temp.nloom < 21, :);
-%    temp = temp(temp.frozen_start == 0, :);
+    %temp = temp(temp.frozen_start == 0, :);
 
 elseif strcmp(opt.Results.period, 'loom')
     temp = temp(temp.period == 1, :);
- %   temp = temp(temp.frozen_start == 0, :);
+  %  temp = temp(temp.frozen_start == 0, :);
 end
 
 % Select Window: le or not?
@@ -106,7 +106,7 @@ temp.tsl = temp.time_since_last/400;
 
 % Set Thresholds on Freeze Durations, Social Motion and Speed of the Fly
 motion_max = 2; % outliers
-speed_max = 2; % outliers
+speed_max = 2.1; % outliers
 
 % Threshold the Dataset
 

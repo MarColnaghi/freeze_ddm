@@ -38,7 +38,7 @@ map_idx = round(interp1(linspace(-max_lim, max_lim, cmap_size), 1:cmap_size, dif
 % 4. Extract the specific colors for your bouts
 bout_colors = col_map(map_idx, :);
 
-selection = 'best';
+selection = 'selection';
 
 if strcmp(selection, 'best')
     selected = i(end - items + 2:end)';
@@ -54,6 +54,11 @@ elseif strcmp(selection, 'random')
     % 3. Sort the random selection based on those 'diff' values
     [~, sort_idx] = sort(rand_diffs);
     selected = rand_indices(sort_idx); % Now they are ordered by diff
+
+    elseif strcmp(selection, 'selection')
+    selected = [4 11];
+    %selected = problematic_idx(end-7)';
+
 end
 
 for idx_selected_bout = selected %
@@ -61,7 +66,7 @@ for idx_selected_bout = selected %
     % Current freeze row
     freeze_row = freezes_ref(idx_selected_bout, :);
     dur_s      = freeze_row.durations_s;
-    is_censored = dur_s >= censoring_val;
+    is_censored = dur_s > censoring_val;
     dur_s(is_censored) = censoring_val + 1/60;
 
     % Update external covariate for current bout
@@ -99,8 +104,10 @@ for idx_selected_bout = selected %
     plot(pdf_ddm_st.t, pdf_ddm_st.ddm, 'LineWidth', 1.4, 'Color', col.stationary_sm)
     stem(fd(end), pdf_ddm_st.survival, 'Color', col.stationary_sm)
 
-    trapz(pdf_ddm_tv.t(pdf_ddm_tv.t >= data(1).results.points.truncation), pdf_ddm_tv.ddm(pdf_ddm_tv.t >= data(1).results.points.truncation)) + pdf_ddm_tv.survival
-    trapz(pdf_ddm_st.t(pdf_ddm_st.t >= data(1).results.points.truncation), pdf_ddm_st.ddm(pdf_ddm_st.t >= data(1).results.points.truncation)) + pdf_ddm_st.survival
+    ll_st_theory(idx_selected_bout) - ll_st(idx_selected_bout)
+    plot(fd, f, 'k--');
+    %trapz(pdf_ddm_tv.t(pdf_ddm_tv.t >= data(1).results.points.truncation), pdf_ddm_tv.ddm(pdf_ddm_tv.t >= data(1).results.points.truncation)) + pdf_ddm_tv.survival
+    %trapz(pdf_ddm_st.t(pdf_ddm_st.t >= data(1).results.points.truncation), pdf_ddm_st.ddm(pdf_ddm_st.t >= data(1).results.points.truncation)) + pdf_ddm_st.survival
 
     ylabel('density')
 

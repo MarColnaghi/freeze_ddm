@@ -29,9 +29,16 @@ T_freeze.period = categorical(T_freeze.period, ...
 
 T_wide = unstack(T_freeze, 'total_freeze_time_s', 'period');
 
-fh = figure('Position', [100 100 500 600], 'Color', 'w'); hold on
-scatter(T_wide.bsl, T_wide.loom, 12, T_wide.fly, 'filled')
+threshold_duration = 100;
+long_freezes_during_bsl = T_wide.bsl > threshold_duration;
+sortrows(T_wide, 'bsl')
 
+sprintf('The flies with more than %ds of freeze are: %s', threshold_duration, num2str(T_wide.fly(long_freezes_during_bsl)'))
+fh = figure('Position', [100 100 500 600], 'Color', 'w'); hold on
+scatter(T_wide.bsl, T_wide.loom, 24, long_freezes_during_bsl, 'filled', 'MarkerFaceAlpha', .55)
+colormap(cbrewer2('RdBu', []))
+clim([-.15 1.15])
+xline(threshold_duration, 'r--')
 xlabel('Total freeze time — Baseline (s)')
 ylabel('Total freeze time — Loom (s)')
 axis square

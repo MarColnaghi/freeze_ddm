@@ -30,9 +30,6 @@ end
 bouts_proc.avg_sm_pre_norm = mean(sm_pre, 2);
 model_results = run_fitting_newer(bouts_proc, points, 'exp4', paths, 'export', true, 'extra', []);
 plot_estimates('results', model_results, 'export', true, 'ylimits', [-2 10])
-
 [fh, ax, ax_inset] = fd_conditions('results', model_results, 'no_y', true, 'bin_size', 1);
 overlay_fits(fh, ax, ax_inset, 'results', model_results, 'export', true)
-
-plot_fit('results', model_results, 'conditions', true, 'bin_size', 3)
 
