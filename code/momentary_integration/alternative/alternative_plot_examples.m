@@ -2,8 +2,9 @@
 % Load the table with the computed log likelihoods
 model_list = {'dddim2'};
 run_list   = {'run01_010326_1800'};
+version = {'_v3'};
 
-paths_analysis = path_generator('folder', fullfile('momentary_integration','alternative_test', model_list{1}, run_list{1}));
+paths_analysis = path_generator('folder', fullfile('momentary_integration','alternative_test', model_list{1}, strcat(run_list{1}, version{1})));
 paths_analysis.fig = fullfile(paths_analysis.fig, 'examples');
 col = cmapper('', 2);
 
@@ -25,7 +26,7 @@ n_col = 4; n_rows = 4; items = n_col * n_rows;
 tl = tiledlayout(n_rows, n_col, 'TileSpacing', 'tight', 'Padding', 'compact');
 
 diff = ll.tv - ll.st;
-[c, i] = sort(diff);
+[c, i_ll] = sort(diff);
 max_lim = max(abs(diff));
 % 2. Create the colormap (e.g., 256 levels for smoothness)
 cmap_size = 256;
@@ -38,12 +39,12 @@ map_idx = round(interp1(linspace(-max_lim, max_lim, cmap_size), 1:cmap_size, dif
 % 4. Extract the specific colors for your bouts
 bout_colors = col_map(map_idx, :);
 
-selection = 'selection';
+selection = 'kl_based';
 
 if strcmp(selection, 'best')
-    selected = i(end - items + 2:end)';
+    selected = i_ll(end - items + 2:end)';
 elseif strcmp(selection, 'worst')
-    selected = i(1:items - 1)';
+    selected = i_ll(1:items - 1)';
 elseif strcmp(selection, 'random')
     % 1. Pick 16 random indices from the pool of available bout indices
     rand_indices = randperm(n_bouts, items - 1); 
@@ -55,9 +56,14 @@ elseif strcmp(selection, 'random')
     [~, sort_idx] = sort(rand_diffs);
     selected = rand_indices(sort_idx); % Now they are ordered by diff
 
-    elseif strcmp(selection, 'selection')
+elseif strcmp(selection, 'selection')
     selected = [4 11];
     %selected = problematic_idx(end-7)';
+
+elseif strcmp(selection, 'kl_based')
+    [c_kl, i_kl] = sort(ll.kl_tv_st);
+    selected = i_kl(end - items + 2:end)';
+    % selected = i_kl(1:items - 1)';
 
 end
 
@@ -205,4 +211,4 @@ apply_generic(ax, 'no_y', true, 'font_size', 20)
 
 
 % 4. Save this separate legend
-exporter(fh, paths_analysis, sprintf('examples_%s_%d.pdf', selection, selected(1)))
+%exporter(fh, paths_analysis, sprintf('examples_%s_%d.pdf', selection, selected(1)))
