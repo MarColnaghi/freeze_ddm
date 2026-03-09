@@ -2,7 +2,7 @@
 % Load the table with the computed log likelihoods
 model_list = {'dddim2'};
 run_list   = {'run01_010326_1800'};
-version = {'_v3'};
+version = {'_v5'};
 
 paths_analysis = path_generator('folder', fullfile('momentary_integration','alternative_test', model_list{1}, strcat(run_list{1}, version{1})));
 paths_analysis.fig = fullfile(paths_analysis.fig, 'examples');
@@ -61,9 +61,9 @@ elseif strcmp(selection, 'selection')
     %selected = problematic_idx(end-7)';
 
 elseif strcmp(selection, 'kl_based')
-    [c_kl, i_kl] = sort(ll.kl_tv_st);
+    [c_kl, i_kl] = sort(ll.js_div_partial);
     selected = i_kl(end - items + 2:end)';
-    % selected = i_kl(1:items - 1)';
+    %selected = i_kl(1:items - 1)';
 
 end
 

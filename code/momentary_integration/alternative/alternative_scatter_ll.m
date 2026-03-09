@@ -1,7 +1,7 @@
 % Load the table with the computed log likelihoods 
 model_list = {'dddim2'};
 run_list   = {'run01_010326_1800'};
-version = {'_v2'};
+version = {'_v3'};
 
 paths_analysis = path_generator('folder', fullfile('momentary_integration','alternative_test', model_list{1}, strcat(run_list{1}, version{1})));
 col = cmapper('', 2);
@@ -42,7 +42,7 @@ fill([min_val, max_val, max_val], [min_val, min_val, max_val], ...
 
 % 4. Plot the reference line and scatter on top
 plot([min_val max_val], [min_val max_val], 'k--', 'LineWidth', 1)
-scatter(ll.st, ll.st_theory, 25, 1:length(ll.st), 'filled', 'MarkerFaceAlpha', 0.2)
+scatter(ll.st, ll.tv, 25, 'k', 'filled', 'MarkerFaceAlpha', 0.2)
 
 % 5. Adjust labels and axis
 axis square

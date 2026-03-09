@@ -2,6 +2,7 @@
 % Load the table with the computed log likelihoods 
 model_list = {'dddim2'};
 run_list   = {'run01_010326_1800'};
+version = {'_v5'};
 
 paths_analysis = path_generator('folder', fullfile('momentary_integration','alternative_test', model_list{1}, run_list{1}));
 

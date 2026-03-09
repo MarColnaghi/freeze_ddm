@@ -23,7 +23,10 @@ ll_st = nan(n_bouts, 1);
 ll_st_theory = nan(n_bouts, 1);
 kl_tv_st = nan(n_bouts, 1);
 kl_st_tv = nan(n_bouts, 1);
+kl_tv_st_partial = nan(n_bouts, 1);
+kl_st_tv_partial = nan(n_bouts, 1);
 js_div = nan(n_bouts, 1);
+js_div_partial = nan(n_bouts, 1);
 
 out_all_tv = data(1).out_all_tv;
 out_all_st = data(1).out_all_st;
@@ -75,8 +78,10 @@ parfor idx_bout = 1:n_bouts
     % --- KL Divergence Calculation ---
     p_vec = [pdf_ddm_tv.ddm(:); pdf_ddm_tv.survival] + eps;
     q_vec = [pdf_ddm_st.ddm(:); pdf_ddm_st.survival] + eps;
-    p_vec = p_vec / sum(p_vec);
-    q_vec = q_vec / sum(q_vec);
+    p_norm = sum(p_vec);
+    q_norm = sum(q_vec);
+    p_vec = p_vec / p_norm;
+    q_vec = q_vec / q_norm;
     
     kl_tv_st(idx_bout) = sum(p_vec .* log2(p_vec ./ q_vec));
     kl_st_tv(idx_bout) = sum(q_vec .* log2(q_vec ./ p_vec));
@@ -85,8 +90,23 @@ parfor idx_bout = 1:n_bouts
     js_div(idx_bout) = 0.5 * sum(p_vec .* log2(p_vec ./ m_vec)) + ...
                        0.5 * sum(q_vec .* log2(q_vec ./ m_vec));
     
+    % 2. Partial KL (To the break)
+    time_v = [pdf_ddm_tv.t; 9000000];
+    partial_mask = (time_v >= res_points.truncation) & (time_v <= dur_s);   
+    p_part = p_vec(partial_mask) / p_norm;
+    q_part = q_vec(partial_mask) / q_norm;
+    
+    % Normalize these segments to compare "shapes" during the freeze
+    kl_tv_st_partial(idx_bout)  = sum(p_part .* log2(p_part ./ q_part));
+    kl_st_tv_partial(idx_bout)  = sum(q_part .* log2(q_part ./ p_part));
+
+    m_vec_partial = 0.5 * (p_part + q_part);
+
+    js_div_partial(idx_bout) = 0.5 * sum(p_part .* log2(p_part ./ m_vec_partial)) + ...
+        0.5 * sum(q_part .* log2(q_part ./ m_vec_partial));
+
     % Update progress
-    send(q, idx_bout); 
+    send(q, idx_bout);
 end
 
 % --- 5. Final Output & Saving ---
@@ -118,6 +138,9 @@ ll_table.st_theory = ll_st_theory;
 ll_table.kl_tv_st = kl_tv_st;
 ll_table.kl_st_tv = kl_st_tv;
 ll_table.js_div = js_div;
+ll_table.kl_tv_st_partial = kl_tv_st_partial;
+ll_table.kl_st_tv_partial = kl_st_tv_partial;
+ll_table.js_div_partial = js_div_partial;
 save('ll_table.mat', 'll_table')
 
 % --- Helper Function ---
