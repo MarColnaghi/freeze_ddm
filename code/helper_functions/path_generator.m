@@ -1,6 +1,6 @@
 function [path] = path_generator(varargin)
     opt = inputParser;
-    addParameter(opt, 'bouts_id', 'imm3_mob3_pc4');
+    addParameter(opt, 'bouts_id', 'imm2_mob2_pc4');
     addParameter(opt, 'folder', []);
     addParameter(opt, 'model', []);
     addParameter(opt, 'imfirst', false);

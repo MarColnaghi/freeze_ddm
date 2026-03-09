@@ -9,7 +9,7 @@ addParameter(opt, 'extra', []);
 addParameter(opt, 'export', false);
 addParameter(opt, 'bads_display', false);
 addParameter(opt, 'pass_ndt', false);
-
+addParameter(opt, 'iid', false);
 addParameter(opt, 'ground_truth', []);
 addParameter(opt, 'only_bads', false);
 addParameter(opt, 'n_bads', 5);

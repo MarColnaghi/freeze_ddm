@@ -1,4 +1,4 @@
-id_code = 'imm3_mob3_pc4';
+id_code = 'imm2_mob2_pc4';
 paths_out = path_generator('folder', 'descriptive/fd_durs', 'bouts_id', id_code, 'imfirst', false);
 
 col = cmapper();

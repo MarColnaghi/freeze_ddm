@@ -93,8 +93,8 @@ parfor idx_bout = 1:n_bouts
     % 2. Partial KL (To the break)
     time_v = [pdf_ddm_tv.t; 9000000];
     partial_mask = (time_v >= res_points.truncation) & (time_v <= dur_s);   
-    p_part = p_vec(partial_mask) / p_norm;
-    q_part = q_vec(partial_mask) / q_norm;
+    p_part = p_vec(partial_mask);
+    q_part = q_vec(partial_mask);
     
     % Normalize these segments to compare "shapes" during the freeze
     kl_tv_st_partial(idx_bout)  = sum(p_part .* log2(p_part ./ q_part));
