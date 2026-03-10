@@ -23,7 +23,7 @@ out_all_st = data(1).out_all_st;
 
 fh = figure('color','w','OuterPosition',[100, 100, 1800, 800]);
 n_col = 4; n_rows = 4; items = n_col * n_rows;
-tl = tiledlayout(n_rows, n_col, 'TileSpacing', 'tight', 'Padding', 'compact');
+tl = tiledlayout(n_rows, n_col, 'TileSpacing', 'tight', 'Padding', 'loose');
 
 diff = ll.tv - ll.st;
 [c, i_ll] = sort(diff);
@@ -39,7 +39,7 @@ map_idx = round(interp1(linspace(-max_lim, max_lim, cmap_size), 1:cmap_size, dif
 % 4. Extract the specific colors for your bouts
 bout_colors = col_map(map_idx, :);
 
-selection = 'kl_based';
+selection = 'random';
 
 if strcmp(selection, 'best')
     selected = i_ll(end - items + 2:end)';
@@ -111,7 +111,7 @@ for idx_selected_bout = selected %
     stem(fd(end), pdf_ddm_st.survival, 'Color', col.stationary_sm)
 
     ll_st_theory(idx_selected_bout) - ll_st(idx_selected_bout)
-    plot(fd, f, 'k--');
+    % plot(fd, f, 'k--');
     %trapz(pdf_ddm_tv.t(pdf_ddm_tv.t >= data(1).results.points.truncation), pdf_ddm_tv.ddm(pdf_ddm_tv.t >= data(1).results.points.truncation)) + pdf_ddm_tv.survival
     %trapz(pdf_ddm_st.t(pdf_ddm_st.t >= data(1).results.points.truncation), pdf_ddm_st.ddm(pdf_ddm_st.t >= data(1).results.points.truncation)) + pdf_ddm_st.survival
 
@@ -211,4 +211,4 @@ apply_generic(ax, 'no_y', true, 'font_size', 20)
 
 
 % 4. Save this separate legend
-%exporter(fh, paths_analysis, sprintf('examples_%s_%d.pdf', selection, selected(1)))
+exporter(fh, paths_analysis, sprintf('examples_%s_%d.pdf', selection, selected(1)))

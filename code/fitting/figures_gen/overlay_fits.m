@@ -42,7 +42,7 @@ for idx_sm = 1:3
             i = i + 1;
             axes(ax(i));
 
-            [freezes_quant, mask] = quantilizer(freezes, 'idx_quanti', struct('sm', idx_sm, 'ls', idx_ls, 'fs', idx_fs));
+            [freezes_quant, mask] = quantilizer_v2(freezes, 'indexed_quantile', struct('sm', idx_sm, 'ls', idx_ls, 'fs', idx_fs));
 
             if isfield(extra, 'soc_mot_array')
                 ec.soc_mot_array = extra.soc_mot_array(mask, :);
@@ -52,8 +52,10 @@ for idx_sm = 1:3
 
             plot(fd, f, 'LineWidth', 1.9, 'Color', 'k', 'LineStyle', '--')
 
-            axes(ax_inset(i));
-            plot(results.points.censoring, f(end), 'o', 'LineWidth', 1, 'MarkerSize', 5, 'MarkerEdgeColor', 'k');
+            if censored_inset
+                axes(ax_inset(i));
+                plot(results.points.censoring, f(end), 'o', 'LineWidth', 1, 'MarkerSize', 5, 'MarkerEdgeColor', 'k');
+            end
 
         end
     end

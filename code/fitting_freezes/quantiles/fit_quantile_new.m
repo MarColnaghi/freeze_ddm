@@ -13,7 +13,7 @@ thresholds = define_thresholds;
 % thresholds.le_window_sl = [10 55];
 
 bouts = bouts_formatting(bouts, thresholds);
-bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', 'nloom', 2:20);
+bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', 'nloom', 2:20, 'min_dur', 30);
 
 total_length = 30;
 
@@ -22,13 +22,13 @@ bouts_proc.smp = mean_sm_before_freeze;
 
 % At some point we should modify this piece of code and unify
 % extract_sm_columns and extract_sm_from_bouts.
-
+ls
 % sm_before_freeze = mean(extract_sm_from_bouts(bouts_proc, 'type', 'onsets', 'window', [-31 -1]), 2);
 
 points.censoring = 10.5;
 points.truncation = 0.5;
 
-extra.soc_mot_array = cell2mat(sm_during)';
+%extra.soc_mot_array = cell2mat(sm_during)';
 
 %  Now we added our vector column to the bouts table
 bouts_proc = bouts_proc(bouts_proc.durations_s >= points.truncation, :);
@@ -86,7 +86,6 @@ for idx_vars = vars
 
             edges = quant.(vr);
             mask = bouts_proc.ls == idx_ln & bouts_proc.(vr) >= edges(idx_quantiles) & bouts_proc.(vr) < edges(idx_quantiles + 1);
-            ec.soc_mot_array = extra.soc_mot_array(mask, :);
 
 
             bouts_quant = bouts_proc(mask, :);
@@ -96,13 +95,13 @@ for idx_vars = vars
             histogram(bouts_quant.durations_s, min(bouts_quant.durations_s):1/20:10.5, 'Normalization', 'pdf')
             hold on
 
-            [~ , estimate] = run_fitting_newer(bouts_quant, points, model_2_fit, paths, 'export', false, 'extra', ec, 'only_bads', true);
+            [~ , estimate] = run_fitting_newer(bouts_quant, points, model_2_fit, paths, 'export', false, 'only_bads', true);
 
             estimates(idx_quantiles, idx_ln, :) = estimate;
 
             bouts_quant.intercept = ones(height(bouts_quant), 1);
 
-            [~, f, fd] = nll_fly_ddm_newer(estimate, bouts_quant, points, func2str(model), 'iid','p', ec);
+            [~, f, fd] = nll_fly_ddm_newer(estimate, bouts_quant, points, func2str(model), 'iid','p', []);
 
             figure(fh(i))
             plot(fd, f, 'r--')

@@ -27,7 +27,7 @@ pal.grey    = cbrewer2('Greys',   nq);
 
 col.empirical.col = [cbrewer2('Set2',3); cbrewer2('Dark2',3)];
 col.empirical.col = col.empirical.col([1,4,2,5,3,6],:);
-col.empirical.gray = repmat([0.8 0.8 0.8], 6, 1);
+col.empirical.gray = repmat([0.5 0.5 0.5], 6, 1);
 
 col.pmix_map = 'L17';
 
@@ -141,6 +141,11 @@ col.ll = cbrewer2('RdBu', 5);
 %%
 col.stationary_sm = '#FF595E';
 col.timevarying_sm = '#1982C4';
+
+
+%%
+col.early_sm = '#FF715B';
+col.late_sm = '#1EA896';
 
 end
 

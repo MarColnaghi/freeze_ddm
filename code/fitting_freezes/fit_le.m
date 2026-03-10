@@ -4,7 +4,7 @@ clearvars
 
 % Load the table first. We will take advantage of an already existing
 % dataset.
-threshold_imm = 2; threshold_mob = 2; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
+threshold_imm = 3; threshold_mob = 3; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
 paths = path_generator('folder', fullfile('fitting_freezes','le'), 'bouts_id', id_code, 'imfirst', false);
 bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
 motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
@@ -45,7 +45,7 @@ for idx_trials = 1:height(bouts_proc)
     sm_pre(idx_trials, :) = sum_motion(ons - total_length:ons - 1) ./ 10;
 end
 
-bouts_proc.smp = mean(sm_pre, 2);
+% bouts_proc.smp = mean(sm_pre, 2);
 
 soc_mot_array = cell2mat(sm_during)';
 extra.soc_mot_array = soc_mot_array;
@@ -54,7 +54,7 @@ lambda_est = table2array(results_bsl.estimates_mean);
 % extra.lambda = lambda_est(~isnan(lambda_est));
 % extra.tndt = 0;
 
-model_results = run_fitting_newer(bouts_proc, points, 'dddm123', paths, 'export', true, 'bads_display', false, 'n_bads', 5, 'extra', extra, 'vbmc_exhaustive', false, 'pass_ndt', false);
+model_results = run_fitting_newer(bouts_proc, points, 'dddm2', paths, 'export', true, 'bads_display', false, 'n_bads', 5, 'extra', extra, 'vbmc_exhaustive', false, 'pass_ndt', false);
 
 %%
 
@@ -63,7 +63,9 @@ model_results = run_fitting_newer(bouts_proc, points, 'dddm123', paths, 'export'
 
 plot_estimates('results', model_results, 'export', true, 'ylimits', [-2 5])
 [fh, ax, ax_inset] = fd_conditions('results', model_results, 'no_y', true, 'vis', 'on');
-overlay_fits(fh, ax, ax_inset, 'results', model_results, 'export', true, 'extra', extra);
+[fh, ax] = fd_conditions_for_cosyne('results', model_results, 'no_y', true, 'vis', true, 'bin_size', 6, 'censored_inset', false,'col', 'gray', 'export', true);
+
+overlay_fits(fh, ax, ax_inset, 'results', model_results, 'export', true, 'extra', extra, 'censored_inset', false);
 overlay_separate_processes(fh, ax, ax_inset, 'results', model_results, 'export', true, 'extra', extra)
 
 %fh = kde_fit('results', model_results, 'conditions', false, 'export', true, 'bin_size', 3, 'censored_inset', true, 'type', 'continuous');

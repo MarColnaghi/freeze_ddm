@@ -132,6 +132,14 @@ end
 mkdir(results_folder);
 cd(results_folder)
 
+figure_base = fullfile(paths_analysis.fig, model_list{1}, run_list{1});
+version_idx = 1;
+figure_folder = figure_base;
+while exist(results_folder, 'dir')
+    version_idx = version_idx + 1;
+    results_folder = sprintf('%s_v%d', figure_base, version_idx);
+end
+
 ll_table.st = ll_st;
 ll_table.tv = ll_tv;
 ll_table.st_theory = ll_st_theory;

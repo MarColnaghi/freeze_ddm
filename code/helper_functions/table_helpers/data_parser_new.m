@@ -105,8 +105,8 @@ temp.ln = temp.nloom/10;
 temp.tsl = temp.time_since_last/400;
 
 % Set Thresholds on Freeze Durations, Social Motion and Speed of the Fly
-motion_max = 2; % outliers
-speed_max = 2.1; % outliers
+motion_max = 1.4; % outliers
+speed_max = 1.8; % outliers
 
 % Threshold the Dataset
 

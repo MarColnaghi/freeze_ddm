@@ -1,9 +1,10 @@
 % --- 1. Setup and Data Loading ---
 model_list = {'dddim2'};
 run_list   = {'run01_010326_1800'};
+version = {'_v8'};
 
-% Adjust these paths to match your local PhD directory structure if needed
-paths_analysis = path_generator('folder', fullfile('momentary_integration','alternative_test', model_list{1}, run_list{1}));
+paths_analysis = path_generator('folder', fullfile('momentary_integration','alternative_test', model_list{1}, strcat(run_list{1}, version{1})));
+
 col = cmapper('', 2);
 
 % Load Likelihoods and Data
@@ -15,9 +16,9 @@ data = alternative_test_collect_data(model_list, run_list);
 motion_cache = importdata(fullfile(paths_analysis.cache_path, 'motion_cache.mat'));
 
 % --- 2. Configuration ---
-align_to = 'onset'; % 'onset' or 'offset'
+align_to = 'offset'; % 'onset' or 'offset'
 trace_len = numel(data.t);    % Frames to show
-selection_size = 500; % How many top/bottom bouts to include in the average
+selection_size = 250; % How many top/bottom bouts to include in the average
 
 % Remove the bouts that are censored?
 

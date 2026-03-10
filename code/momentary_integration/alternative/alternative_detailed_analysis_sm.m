@@ -3,8 +3,10 @@ model_list = {'dddim2'};
 run_list   = {'run01_010326_1800'};
 
 % Adjust these paths to match your local PhD directory structure if needed
-paths_analysis = path_generator('folder', fullfile('momentary_integration','alternative_test', model_list{1}, run_list{1}));
-paths_analysis.fig = fullfile(paths_analysis.fig, 'detailed_analysis_sm');
+version = {'_v8'};
+
+paths_analysis = path_generator('folder', fullfile('momentary_integration','alternative_test', model_list{1}, strcat(run_list{1}, version{1})));
+paths_analysis.fig = fullfile(paths_analysis.fig, 'detailed_analysis');
 col = cmapper('', 2);
 
 % Load Likelihoods and Data
@@ -116,6 +118,6 @@ for idx_metrics = 1:length(metrics)
     cb.FontSize = 18;
 
     linkaxes(ax(:), 'y')
-    exporter(fh, paths_analysis, sprintf('analyse_sm_%s.pdf', metrics{idx_metrics}));
+    exporter(fh, paths_analysis, sprintf('%s.pdf', metrics{idx_metrics}));
 
 end

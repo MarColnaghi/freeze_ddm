@@ -4,7 +4,8 @@ model_list = {'dddim2'};
 run_list   = {'run01_010326_1800'};
 version = {'_v8'};
 
-paths_analysis = path_generator('folder', fullfile('momentary_integration','alternative_test', model_list{1}, run_list{1}));
+paths_analysis = path_generator('folder', fullfile('momentary_integration','alternative_test', model_list{1}, strcat(run_list{1}, version{1})));
+paths_analysis.fig = fullfile(paths_analysis.fig);
 
 col = cmapper('', 2);
 

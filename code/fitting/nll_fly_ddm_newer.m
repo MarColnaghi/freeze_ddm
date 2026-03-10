@@ -63,7 +63,7 @@ if strcmp(plot_flag, 'p')
     end
 
     f = f ./ num_bouts;
-    %f(fd < points.truncation) = 0;
+    f(fd < points.truncation) = 0;
 
 %     if strcmp('ed', tok{1}) || strcmp('ded', tok{1})
 %         f(1:end-1) = f(1:end-1)* 60;
