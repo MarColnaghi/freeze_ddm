@@ -30,11 +30,11 @@ type = opt.Results.type;
 color = opt.Results.color;
 
 est_params = table2array(results.estimates_mean(:, ~ismissing(results.estimates_mean)));
-freezes = importdata(fullfile(results.bouts_path, 'surrogate.mat'));
+freezes = importdata(fullfile(results.bouts_path, 'freeze.mat'));
 
 i = 0;
 for idx_sm = 1:3
-    for idx_ls = 1:2
+    for idx_ls = 0:1
         for idx_fs = 1:2
 
             ec = extra;

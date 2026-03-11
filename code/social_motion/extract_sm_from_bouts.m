@@ -4,7 +4,7 @@ function sm_output = extract_sm_from_bouts(bouts_le, varargin)
 opt = inputParser;
 addParameter(opt, 'type', 'onsets');
 addParameter(opt, 'window', [-180 300]);
-addParameter(opt, 'formula', 'mat');
+addParameter(opt, 'output_type', 'mat');
 addParameter(opt, 'size', 630);
 addParameter(opt, 'align', 'onset');
 
@@ -48,29 +48,54 @@ switch opt.Results.type
 
         total_bouts = height(bouts_le);
 
+        win_start = opt.Results.window(1);
+        win_end   = opt.Results.window(2);
+        win_width = opt.Results.window(2) - opt.Results.window(1) + 1;
+        
+        switch opt.Results.output_type
+            case 'cell'
+                % Pre-allocate a cell array for speed
+                sm_output = cell(total_bouts, 1);
+
+            case 'mat'
+                % Pre-allocate a matrix filled with NaNs (or zeros)
+                % This is significantly faster than growing the matrix inside the loop
+                sm_output = nan(total_bouts, win_width);
+        end
+
         for idx_bouts = 1:total_bouts
-
             ons = bouts_le.onsets(idx_bouts);
-            off = bouts_le.ends(idx_bouts) - 1;
-            sum_motion = motion_cache(bouts_le.fly(idx_bouts));
+            fly_idx = bouts_le.fly(idx_bouts);
+            sum_motion = motion_cache(fly_idx);
 
-            switch opt.Results.formula
+            % Calculate absolute indices in the motion data
+            idx_range = (ons + win_start) : (ons + win_end);
 
+            % Boundary Check: Ensure indices are within the actual data length
+            % This prevents "Index out of bounds" errors for early or late onsets
+            valid_idx = idx_range > 0 & idx_range <= length(sum_motion);
+
+            % Initialize a NaN or zero vector of the required window size
+            chunk_data = nan(1, length(idx_range));
+
+            % Fill only the valid portions
+            chunk_data(valid_idx) = sum_motion(idx_range(valid_idx));
+
+            % Normalize and assign
+            switch opt.Results.output_type
                 case 'cell'
-                    sm_output{idx_bouts} = sum_motion(ons:ons + chunk_len) ./ 10;
+                    sm_output{idx_bouts} = chunk_data ./ 10;
 
                 case 'mat'
-                    sm_output(idx_bouts, :) = sum_motion(ons:ons + chunk_len) ./ 10;
+                    sm_output(idx_bouts, :) = chunk_data ./ 10;
             end
-
-
         end
 
     case 'onlyfreeze'
 
         total_bouts = height(bouts_le);
 
-        switch opt.Results.formula
+        switch opt.Results.output_type
 
             case 'cell'
 

@@ -3,8 +3,8 @@ paths_out = path_generator('folder', 'experimental_vars/freeze_durations', 'bout
 
 col = cmapper();
 thresholds = define_thresholds;
-thresholds.le_window_fl = [5 40];
-thresholds.le_window_sl = [15 50];
+%thresholds.le_window_fl = [5 40];
+%thresholds.le_window_sl = [15 50];
 
 bouts = importdata(fullfile(paths_out.dataset, 'bouts.mat'));
 bouts = bouts_formatting(bouts, thresholds);
@@ -15,7 +15,7 @@ bouts_all = data_parser_new(bouts, 'min_dur', 30, 'exclude_flies', true);
 
 %%
 'avg_sm_freeze_norm'
-param = {'avg_fs_loom'}
+param = {'fs'}
 type = 'ecdf';
 ls = 'fast';
 fh = fd_distr_withparam_new('bouts', bouts_le, 'type', type, 'param', param, 'check_quantiles', true);%, 'sloom_to_plot', 'fast'); %, 'avg_ss', 'cum_freeze_time', 'avg_fs_1s_norm', 'n_generated_freezes'})

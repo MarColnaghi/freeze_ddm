@@ -36,7 +36,7 @@ if isempty(period)
 end
 
 %% ===================== Determine which sloom values to plot =====================
-all_sloom = unique(bouts_proc.sloom_norm)';
+all_sloom = unique(bouts_proc.ls)';
 
 switch sloom_to_plot
     case 'all'
@@ -106,8 +106,8 @@ for idx_param = params
         nexttile([7 2]); hold on
 
         for idx_sloom = sloom_vals
-            bouts_sloom = bouts_proc(bouts_proc.sloom_norm==idx_sloom,:);
-            qmask = quantiles(bouts_proc.sloom_norm==idx_sloom);
+            bouts_sloom = bouts_proc(bouts_proc.ls==idx_sloom,:);
+            qmask = quantiles(bouts_proc.ls==idx_sloom);
 
             plot_duration_distribution( ...
                 bouts_sloom.durations_s, qmask, ...
@@ -130,8 +130,8 @@ for idx_param = params
         end
 
         for idx_sloom = sloom_vals
-            bouts_sloom = bouts_proc(bouts_proc.sloom_norm==idx_sloom,:);
-            qmask = quantiles(bouts_proc.sloom_norm==idx_sloom);
+            bouts_sloom = bouts_proc(bouts_proc.ls==idx_sloom,:);
+            qmask = quantiles(bouts_proc.ls==idx_sloom);
 
             nexttile([7 tile_width]); hold on
             plot_duration_distribution( ...

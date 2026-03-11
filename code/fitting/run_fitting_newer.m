@@ -1,4 +1,4 @@
-function [model_results, estimates] = run_fitting_newer(surrogate, points, idx_model, paths, varargin)
+function [model_results, estimates] = run_fitting_newer(freeze_table, points, idx_model, paths, varargin)
 
 % RUN_FITTING_NEWER - Run DDM model fitting with BADS and VBMC
 % Version: Refactored July 2025
@@ -7,7 +7,7 @@ function [model_results, estimates] = run_fitting_newer(surrogate, points, idx_m
 opt = inputParser;
 addParameter(opt, 'extra', []);
 addParameter(opt, 'export', false);
-addParameter(opt, 'bads_display', false);
+addParameter(opt, 'bads_display', 'iter');
 addParameter(opt, 'pass_ndt', false);
 addParameter(opt, 'iid', false);
 addParameter(opt, 'ground_truth', []);
@@ -29,8 +29,8 @@ only_bads = opt.Results.only_bads;
 %% Truncation Filter
 
 if isfield(points, 'truncation') && ~isempty(points.truncation)
-    mask = surrogate.durations_s >= points.truncation;
-    surrogate = surrogate(mask, :);
+    mask = freeze_table.durations_s >= points.truncation;
+    freeze_table = freeze_table(mask, :);
     if isfield(extra, 'soc_mot_array')
         extra.soc_mot_array = extra.soc_mot_array(mask, :);
     end
@@ -41,58 +41,71 @@ else
 end
 
 fprintf('The censoring point is %.2fs \n', points.censoring);
-fprintf('The smallest rt is %.2fs \n', min(surrogate.durations_s));
+fprintf('The smallest rt is %.2fs \n', min(freeze_table.durations_s));
 
 %% Model Setup
-
+% Extract the Bounds
 model_str = sprintf('model_%s', idx_model);
-model_out = eval(model_str);
+model_func = str2func(model_str);
+model_obj = model_func();
 
 % Extract the Bounds
-[LB, PLB, PUB, UB, prior_info] = extract_bounds_from_model(model_out);
+[LB, PLB, PUB, UB, ~] = extract_bounds_from_model(model_obj);
+[~, lbl, mask] = get_ground_truth_vector(model_obj);
 
 %% Setting up the table
 
-if ismember('smp', surrogate.Properties.VariableNames)
-    surrogate.smp = surrogate.smp;
+if ismember('smp', freeze_table.Properties.VariableNames)
+    freeze_table.smp = freeze_table.smp;
 else
-    surrogate.smp = surrogate.sm;
+    freeze_table.smp = freeze_table.sm;
 end
 
-surrogate.intercept = ones(height(surrogate), 1);
+freeze_table.intercept = ones(height(freeze_table), 1);
 
 %% BADS Optimization
 
 % Likelihood Function
-llfun = @(x) nll_fly_ddm_newer(x, surrogate, points, model_str, 'iid', 'n', extra);
+llfun = @(x) nll_fly_ddm_newer(x, freeze_table, points, model_str, 'iid', 'n', extra);
 
 num_iters = n_bads;
-
-if bads_display
-    options_bads.Display = 'iter';
-else
-    options_bads.Display = 'none';
-end
+options_bads = bads('defaults');
+options_bads.Display = bads_display;
 
 nvars = numel(PLB);
-x0_all = PLB + rand(num_iters, nvars) .* (PUB - PLB);
-
 eval_param = zeros(num_iters, nvars);
 fval = zeros(num_iters, 1);
 
-tic 
+tic
+all_estimates = nan(num_iters, length(lbl));
+res_table = array2table(all_estimates, 'VariableNames', lbl);
+
+fprintf('\n--- Starting BADS Multi-Run Optimization ---\n');
+
 for idx = 1:num_iters
-    fprintf('Currently bads run #%d \n', idx)
-    [eval_param(idx,:), fval(idx)] = bads(llfun, x0_all(idx,:), LB, UB, PLB, PUB, [], options_bads);
-    fprintf('Estimates: %d \n', eval_param(idx,:))
-    
+    x0 = PLB + rand(1, nvars) .* (PUB - PLB);
+
+    [eval_param(idx,:), fval(idx)] = bads(llfun, x0, LB, UB, PLB, PUB, [], options_bads);
+
+    current_full_row = nan(1, length(lbl));
+    current_full_row(mask) = eval_param(idx, :);
+
+    res_table{idx, :} = current_full_row;
 end
+
+is_empty_col = all(isnan(res_table{:, :}), 1);
+clean_table = res_table(:, ~is_empty_col);
+
+meta_data = table((1:num_iters)', fval, 'VariableNames', {'Iter', 'NLL'});
+clean_table = [meta_data, clean_table];
+
+disp('--- Final Optimization Results ---');
+disp(clean_table);
 toc
 
 [~, best_idx] = sort(fval);
 eval_param = eval_param(best_idx,:); fval = fval(best_idx, :);
 
-[~, lbl, mask] = get_ground_truth_vector(model_out);
 estimates = nan(1, length(lbl));
 estimates(find(mask)) = eval_param(1, :);
 temp_table = array2table(estimates, 'VariableNames', lbl);
@@ -161,7 +174,7 @@ else
     end
 
     %% VBMC Optimization
-    llfun = @(x) -nll_fly_ddm_newer(x, surrogate, points, model_str, 'iid', 'n', extra);
+    llfun = @(x) -nll_fly_ddm_newer(x, freeze_table, points, model_str, 'iid', 'n', extra);
     lpriorfun = @(x) structured_prior(x, prior_info, LB, PLB, PUB, UB);
 
     lpriorfun = @(x) msplinetrapezlogpdf(x, LB, PLB, PUB, UB);
@@ -193,10 +206,10 @@ else
     %% Store Fit Results
     model_results = struct;
     model_results.elbo = [ELBO, ELBO_SD];
-    model_results.elbo_normalized = [ELBO, ELBO_SD] ./ height(surrogate);
+    model_results.elbo_normalized = [ELBO, ELBO_SD] ./ height(freeze_table);
     model_results.time = datetime;
 
-    [~, lbl, mask] = get_ground_truth_vector(model_out);
+    [~, lbl, mask] = get_ground_truth_vector(model_obj);
     estimates_mean = nan(1, length(lbl));
     estimates_std = nan(1, length(lbl));
 
@@ -237,8 +250,8 @@ else
 
         model_results.motion_cache_path = fullfile(paths.cache_path, 'motion_cache.mat');
 
-        save(fullfile(paths.results, sprintf('fit_results_%s.mat', idx_model)), '-struct', 'model_results');
-        save(fullfile(paths.results, 'surrogate.mat'), 'surrogate');
+        save(fullfile(paths.results, 'model_results.mat'), '-struct', 'model_results');
+        save(fullfile(paths.results, 'freeze.mat'), 'freeze_table');
         save(fullfile(paths.results, 'extra.mat'), 'extra');
 
     end
@@ -246,38 +259,41 @@ end
 end
 
 function create_output_dirs(paths)
-    % Ensure base directories exist
     if ~exist(paths.fig, 'dir'), mkdir(paths.fig); end
     if ~exist(paths.results, 'dir'), mkdir(paths.results); end
 
-    % Auto-incrementing run folder inside results
+    % Use a temporary variable to look for existing runs in the BASE directory
     run_folders = dir(fullfile(paths.results, 'run*'));
     run_nums = [];
-
     for i = 1:length(run_folders)
         if run_folders(i).isdir
-            tokens = regexp(run_folders(i).name, '^run(\d+)$', 'tokens');
+            tokens = regexp(run_folders(i).name, '^run(\d+)', 'tokens');
             if ~isempty(tokens)
-                run_nums(end+1) = str2double(tokens{1}{1}); %#ok<AGROW>
+                run_nums(end+1) = str2double(tokens{1}{1});
             end
         end
     end
+
     if isempty(run_nums)
         next_run = 1;
     else
         next_run = max(run_nums) + 1;
     end
 
-    timestamp = string(datetime('now', 'Format', 'ddMMyy_HHmm'));
+    datestamp = string(datetime('now', 'Format', 'yyMMdd'));
+    run_name = sprintf('run%02d_%s', next_run, datestamp);
 
-    run_name = sprintf('run%02d_%s', next_run, timestamp);
+    % Create the specific run subfolders
+    new_results_path = fullfile(paths.results, run_name);
+    new_fig_path = fullfile(paths.fig, run_name);
 
-    paths.results = fullfile(paths.results, run_name);
-    mkdir(paths.results);
+    mkdir(new_results_path);
+    mkdir(new_fig_path);
 
-    paths.fig = fullfile(paths.fig, run_name);
-    mkdir(paths.fig);
-
+    % Update the paths struct for the caller
+    paths.results = new_results_path;
+    paths.fig = new_fig_path;
+    
     assignin('caller', 'paths', paths);
 end
 

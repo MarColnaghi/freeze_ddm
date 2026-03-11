@@ -22,7 +22,7 @@ bouts_proc.smp = mean_sm_before_freeze;
 
 % At some point we should modify this piece of code and unify
 % extract_sm_columns and extract_sm_from_bouts.
-ls
+
 % sm_before_freeze = mean(extract_sm_from_bouts(bouts_proc, 'type', 'onsets', 'window', [-31 -1]), 2);
 
 points.censoring = 10.5;
