@@ -27,7 +27,12 @@ pal.grey    = cbrewer2('Greys',   nq);
 
 col.empirical.col = [cbrewer2('Set2',3); cbrewer2('Dark2',3)];
 col.empirical.col = col.empirical.col([1,4,2,5,3,6],:);
-col.empirical.gray = repmat([0.5 0.5 0.5], 6, 1);
+col.empirical.gray = [[240, 167, 164]; [226, 155, 152]; [213, 133, 130];[240, 167, 164]; [226, 155, 152]; [213, 133, 130]] /255;
+col.empirical.gray = col.empirical.gray([1,4,2,5,3,6],:);
+col.empirical.gray2 = [[.8, .8, .8]; [.75, .75, .75]; [.7, .7, .7];[.8, .8, .8]; [.75, .75, .75]; [.7, .7, .7]];
+col.empirical.gray2 = col.empirical.gray2([1,4,2,5,3,6],:);
+% col.empirical.reds = [pal.red([2 3 4], :); pal.red([2 3 4], :) - 0.1];
+% col.empirical.reds = col.empirical.reds([1,4,2,5,3,6],:);
 
 col.pmix_map = 'L17';
 

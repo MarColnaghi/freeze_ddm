@@ -116,7 +116,7 @@ for idx_param = params
 
         xlabel('Freeze Duration (s)');
         ylabel(type);
-        apply_generic(gca,'tick_length',0.025,'font_size',24, ...
+        apply_generic(gca,'tick_length',0.025,'font_size', 26, ...
             'yticks',[0 1],'xticks',[0 10])
 
         ax_bottom = gca;
@@ -140,10 +140,10 @@ for idx_param = params
 
             xlabel('Freeze Duration (s)');
             ylabel(type);
-            apply_generic(gca,'tick_length',0.025,'font_size',24, ...
+            apply_generic(gca,'tick_length',0.025,'font_size',26, ...
                 'yticks',[0 1],'xticks',[0 10])
 
-            if idx_sloom == min(all_sloom)
+            if idx_sloom == min(all_sloom) && strcmp(sloom_to_plot, 'all')
                 txt = 'Slow Loom';
             else
                 txt = 'Fast Loom';
@@ -229,12 +229,12 @@ end
 function plot_duration_distribution(durations,qmask,cmap,nq,type,period)
 
 switch type
-    case 'ecdf'
+    case 'cumulative'
         for q = 1:nq
             d = durations(qmask==q);
             if isempty(d), continue, end
             [f,x] = ecdf(d);
-            plot(x,f,'LineWidth',3,'Color',cmap(1+q,:))
+            plot(x,f,'LineWidth', 4 ,'Color',cmap(1+q,:))
         end
         ylim([0 1])
         pad_ylim(gca,0.025)
@@ -300,7 +300,7 @@ colorbar(ax,'southoutside', ...
     'TickLabels',labels, ...
     'Limits',[0 nq], ...
     'TickDirection','none', ...
-    'FontSize',18, ...
+    'FontSize', 22, ...
     'LineWidth',2)
 end
 

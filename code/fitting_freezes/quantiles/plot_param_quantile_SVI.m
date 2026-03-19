@@ -16,9 +16,16 @@ titleLabels = {...
     '$p_{mix}$', ...
     '$ndt$'};
 
+titleLabels = {...
+    'Drift Rate', ...
+    '$\mathrm{Bound}_{1} (\theta_{1})$', ...
+    '$\mathrm{Drift}_{2} (\mu_{2})$', ...
+    '$\mathrm{Bound}_{2} (\theta_{2})$', ...
+    '$p_{mix}$', ...
+    '$ndt$'};
 
 % 2. Find the column indices (sourceIdx)
-[~, means] = ismember(targetLabels, imported_results.textdata);
+[~, means] = ismember(meanLabels, imported_results.textdata);
 [~, stds] = ismember(stdLabels, imported_results.textdata);
 
 % 3. Extract the numeric columns from the data matrix
@@ -34,24 +41,24 @@ stdTable = array2table(stdValues, 'VariableNames', {'drift_1', 'bound_1', 'drift
 fh = figure('color','w','Position',[100,100, 1200, 500]);
 tiledlayout(1, 6, 'TileSpacing', 'loose', 'Padding', 'compact')
 
+markersize = 100;
 for idx_params = 1:6
     nexttile
     hold on
-%     scatter([1:3] - 0.05, table2array(meanTable(imported_results.data(:,3) == 25, idx_params)), 50, col.vars.ls(3,:), 'filled')
-%     scatter([1:3] + 0.05, table2array(meanTable(imported_results.data(:,3) == 50, idx_params)), 50, col.vars.ls(5,:), 'filled')
+
+    scatter([1:3] - 0.05, table2array(meanTable(imported_results.data(:,3) == 25, idx_params)), markersize, [0.4 0.4 0.4], 'filled')
+        errbar([1:3] - 0.05,  table2array(meanTable(imported_results.data(:,3) == 25, idx_params)), ....
+        table2array(stdTable(imported_results.data(:,3) == 25, idx_params)),'Color', [0.4 0.4 0.4])
+
+
+%     scatter([1:3] - 0.05, table2array(meanTable(imported_results.data(:,3) == 25, idx_params)), markersize, col.vars.ls(3,:), 'filled')
+%     scatter([1:3] + 0.05, table2array(meanTable(imported_results.data(:,3) == 50, idx_params)), markersize, col.vars.ls(5,:), 'filled')
 %     errbar([1:3] - 0.05,  table2array(meanTable(imported_results.data(:,3) == 25, idx_params)), ....
 %         table2array(stdTable(imported_results.data(:,3) == 25, idx_params)),'Color', col.vars.ls(3,:))
 %     errbar([1:3] + 0.05,  table2array(meanTable(imported_results.data(:,3) == 50, idx_params)), ....
 %         table2array(stdTable(imported_results.data(:,3) == 50, idx_params)), 'Color', col.vars.ls(5,:))
      axis square
 
-
-    scatter([1:3] - 0.05, table2array(meanTable(imported_results.data(:,3) == 25, idx_params)), 50, [0.4 0.4 0.4], 'filled')
-%     scatter([1:3] + 0.05, table2array(meanTable(imported_results.data(:,3) == 50, idx_params)), 50, col.vars.ls(5,:), 'filled')
-    errbar([1:3] - 0.05,  table2array(meanTable(imported_results.data(:,3) == 25, idx_params)), ....
-        table2array(stdTable(imported_results.data(:,3) == 25, idx_params)),'Color', [0.4 0.4 0.4])
-%     errbar([1:3] + 0.05,  table2array(meanTable(imported_results.data(:,3) == 50, idx_params)), ....
-%         table2array(stdTable(imported_results.data(:,3) == 50, idx_params)), 'Color', col.vars.ls(5,:))
 
     xlim([0.5 3.5])
     xticks(1:3)
@@ -77,12 +84,16 @@ for idx_params = 1:6
 
     apply_generic(gca, 'line_width', 2, 'tick_length', 0.02)
 
-    xlabel({'Soc. Mot.', 'Range'}, 'FontSize', 18)
+    xlabel({'Social Motion'}, 'FontSize', 22)
     ax = gca;
-    ax.XAxis.FontSize = 18;
-    xticklabels({'Low', 'Med', 'High'})
-
-    title(titleLabels{idx_params}, 'Interpreter', 'latex', 'FontSize', 22);
+    ax.XAxis.FontSize = 20;
+xticklabels({ ...
+    '\color[rgb]{1, 0.7, 0.7}Low', ...
+    '\color[rgb]{1, 0.4, 0.4}Med', ...
+    '\color[rgb]{0.8, 0, 0}High' ...
+});
+    
+    title(titleLabels{idx_params}, 'Interpreter', 'none', 'FontSize', 28);
 end
 
-exporter(fh, paths, 'quartile_fitting_SVI_onlyslow.pdf')
+%exporter(fh, paths, 'quartile_fitting_SVI_onlyslow.pdf')

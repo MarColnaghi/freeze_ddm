@@ -13,14 +13,14 @@ thresholds.le_window_sl = [15 50];
 
 bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
 bouts = bouts_formatting(bouts, thresholds);
-freezes = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', 'nloom', 2:20, 'min_dur', 30);
+freezes = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', 'nloom', 2:20, 'min_dur', 180);
 
 fh = figure('Position', [100 100 1100 480], 'Color', 'w');
 t = tiledlayout(1, 3, 'TileSpacing', 'compact', 'Padding', 'compact');
 i = 0;
 
 for idx_sm = 1
-    for idx_ls = 2
+    for idx_ls = 1
         for idx_fs = 1
 
             i = i + 1;
@@ -29,7 +29,7 @@ for idx_sm = 1
 
             ax(i) = gca;
 
-            [freezes_quant, ~] = quantilizer(freezes, 'idx_quanti', struct('sm', idx_sm, 'ls', idx_ls, 'fs', idx_fs), 'quant', struct('sm', 1, 'ls', 2, 'fs', 2));
+            [freezes_quant, ~] = quantilizer_v2(freezes, 'indexed_quantile', struct('sm', idx_sm, 'ls', idx_ls, 'fs', idx_fs), 'total_quantiles', struct('sm', 3, 'fs', 2));
 
             RTs{1,1} = freezes_quant.durations_s;
             RTs{2,1} = freezes_quant.durations_s;
@@ -51,4 +51,4 @@ xlabel('Duration (s)')
 %
 nexttile
 
-run_fitting_newer(freezes_quant, )
+% run_fitting_newer(freezes_quant, )

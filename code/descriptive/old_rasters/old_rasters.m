@@ -151,7 +151,7 @@ end
 
 linkaxes([ax(1), ax(2)], 'x');
 
-exporter(fh, paths, 'raster_grouped_moving_flies_reoriented.pdf');
+% exporter(fh, paths, 'raster_grouped_moving_flies_reoriented.pdf');
 
 % 
 % for idx_zooms = [0 18000]
@@ -211,7 +211,7 @@ for f = 1:numel(selected_flies)
         for b = 1:height(fly_bouts)
             onset  = fly_bouts.onsets(b);
             offset = fly_bouts.ends(b);
-            sm_val = fly_bouts.avg_sm_freeze_norm(b);
+            sm_val = fly_bouts.sm(b);
 
             idx = tvec >= onset & tvec <= offset;
             sm_vec(idx) = sm_val;
@@ -234,7 +234,7 @@ for f = 1:n_flies
     SM_mat(f, :) = fly_sm(f).avg_sm_vec;
 end
 
-fh = figure('color', 'w', 'Position', [100 200 860 290]);
+fh = figure('color', 'w', 'Position', [100 200 1100 290]);
 tl = tiledlayout(1, 1, 'TileSpacing', 'compact', 'Padding', 'loose');
 
 col.n_mov_flies = colorcet('I2','N', 5);
@@ -253,7 +253,7 @@ set(sm_img, 'AlphaData', ~isnan(SM_mat));
 colormap(ax(2), cbrewer2('Reds', []));
 
 % apply_generic(ax(2), 'xtick', [0, 18000, size(fr_mat, 2)], 'ytick', [1, size(fr_mat, 1)], 'ylim', [- 10 size(fr_mat, 1) + 10], 'xlim', [16200, size(fr_mat, 2)])
-apply_generic(ax(2), 'xticks', [0, 18000, size(ts_proc.freeze, 2)], 'no_yticks', true, 'ylim', [-1 size(ts_proc.freeze, 1) + 1], 'xlim', [16200, size(ts_proc.freeze, 2)], 'font_size', 28)
+apply_generic(ax(2), 'xticks', [0, 18000, size(ts_proc.freeze, 2)], 'no_yticks', false, 'yticks', [1 size(ts_proc.freeze, 1)], 'ylim', [-1 size(ts_proc.freeze, 1) + 1], 'xlim', [16200, size(ts_proc.freeze, 2)], 'font_size', 28)
 xticklabels([0 5 10]);
 ylabel('Focal Flies')
 xlabel('Time (min)')
@@ -265,17 +265,19 @@ ax(2).XLabel.Position(2) = -10;
 
 % Add lines for median_loom_ts array
 for i = 1:length(median_loom_ts)
-    line([median_loom_ts(i), median_loom_ts(i)], [-4, size(ts_proc.freeze, 1) + 4], 'Color', col_nloom.vars.nloom(10 + i, :), 'LineWidth', 1.5, 'LineStyle', '-', 'clipping', 'off');
+   % line([median_loom_ts(i), median_loom_ts(i)], [-4, size(ts_proc.freeze, 1) + 4], 'Color', col_nloom.vars.nloom(10 + i, :), 'LineWidth', 1.5, 'LineStyle', '-', 'clipping', 'off');
+       line([median_loom_ts(i), median_loom_ts(i)], [-4, size(ts_proc.freeze, 1) + 4], 'Color', 'k', 'LineWidth', 1.5, 'LineStyle', '-', 'clipping', 'off');
+
 end
 
-for idx_moving = 0:4
-    fill([ax(2).XLim(1)-200,ax(2).XLim(1)-200,ax(2).XLim(1)-1000,ax(2).XLim(1)-1000], [length(find(ts_proc.moving_flies <= idx_moving)) length(find(ts_proc.moving_flies <= idx_moving - 1)) length(find(ts_proc.moving_flies <= idx_moving - 1))   length(find(ts_proc.moving_flies <= idx_moving))], ...
-        col.n_mov_flies(idx_moving + 1,:), 'EdgeColor','none', 'Clipping', 'off');
-end
+% for idx_moving = 0:4
+%     fill([ax(2).XLim(1)-200,ax(2).XLim(1)-200,ax(2).XLim(1)-1000,ax(2).XLim(1)-1000], [length(find(ts_proc.moving_flies <= idx_moving)) length(find(ts_proc.moving_flies <= idx_moving - 1)) length(find(ts_proc.moving_flies <= idx_moving - 1))   length(find(ts_proc.moving_flies <= idx_moving))], ...
+%         col.n_mov_flies(idx_moving + 1,:), 'EdgeColor','none', 'Clipping', 'off');
+% end
 
-ax(2).YLabel.Position(1) = ax(2).YLabel.Position(1) - 1000;
+%ax(2).YLabel.Position(1) = ax(2).YLabel.Position(1) - 1000;
 
-exporter(fh, paths, 'raster_sm.pdf')
+exporter(fh, paths, 'raster_sm_cosyne.pdf')
 
 %%
 
@@ -302,18 +304,18 @@ for b = 1:n_freezes
 
     % Fill with average social motion for this freeze
     freeze_SM_mat(1:len_clamped, b) = ...
-        bouts_sorted.avg_sm_freeze_norm(b);
+        bouts_sorted.sm(b);
 
 end
 
 
 % QUICK SANITY CHECK
-fh = figure('color', 'w', 'Position', [100 200 860 270]);
+fh = figure('color', 'w', 'Position', [100 200 1100 290]);
 
 sm_img = imagesc(freeze_SM_mat);
 
 % Colormap + limits
-clim([0 0.8])   % adjust to your avg_sm_freeze_norm range
+clim([0 1])   % adjust to your avg_sm_freeze_norm range
 
 % % Transparency: hide NaNs
 set(sm_img, 'AlphaData', ~isnan(freeze_SM_mat));
@@ -321,16 +323,16 @@ colormap(gca, cbrewer2('Reds', []));
 set(gca,'color','none')
 
 set(gca, 'YDir', 'normal')
-apply_generic(gca, 'no_xticks', true, 'yticks', [1 600])
+apply_generic(gca, 'no_xticks', true, 'yticks', [1 600], 'font_size', 28)
 yticklabels([0 10])
 
-xlabel('Sorted Immobilities')
+xlabel('Sorted Freezes')
 ylabel('Durations (s)')
 %colorbar
 cb2 = colorbar(gca, 'horiz', 'Position', [0.6 0.55 0.3 0.05], 'FontSize', 24, 'LineWidth', 2, 'TickLength', 0.3, 'TickDirection', 'none');
 cb2.Label.String = 'Average Social Motion';
-cb2.Ticks = [0 0.4 0.8];
-exporter(fh, paths, 'reordered_bouts_sm.pdf')
+cb2.Ticks = [0 0.5 1];
+exporter(fh, paths, 'reordered_bouts_sm_cosyne.pdf')
 
 
 %%
