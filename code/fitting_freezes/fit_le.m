@@ -4,14 +4,14 @@ clearvars
 
 % Load the table first. We will take advantage of an already existing
 % dataset.
-threshold_imm = 2; threshold_mob = 2; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
+threshold_imm = 3; threshold_mob = 3; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
 paths = path_generator('folder', fullfile('fitting_freezes', 'le_new'), 'bouts_id', id_code, 'imfirst', false);
 bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
 motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 
 thresholds = define_thresholds;
-%thresholds.le_window_fl = [5 40];
-%thresholds.le_window_sl = [15 50];
+thresholds.le_window_fl = [5 40];
+thresholds.le_window_sl = [15 50];
 
 bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
 bouts = bouts_formatting(bouts, thresholds);
@@ -21,7 +21,7 @@ points.truncation = 0.5;
 
 %  Here we will extract social motion before the freeze onset to feed it to
 %  the pmix calculation
-sm_pre = extract_sm_from_bouts(bouts_proc, 'type', 'onsets', 'output_type', 'mat', 'window', [-15 25]);
+sm_pre = extract_sm_from_bouts(bouts_proc, 'type', 'onsets', 'output_type', 'mat', 'window', [-25 5]);
 bouts_proc.smp = mean(sm_pre, 2);
 
 sm_freeze = extract_sm_from_bouts(bouts_proc, 'type', 'onsets', 'output_type', 'mat', 'window', [0 630]);
@@ -29,9 +29,9 @@ sm_freeze = extract_sm_from_bouts(bouts_proc, 'type', 'onsets', 'output_type', '
 extra = [];
 
 %%
-for idx_model = 2:26
+for idx_model = 1%:26
     model = sprintf('m%02d', idx_model);
-    model_results = run_fitting_newer(bouts_proc, points, model, paths, 'export', true, 'bads_display', 'iter', 'n_bads', 3, 'extra', extra, 'vbmc_exhaustive', false, 'pass_ndt', false);
+    model_results = run_fitting_newer(bouts_proc, points, model, paths, 'export', true, 'bads_display', 'none', 'n_bads', 3, 'extra', extra, 'vbmc_exhaustive', false, 'pass_ndt', false);
     plot_estimates('results', model_results, 'export', true, 'ylimits', [-2 5])
     [fh, ax, ax_inset] = fd_conditions('results', model_results, 'no_y', true, 'vis', true, 'bin_size', 5, 'col', 'gray2', 'censored_inset', true);
     overlay_fits(fh, ax, ax_inset, 'results', model_results, 'export', true, 'extra', extra, 'censored_inset', true);

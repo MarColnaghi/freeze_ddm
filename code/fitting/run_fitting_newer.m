@@ -91,6 +91,11 @@ for idx = 1:num_iters
     current_full_row(mask) = eval_param(idx, :);
 
     res_table{idx, :} = current_full_row;
+    is_empty_col = all(isnan(res_table{idx, :}), 1);
+
+    clean_table = res_table(:, ~is_empty_col);
+    disp(clean_table);
+
 end
 
 is_empty_col = all(isnan(res_table{:, :}), 1);

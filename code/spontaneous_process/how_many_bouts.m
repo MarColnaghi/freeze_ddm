@@ -9,24 +9,39 @@ bouts = importdata(fullfile(paths_out.dataset, 'bouts.mat'));
 col = cmapper('', 5);
 fh = figure('Position', [100 100 800 410], 'Color', 'w');
 t = tiledlayout(2, 1, 'TileSpacing', 'compact', 'Padding', 'loose');
-bouts_spontaneous = data_parser_new(bouts, 'period', 'bsl', 'window', 'all', 'type', 'immobility');
+bouts_spontaneous = data_parser_new(bouts, 'period', 'bsl', 'type', 'immobility', 'window', 'all');
 
 [counts_x_fly] = histcounts(bouts_spontaneous.fly, 0.5:1:max(bouts_spontaneous.fly) + 0.5);
 [~, ~, fly_idx] = unique(bouts_spontaneous.fly, 'stable');
 
+select_method = 'sum';
+
 % Median duration per fly
-median_dur_per_fly = accumarray( ...
+dur_per_fly.median = accumarray( ...
     fly_idx, ...
     bouts_spontaneous.durations_s, ...
     [], ...
     @median);
+
+dur_per_fly.mean = accumarray( ...
+    fly_idx, ...
+    bouts_spontaneous.durations_s, ...
+    [], ...
+    @mean);
+
+dur_per_fly.sum = accumarray( ...
+    fly_idx, ...
+    bouts_spontaneous.durations_s, ...
+    [], ...
+    @sum);
+
 
 fly_moving = accumarray(fly_idx, bouts_spontaneous.moving_flies, [], @mode);
 fly_colors = col.vars.moving_flies(fly_moving + 1, :);
 
 [sorted_counts, sorted_i] = sort(counts_x_fly);
 sorted_colors = fly_colors(sorted_i, :);
-sorted_medians = median_dur_per_fly(sorted_i);
+sorted_medians = dur_per_fly.(select_method)(sorted_i);
 
 nexttile
 %yyaxis left
@@ -42,7 +57,6 @@ plot(1:length(sorted_medians), repmat(0.1, length(sorted_medians), 1), 'r-.')
 plot(sorted_medians, 'r')
 ylabel('Median Duration', 'FontSize', 20)
 
-
 nexttile
 histogram(counts_x_fly, 50, 'EdgeColor', 'none')
 apply_generic(gca, 'tick_length', 0.01)
@@ -50,3 +64,4 @@ xlabel('Number of Bouts')
 ylabel('Counts')
 
 exporter(fh, paths_out, 'contaminant_howmany_xfly.pdf')
+

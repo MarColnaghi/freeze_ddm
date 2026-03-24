@@ -1,10 +1,10 @@
 % Fit bsl immobilities
 
-clear all
+clearvars
 
 % Load the table first. We will take advantage of an already existing
 % dataset.
-threshold_imm = 2; threshold_mob = 2; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
+threshold_imm = 3; threshold_mob = 3; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
 paths = path_generator('folder', 'fitting_freezes/bsl', 'bouts_id', id_code);
 
 motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
@@ -32,4 +32,5 @@ model_results = run_fitting_newer(bouts_proc, points, 'exp4', paths, 'export', t
 plot_estimates('results', model_results, 'export', true, 'ylimits', [-2 10])
 [fh, ax, ax_inset] = fd_conditions('results', model_results, 'no_y', true, 'bin_size', 1);
 overlay_fits(fh, ax, ax_inset, 'results', model_results, 'export', true)
-
+ylim([0 10])
+xlim([0 1])

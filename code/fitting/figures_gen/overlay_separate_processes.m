@@ -31,7 +31,7 @@ color = opt.Results.color;
 
 est_params = table2array(results.estimates_mean(:, ~ismissing(results.estimates_mean)));
 freezes = importdata(fullfile(results.bouts_path, 'freeze.mat'));
-est_params = [  -1.0101       3.0639        1.2792      0.029802       -0.017144        0.24792         -0.52892          2.8024               3               0.0001    ];
+% est_params = [  -1.0101       3.0639        1.2792      0.029802       -0.017144        0.24792         -0.52892          2.8024               3               0.0001    ];
 
 results.estimates_mean.Properties.VariableNames
 

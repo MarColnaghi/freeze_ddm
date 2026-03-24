@@ -5,7 +5,7 @@ pixel_cache = importdata(fullfile(paths.cache_path, 'pixel_cache.mat'));
 loom_cache = importdata(fullfile(paths.cache_path, 'loom_cache.mat'));
 motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 thresholds = define_thresholds;
-fly_id = 15;
+fly_id = 631;
 fly_pc = ~pixel_cache(fly_id);
 fly_loom = loom_cache(fly_id);
 loom_frames = find(diff(fly_loom) == 1) + 1;
@@ -24,14 +24,19 @@ if include_old
     xs_fly = xs(xs.fly == fly_id, :);
     old_fly_pc = zeros(1, length(fly_sm));
     for idx_freezes = 1:height(xs_fly)
-        starts = xs_fly.freeze_start(idx_freezes); ends = xs_fly.freeze_start(idx_freezes) + round(xs_fly.freeze_dur(idx_freezes) * 60); 
-        old_fly_pc(starts:ends) = 2;
+        starts = xs_fly.freeze_start(idx_freezes); ends = xs_fly.freeze_start(idx_freezes) + round(xs_fly.freeze_dur(idx_freezes) * 60);
+        if xs_fly.hit_looms(idx_freezes) == 1
+            old_fly_pc(starts:ends) = 2;
+        else %if xs_fly.frozen_start_looms(idx_freezes) == 1 % Sadly the frozen_start_looms don't have a start and end.
+            old_fly_pc(starts:ends) = 3;
+        end
+
     end
     nexttile
     hold on
     ax(4) = gca;
     apply_effects(ax(4));
-    imagesc(old_fly_pc, [0 2])
+    imagesc(old_fly_pc, [0 3])
 
 end
 
@@ -44,8 +49,8 @@ for idx_bout_solution = 1:2
     bouts = importdata(fullfile('/Users/marcocolnaghi/PhD/freeze_ddm/datasets', types{idx_bout_solution}, id_code,  'bouts.mat'));
 
     thresholds = define_thresholds;
-%     thresholds.le_window_fl = [0 60];
-%     thresholds.le_window_sl = [0 60];
+    %     thresholds.le_window_fl = [0 60];
+    %     thresholds.le_window_sl = [0 60];
 
     bouts = bouts_formatting(bouts, thresholds);
     bouts_fly = bouts(bouts.fly == fly_id, :);
@@ -54,6 +59,7 @@ for idx_bout_solution = 1:2
     dur(dur <= 0 | isnan(dur)) = 0;
     base_val = double(bouts_fly.type);
     base_val(bouts_fly.le == true & bouts_fly.type == true & bouts_fly.frozen_start == false & bouts_fly.durations >= 30) = 2;
+    base_val(bouts_fly.le == true & bouts_fly.type == true & bouts_fly.frozen_start == true & bouts_fly.durations >= 30) = 3;
 
     ts_all = repelem(base_val, dur);
 
@@ -61,7 +67,7 @@ for idx_bout_solution = 1:2
     hold on
     ax(1 + idx_bout_solution) = gca;
     apply_effects(ax(1 + idx_bout_solution));
-    imagesc(ts_all', [0 2])
+    imagesc(ts_all', [0 3])
 
 end
 
@@ -87,7 +93,8 @@ end
 function Xs = filter_x(X)
 Nloom = mod(0:height(X)-1,20)'+1;
 X.Nloom = Nloom;
-X_short = X(X.hit_looms==1,:);
+% X_short = X(X.hit_looms==1,:);
+X_short = X;
 X_short.freeze_dur = X_short.freeze_dur/60;
 X_short.loom_interval = X_short.loom_interval/60;
 X_short.freeze_latency = X_short.freeze_latency/60;
@@ -98,6 +105,7 @@ X_short.loom_speed = X_short.loom_speed/25;
 X_short.Nloom = X_short.Nloom/10;
 X_short = X_short(X_short.freeze_dur >= 0.5,:);
 X_short = X_short(X_short.freeze_latency<=1,:);
-Xs = X_short(X_short.avg_sm_freeze < 1.25 &...
-    X_short.avg_fs_1s_prefreeze < 2,:);
+Xs = X_short;
+%Xs = X_short(X_short.avg_sm_freeze < 1.25 &...
+%    X_short.avg_fs_1s_prefreeze < 2,:);
 end

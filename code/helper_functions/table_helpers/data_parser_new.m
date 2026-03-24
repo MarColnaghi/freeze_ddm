@@ -73,7 +73,6 @@ end
 if strcmp(opt.Results.period, 'bsl')
     temp = temp(temp.period == 0, :);
     temp = temp(temp.nloom < 21, :);
-    temp = temp(temp.frozen_start == 0, :);
 
 elseif strcmp(opt.Results.period, 'loom')
     temp = temp(temp.period == 1, :);
