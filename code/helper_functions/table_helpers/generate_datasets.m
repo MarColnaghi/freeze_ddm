@@ -1,9 +1,8 @@
-clear all
 col = cmapper();
 thresholds = define_thresholds();
-imfirst = true;
+imfirst = false;
 
-for threshold_imm = [9 11]
+for threshold_imm = [3]
    % for threshold_mob =  11:-2:1
         for threshold_pc = 4
 

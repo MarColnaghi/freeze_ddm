@@ -118,7 +118,7 @@ switch opt.Results.type
 
                 for idx_bouts = 1:total_bouts
                     ons = bouts_le.onsets(idx_bouts);
-                    off = bouts_le.ends(idx_bouts);
+                    off = bouts_le.ends(idx_bouts) - 1;
                     try
                     sum_motion = motion_cache(bouts_le.fly(idx_bouts));
 
@@ -127,6 +127,7 @@ switch opt.Results.type
 
                     switch opt.Results.align
                         case 'onset'
+                            
                             sm_output(idx_bouts, 1:L) = freeze_sig;
                         case 'offset'
                             sm_output(idx_bouts, end-L+1:end) = freeze_sig;

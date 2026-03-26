@@ -1,21 +1,19 @@
 %% Script: Individual Freeze Likelihood Comparison
-paths_analysis = path_generator('folder', 'momentary_integration/alternative_test');
+paths_analysis = path_generator('folder', 'extrema_detection/alternative_test');
 
 % --- 1. Configuration & Paths ---
 threshold_imm = 2; threshold_mob = 2; threshold_pc = 4;
 id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
 col = cmapper('', 2);
 
-% model_list = {'dddim2'};
-% run_list   = {'run02_260325'};
-model_list = {'dddm2'};
-run_list   = {'run14_260325'};
-
+model_list = {'dddim2', 'ded2'};
+run_list   = {'run02_260325', 'run05_260325'};
 paths_fit  = path_generator('folder', 'fitting_freezes/le_new');
 data = alternative_test_collect_data(model_list, run_list);
 
 % --- 2. Preparation ---
 freezes_ref = data(1).table;
+freezes_ed = data(2).table;
 n_bouts     = height(freezes_ref);
 censoring_val = data(1).results.points.censoring;
 res_points = data(1).results.points; 
@@ -24,6 +22,8 @@ res_points = data(1).results.points;
 ll_tv = nan(n_bouts, 1);
 ll_st = nan(n_bouts, 1);
 ll_st_theory = nan(n_bouts, 1);
+ll_ed = nan(n_bouts, 1);
+
 kl_tv_st = nan(n_bouts, 1);
 kl_st_tv = nan(n_bouts, 1);
 kl_tv_st_partial = nan(n_bouts, 1);
@@ -47,9 +47,11 @@ afterEach(q, @(idx) helperUpdateProgress(ll_tv, ll_st, n_bouts, startTime));
 fprintf('Starting parfor over %d bouts...\n', n_bouts);
 
 % --- 4. Main Loop: parfor ---
-for idx_bout = 1:n_bouts
+parfor idx_bout = 1:n_bouts
     % Extract local row data
     freeze_row = freezes_ref(idx_bout, :);
+    freeze_ed_row = freezes_ref(idx_bout, :);
+
     dur_s      = freeze_row.durations_s;
     is_censored = dur_s > censoring_val;
 
@@ -63,21 +65,37 @@ for idx_bout = 1:n_bouts
     [pdf_ddm_st] = compute_pdf_tv_ddm(cur_out_st, res_points);
     ll_st(idx_bout) = compute_likelihood(pdf_ddm_st, is_censored, dur_s);
 
-    % --- Model 2 (Extrema Detection) ---
-    data(1).est(end)
-
+    % --- Model 1 (Theory) ---
     local_row = freeze_row;
     local_row.sm = local_row.sm_stat;
     nll_val_st = nll_fly_ddm_newer(data(1).est, local_row, res_points, ...
         strcat('model_', model_list{1}), 'iid', '', []);
-    [~, f, fd] = nll_fly_ddm_newer(data(1).est, local_row, res_points, ...
+    [~, f_ddm, fd_ddm] = nll_fly_ddm_newer(data(1).est, local_row, res_points, ...
         strcat('model_', model_list{1}), 'iid', 'p', []);
     ll_st_theory(idx_bout) = -nll_val_st;
+
+   % --- Model 2 (Extrema Detection) ---
+    local_row_ed = freeze_ed_row;
+    
+    % FIX: Slice the data into a temporary variable first
+    temp_soc_mot = data(2).extra_tv_n(idx_bout, :); 
+    
+    % Define the struct entirely within the loop to ensure it is "temporary"
+    signal_ed = struct(); 
+    signal_ed.soc_mot_array = temp_soc_mot;
+
+    [nll_val_ed] = nll_fly_ddm_newer(data(2).est, local_row_ed, res_points, ...
+        strcat('model_', model_list{2}), 'iid', '', signal_ed);
+    ll_ed(idx_bout) = -nll_val_ed;
+
+    % Ensure the second call also uses the sliced signal_ed
+    [~, f_ed, fd_ed] = nll_fly_ddm_newer(data(2).est, local_row_ed, res_points, ...
+        strcat('model_', model_list{2}), 'iid', 'p', signal_ed);
 
     % 1. Create a mask for valid (post-truncation) data
     % Assumes pdf_ddm_tv.t is the time vector corresponding to the ddm vector
     valid_mask = pdf_ddm_tv.t >= res_points.truncation ;
-
+    
     p_pdf = zeros(size(pdf_ddm_tv.ddm));
     q_pdf = zeros(size(pdf_ddm_tv.ddm));
 
@@ -115,31 +133,43 @@ for idx_bout = 1:n_bouts
     js_div_partial(idx_bout) = 0.5 * sum(p_part .* log2(p_part ./ m_vec_partial)) + ...
         0.5 * sum(q_part .* log2(q_part ./ m_vec_partial));
 
-    figure
-    plot(fd,f )
-    hold on
-    plot(pdf_ddm_tv.t, p_pdf)
-    plot(pdf_ddm_tv.t, q_pdf)
-    plot(fd,f )
-    plot(pdf_ddm_tv.t, cur_out_tv.mu1)
+%     figure
+%     hold on
+%     plot(fd_ed,f_ed)
+%     plot(fd_ddm, f_ddm)
+% 
+%     plot(pdf_ddm_tv.t, p_pdf)
+%     plot(pdf_ddm_tv.t, q_pdf)
+%     plot(fd_ed(1:end-1),  signal_ed.soc_mot_array)
+%     %     stem()
+%     sum(q_pdf) / 60 + pdf_ddm_st.survival
+%     sum(p_pdf) / 60 + pdf_ddm_tv.survival
+%     sum(f_ed(1:end-1)) / 60 + f_ed(end)
+%     sum(f_ddm(1:end-1)) / 60 + f_ddm(end)
+
     % Update progress
-    send(q, idx_bout);
+   send(q, idx_bout);
 end
 
 % --- 5. Final Output & Saving ---
 total_ll_tv = sum(ll_tv, 'omitnan');
 total_ll_st = sum(ll_st, 'omitnan');
+total_ll_ed = sum(ll_ed, 'omitnan');
 total_ll_st_theory = sum(ll_st_theory, 'omitnan');
 fav_pct = (sum(ll_tv > ll_st, 'omitnan') / sum(~isnan(ll_tv))) * 100;
+fav_pct_ed = (sum(ll_tv > ll_ed, 'omitnan') / sum(~isnan(ll_tv))) * 100;
 
 fprintf('\nFinal Results:\n');
 fprintf('Time-Varying Total LL: %.2f\n', total_ll_tv);
 fprintf('Stationary Total LL: %.2f\n', total_ll_st);
 fprintf('Stationary2 Total LL: %.2f\n', total_ll_st_theory);
+fprintf('Extrema-Detection Total LL: %.2f\n', total_ll_ed);
+
 fprintf('Percentage favoring Time-Varying: %.2f%%\n', fav_pct);
+fprintf('Percentage favoring Time-Varying: %.2f%%\n', fav_pct_ed);
 
 % Folder versioning
-results_base = fullfile(paths_analysis.results, model_list{1}, run_list{1});
+results_base = fullfile(paths_analysis.results, model_list{2}, run_list{1});
 version_idx = 1;
 results_folder = results_base;
 while exist(results_folder, 'dir')
@@ -149,7 +179,7 @@ end
 mkdir(results_folder);
 cd(results_folder)
 
-figure_base = fullfile(paths_analysis.fig, model_list{1}, run_list{1});
+figure_base = fullfile(paths_analysis.fig, model_list{2}, run_list{1});
 version_idx = 1;
 figure_folder = figure_base;
 while exist(results_folder, 'dir')
@@ -159,6 +189,7 @@ end
 
 ll_table.st = ll_st;
 ll_table.tv = ll_tv;
+ll_table.ed = ll_ed;
 ll_table.st_theory = ll_st_theory;
 ll_table.kl_tv_st = kl_tv_st;
 ll_table.kl_st_tv = kl_st_tv;

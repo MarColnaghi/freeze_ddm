@@ -178,7 +178,7 @@ for dataset = 1
                 end
 
                 capped_lengths = min(run_lengths, 630);
-                z.avg_sm = compute_means(Fly1.sum_motion(1:end), onsets, onsets + capped_lengths - 1);
+                z.avg_sm = compute_means(Fly1.sum_motion(1:end), onsets , onsets + capped_lengths - 1);
                 z.avg_ss = compute_means(Fly1.sum_speed(1:end), onsets, onsets + capped_lengths - 1);
 
                 l.ts_sm = arrayfun(@(start_idx, end_idx) ...

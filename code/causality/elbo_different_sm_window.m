@@ -9,14 +9,14 @@ model_str = 'dddm2';
 col.Set3 = cbrewer2('Set3', 7);
 
 windows.anchor = 'freeze_onset';
-windows.reference = 'cumulative';
-windows.length = 'cumul';
+windows.reference = 'fixed_length';
+windows.length = '30';
 
-fh = figure('Position', [100 100 1070 500], 'Color', 'w');
+fh = figure('Position', [100 100 1070 450], 'Color', 'w');
 t = tiledlayout(1, 1, 'TileSpacing', 'loose', 'Padding', 'loose');
 mkrsize = 180;
 
-model_acausal = importdata('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/fitting_freezes/le/dddm2/run11/fit_results_dddm2.mat');
+model_acausal = importdata('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/fitting_freezes/le_new/dddm2/run11_260324/model_results.mat');
 elbo_acausal = model_acausal.elbo;
 
 parent_folder = fullfile('/Users/marcocolnaghi/PhD/freeze_ddm/model_results/causality/fitting_windows', model_str, windows.reference);
@@ -24,9 +24,9 @@ code_folder = sprintf('*_size%s*', windows.length);
 dir_folder = dir(fullfile(parent_folder, code_folder));
 
 nexttile
-
+xline(0, 'k-', 'LineWidth', 2, 'DisplayName', 'Freeze Onset')
 c = 0;
-for idx_run = 1:length(dir_folder)
+for idx_run = 3%5%1:length(dir_folder)
     
     c = c + 1;
     str_folder = fullfile(dir_folder(idx_run).folder, dir_folder(idx_run).name);
@@ -68,7 +68,9 @@ end
 
 yline(elbo_acausal(:,1), 'k--', 'DisplayName', 'Freeze Duration', 'LineWidth', 2)
 ax = gca;
-apply_generic(ax, 'xlim', [-610 240], 'xticks', [-600 -300 -60 0 30 60 120 180 240], 'ylim', [-10650 -10400])
+sorted_windows = sort(get_window_size);
+sorted_windows = sorted_windows(diff(sorted_windows) > 21);
+apply_generic(ax, 'xlim', [-420 420], 'xticks', sort(sorted_windows))%, 'ylim', [-10650 -10400])
 ax.GridAlpha = .1;
 
 if strcmp(windows.reference, 'fixed_length')

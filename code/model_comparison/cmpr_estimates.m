@@ -13,25 +13,26 @@ markers = {'o','+','*','s','d','v','>','h'};
 
 mkrsize = 220;
 
-model_list = {'dddm2', 'ded2'};
-run_list   = {'run21', 'run15'};
-label_list = {'Integration', 'Extrema Detection'};
-color_list = {col.timevarying_sm, col.extremadetection};
+model_list = {'ded2','ded2'};
+run_list   = {'run05_260325', 'run06_260325'};
+label_list = { 'extrema detection', 'extrema detection (constant evidence)'};
+color_list = {col.extremadetection, '#7D74BD'};
+%color_list = {'#20DA99', '#5921E6'};
 
 fh = figure('color','w', 'Position', [100 100 1200 400]);
 
-[fh] = base_for_estimates('model', model_struct, 'ylimits', [-1 5], 'fh', fh);
-paths = path_generator('folder', 'fitting_freezes/le');
+[fh] = base_for_estimates('model', model_struct, 'ylimits', [-2 7], 'fh', fh);
+paths = path_generator('folder', 'fitting_freezes/le_new');
 
 for idx_model = 1:length(model_list)
 
     results_folder = fullfile(paths.results, model_list{idx_model}, run_list{idx_model});
 
-    model_results = importdata(fullfile(results_folder, sprintf('fit_results_%s.mat', model_list{idx_model})));
+    model_results = importdata(fullfile(results_folder, 'model_results.mat'));
 
-    plot_estimates('base', fh, 'results', model_results, 'marker', markers{idx_model}, 'label', label_list{idx_model}, 'ylimits', [-1 5], 'colors', color_list{idx_model})
+    plot_estimates('base', fh, 'results', model_results, 'marker', markers{idx_model}, 'label', label_list{idx_model}, 'ylimits', [-2 7], 'colors', color_list{idx_model})
 end
 
 legend('Location', 'eastoutside', 'box', 'off', 'FontSize', 20)
 paths = path_generator('folder', 'model_comparison');
-exporter(fh, paths, 'comparison.pdf')
+exporter(fh, paths, 'comparison_ed_st_tv.pdf')

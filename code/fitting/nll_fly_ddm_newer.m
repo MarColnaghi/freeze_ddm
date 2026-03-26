@@ -42,7 +42,11 @@ if strcmp(plot_flag, 'p')
         tbl.intercept(:) = bouts.intercept(idx_bout);
 
         if strcmp('ed', tok{1}) || strcmp('ded', tok{1})
-            ec.soc_mot_array = extra.soc_mot_array(idx_bout, :);
+            if num_bouts > 1
+                ec.soc_mot_array = extra.soc_mot_array(idx_bout, :);
+            else
+                ec.soc_mot_array = extra.soc_mot_array;
+            end
         end
         g = comp_loglikelihood(params, tbl, points, model_func, iid, tok, ec);
 
@@ -112,8 +116,8 @@ y.tsl = bif.tsl;
 y.intercept = bif.intercept;
 
 model = model_func();
-if isfield(extra, 'fixed_param')
-    model = rmfield(model, fieldnames(extra.fixed_param));
+if isfield(extra, 'tndt')
+    model = rmfield(model, 'tndt');
 end
 
 [gt, lbl] = get_ground_truth_vector(model);
@@ -289,6 +293,8 @@ if strcmp('iid', iid)
 
     elseif  strcmp('ed', tok{1})
 
+        fs = 60;
+
         [pdf, cdf] = pdf_cdf({'ed'});
 
         f = @(ts, inds) pdf.ed(ts, out.theta(inds), out.mu(inds, :), out.tndt(inds), fs);
@@ -317,7 +323,6 @@ if strcmp('iid', iid)
         f = @(ts, inds) pdf.ed(ts, out.theta(inds), out.mu(inds, :), out.tndt(inds), fs);
         F = @(ts, inds) cdf.ed(ts, out.theta(inds), out.mu(inds, :), out.tndt(inds), fs);
 
-        epsN = 1e-12;
 
         if ~isempty(points.truncation)
             trunc_factor = @(inds) max(F(points.truncation - 1/fs, inds), epsN) ;
@@ -328,7 +333,7 @@ if strcmp('iid', iid)
         g(bet) = f(ts(bet), bet) ./ trunc_factor(bet) * fs;
         g(abo) = F(points.censoring, abo) ./ trunc_factor(abo);
 
-        g      = max(g, 1e-12);
+        g      = max(g, epsN);
         log_g  = log(g);
 
     elseif  strcmp('ded', tok{1})
@@ -346,8 +351,6 @@ if strcmp('iid', iid)
         F = @(ts, inds) out.pmix(inds)' .* cdf.ed(ts, out.theta1(inds), out.mu1(inds, :), out.tndt(inds), fs) + ...
             (1 - out.pmix(inds))' .* cdf.ed(ts, out.theta2(inds), out.mu2(inds, :), out.tndt(inds), fs);
 
-        epsN = 1e-12;
-
         if ~isempty(points.truncation)
             trunc_factor = @(inds) max(F(points.truncation - 1/fs, inds), epsN) ;
         else
@@ -361,7 +364,7 @@ if strcmp('iid', iid)
 %         z(bet) = z(bet);
 %         sum(z(ts >= points.truncation))
 
-        g      = max(g, 1e-12);
+        g      = max(g, epsN);
         log_g  = log(g);
 
     elseif  strcmp('expsddm', tok{1})
@@ -406,7 +409,7 @@ if strcmp('iid', iid)
         g(bet)     = f(ts(bet),   bet)     ./ trunc_factor(bet);
         g(abo)     = (1 - F(C, abo))         ./ trunc_factor(abo);
 
-        g      = max(g, 1e-12);
+        g      = max(g, epsN);
         log_g  = log(g);
 
     elseif  strcmp('expdddm', tok{1})

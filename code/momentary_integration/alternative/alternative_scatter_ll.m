@@ -1,9 +1,14 @@
 % Load the table with the computed log likelihoods 
 model_list = {'dddim2'};
-run_list   = {'run01_010326_1800'};
-version = {'_v8'};
+run_list   = {'run02_260325'};
+version = {''};
+model_list = {'dddm2'};
+run_list   = {'run14_260325'};
+model_list = {'ded2'};
+run_list   = {'run05_260325'};
 
-paths_analysis = path_generator('folder', fullfile('momentary_integration','alternative_test', model_list{1}, strcat(run_list{1}, version{1})));
+paths_fit  = path_generator('folder', 'fitting_freezes/le_new');
+paths_analysis = path_generator('folder', fullfile('extrema_detection','alternative_test', model_list{1}, strcat(run_list{1}, version{1})));
 col = cmapper('', 2);
 
 ll = struct2table(importdata(fullfile(paths_analysis.results, 'll_table.mat')));

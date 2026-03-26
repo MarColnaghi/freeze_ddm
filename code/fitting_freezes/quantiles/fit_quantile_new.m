@@ -17,21 +17,13 @@ bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'win
 
 total_length = 30;
 
-[mean_sm_before_freeze, mean_sm_during_freeze] = extract_sm_columns(bouts_proc, motion_cache, 'chunk_dur', total_length);
-bouts_proc.smp = mean_sm_before_freeze;
+% Extract the pre-freezing social motion
+sm_pre = extract_sm_from_bouts(bouts_proc, 'type', 'onsets', 'output_type', 'mat', 'window', [-25 5]);
+bouts_proc.smp = mean(sm_pre, 2);
 
-% At some point we should modify this piece of code and unify
-% extract_sm_columns and extract_sm_from_bouts.
-
-% sm_before_freeze = mean(extract_sm_from_bouts(bouts_proc, 'type', 'onsets', 'window', [-31 -1]), 2);
-
+% Censoring and Truncation point for the fitting
 points.censoring = 10.5;
 points.truncation = 0.5;
-
-%extra.soc_mot_array = cell2mat(sm_during)';
-
-%  Now we added our vector column to the bouts table
-bouts_proc = bouts_proc(bouts_proc.durations_s >= points.truncation, :);
 
 fh = figure('Position', [100 100 500 400], 'Color', 'w');
 tiledlayout(2, 1, 'TileSpacing', 'loose')

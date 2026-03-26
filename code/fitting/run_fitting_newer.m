@@ -172,11 +172,14 @@ else
         plc_hold = ground_truth;
         plc_hold(:, all(ismissing(plc_hold))) = [];
         disp(plc_hold)
+        ground_truth = ground_truth(1, :);
+
     else
         starting_point = array2table(estimates, 'VariableNames', lbl);
         starting_point(:, ismissing(starting_point)) = [];
         disp(starting_point)
     end
+
 
     %% VBMC Optimization
     llfun = @(x) -nll_fly_ddm_newer(x, freeze_table, points, model_str, 'iid', 'n', extra);
@@ -205,8 +208,14 @@ else
 
     [VP, ELBO, ELBO_SD] = vbmc(postfun, eval_param(1,:), LB, UB, PLB, PUB, options_vbmc);
     [x_mean, x_sigma] = vbmc_moments(VP);
+    vbmc_mode(VP);
     x_std = sqrt(diag(x_sigma));
     vbmc_plot(VP);
+
+    Xs = vbmc_rnd(VP, 3e5);
+
+    post_median = median(Xs, 1);                % Posterior SD
+    post_iqr = quantile(Xs,[0.25,0.75],1);   % Posterior interquartile ranges
 
     %% Store Fit Results
     model_results = struct;
@@ -228,6 +237,12 @@ else
 
     model_results.estimates_mean = array2table(estimates_mean, 'VariableNames', lbl);
     model_results.estimates_std = array2table(estimates_std, 'VariableNames', lbl);
+
+    model_results.array_mean = x_mean;
+    model_results.array_std = x_std;
+
+    model_results.array_median = post_median;
+    model_results.array_IQR = post_iqr;
 
     model_results.points.truncation = points.truncation;
     model_results.points.censoring = points.censoring;

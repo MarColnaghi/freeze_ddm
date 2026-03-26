@@ -155,22 +155,65 @@ if strcmp('iid', iid)
         f1 = @(ts, inds) out.pmix(inds) .* pdf.ddm(ts, out.mu1(inds), out.theta1(inds), out.tndt(inds));
         f2 = @(ts, inds) (1 - out.pmix(inds)) .* pdf.ddm(ts, out.mu2(inds), out.theta2(inds), out.tndt(inds));
 
-        F = @(ts, inds) out.pmix(inds) .* cdf.ddm(ts, out.mu1(inds), out.theta1(inds), out.tndt(inds)) + ...
-            (1 - out.pmix(inds)) .* cdf.ddm(ts, out.mu2(inds), out.theta2(inds), out.tndt(inds));
+        F1 = @(ts, inds) out.pmix(inds) .* cdf.ddm(ts, out.mu1(inds), out.theta1(inds), out.tndt(inds));
+        F2 = @(ts, inds) (1 - out.pmix(inds)) .* cdf.ddm(ts, out.mu2(inds), out.theta2(inds), out.tndt(inds));
 
+        F = @(ts, inds) F1(ts, inds) + F2(ts, inds);
         trunc_factor = @(inds) max(1 - F(t0, inds), epsN);
 
         g1(bet) = f1(ts(bet), bet) ./ trunc_factor(bet);
-        g(abo) = (1 - F(C, abo)) ./ trunc_factor(abo);
+        g1(abo) = (out.pmix(abo) - F1(C, abo)) ./ trunc_factor(abo);
 
         g1 = max(g1, epsN);
         log_g1= log(g1);
 
         g2(bet) = f2(ts(bet), bet) ./ trunc_factor(bet);
-        g(abo) = (1 - F(C, abo)) ./ trunc_factor(abo);
+        g2(abo) = ((1 - out.pmix(abo)) - F2(C, abo)) ./ trunc_factor(abo);
 
         g2 = max(g2, epsN);
         log_g2= log(g2);
+
+
+    elseif  strcmp('ded', tok{1})
+
+       fs = 60;
+        % Use the same index definitions as your joint code
+        below = bif.durations_s <  out.tndt;
+        bet   = bif.durations_s >= out.tndt & bif.durations_s <= points.censoring;
+        abo   = bif.durations_s >  points.censoring;
+        
+        [pdf, cdf] = pdf_cdf({'ed'});
+        
+        % Component 1 functions
+        f1 = @(ts, inds) out.pmix(inds)' .* pdf.ed(ts, out.theta1(inds), out.mu1(inds, :), out.tndt(inds), fs);
+        F1 = @(ts, inds) out.pmix(inds)' .* cdf.ed(ts, out.theta1(inds), out.mu1(inds, :), out.tndt(inds), fs);
+        
+        % Component 2 functions
+        f2 = @(ts, inds) (1 - out.pmix(inds))' .* pdf.ed(ts, out.theta2(inds), out.mu2(inds, :), out.tndt(inds), fs);
+        F2 = @(ts, inds) (1 - out.pmix(inds))' .* cdf.ed(ts, out.theta2(inds), out.mu2(inds, :), out.tndt(inds), fs);
+        
+        % Full Mixture (Only for the denominator)
+        F_total = @(ts, inds) F1(ts, inds) + F2(ts, inds);
+        
+        % MATCH THE JOINT TRUNCATION LOGIC
+        if ~isempty(points.truncation)
+            % Use F_total here so both g1 and g2 are scaled by the same mixture mass
+            trunc_denom = @(inds) max(F_total(points.truncation - 1/fs, inds), 1e-12);
+        else
+            trunc_denom = @(inds) ones(size(inds))';
+        end
+        
+        % --- Component 1 ---
+        g1(bet) = f1(ts(bet), bet) ./ trunc_denom(bet) * fs; % Scale by fs
+        g1(abo) = F1(points.censoring, abo) ./ trunc_denom(abo); % Match joint 'F' logic
+        g1 = max(g1, 1e-12);
+        log_g1 = log(g1);
+        
+        % --- Component 2 ---
+        g2(bet) = f2(ts(bet), bet) ./ trunc_denom(bet) * fs; % Scale by fs
+        g2(abo) = F2(points.censoring, abo) ./ trunc_denom(abo); % Match joint 'F' logic
+        g2 = max(g2, 1e-12);
+        log_g2 = log(g2);
 
     elseif  strcmp('m', tok{1})
 
@@ -202,8 +245,9 @@ if strcmp('iid', iid)
         g2 = max(g2, epsN);
         log_g2= log(g2);
 
-            end
-            
+    
+    end
+
 end
 end
 

@@ -5,7 +5,7 @@ function [pdf] = compute_pdf_tv_ddm(out, points)
         out.tndt = zeros(height(out), 1);
     end
 
-    dt = 1/300;
+    dt = 1/60;
 
     % 1. Get the raw (shifted but NOT yet truncated) outputs for both components
     pr1 = param_res(out.theta1, 'points', points, 'dt', dt);

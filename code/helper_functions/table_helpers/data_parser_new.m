@@ -102,14 +102,18 @@ temp.fs_loom = temp.avg_fs_loom/10;
 temp.ls = temp.sloom/25 - 1;
 temp.ln = temp.nloom/10;
 temp.tsl = temp.time_since_last/400;
+temp.intercept = ones(height(temp), 1);
 
 % Set Thresholds on Freeze Durations, Social Motion and Speed of the Fly
-motion_max = 2; % outliers
+motion_max = 1.2; % outliers
 speed_max = 2; % outliers
 
 % Threshold the Dataset
 
 temp = temp(temp.sm <= motion_max & temp.fs <= speed_max, :);
 
+% Get smp in the table.
+sm_pre = extract_sm_from_bouts(temp, 'type', 'onsets', 'output_type', 'mat', 'window', [-25 5]);
+temp.smp = mean(sm_pre, 2);
 
 end

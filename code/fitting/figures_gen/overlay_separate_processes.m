@@ -34,6 +34,7 @@ freezes = importdata(fullfile(results.bouts_path, 'freeze.mat'));
 % est_params = [  -1.0101       3.0639        1.2792      0.029802       -0.017144        0.24792         -0.52892          2.8024               3               0.0001    ];
 
 results.estimates_mean.Properties.VariableNames
+col = cmapper();
 
 i = 0;
 for idx_sm = 1:3
@@ -52,8 +53,8 @@ for idx_sm = 1:3
             end
             
             [f1, f2, fd] = extract_individual_processes(est_params, freezes_quant, results.points, strcat('model_', results.fitted_model), 'iid', 'p', extra);
-            plot(fd, f1, 'LineWidth', 1.2, 'Color', 'r', 'LineStyle', '-.')
-            plot(fd, f2, 'LineWidth', 1.2, 'Color', 'b', 'LineStyle', '-.')
+            plot(fd, f1, 'LineWidth', 1.2, 'Color', col.processes.short, 'LineStyle', '-.')
+            plot(fd, f2, 'LineWidth', 1.2, 'Color', col.processes.long, 'LineStyle', '-.')
 
 %             axes(ax_inset(i));
             %plot(results.points.censoring, f(end), 'o', 'LineWidth', 1, 'MarkerSize', 5, 'MarkerEdgeColor', 'k');

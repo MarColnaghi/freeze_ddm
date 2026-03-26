@@ -52,6 +52,12 @@ for idx_sm = 1:3
 
             plot(fd, f, 'LineWidth', 1.9, 'Color', 'k', 'LineStyle', '--')
 
+            if gt_plot
+                gt_parameters = table2array(results.ground_truth(1, ~ismissing(results.ground_truth)));
+                [~, f, fd] =  nll_fly_ddm_newer(gt_parameters, freezes_quant, results.points, strcat('model_', results.fitted_model), 'iid', 'p', extra);
+                plot(fd, f, 'LineWidth', 1.9, 'Color', 'r', 'LineStyle', '--')
+            end
+
             if censored_inset
                 axes(ax_inset(i));
                 plot(results.points.censoring, f(end), 'o', 'LineWidth', 1, 'MarkerSize', 5, 'MarkerEdgeColor', 'k');
