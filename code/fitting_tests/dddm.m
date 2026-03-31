@@ -10,7 +10,7 @@ col = cmapper();
 threshold_imm = 2; threshold_mob = 2; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
 paths = path_generator('folder', fullfile('fitting_tests','dddm'), 'bouts_id', id_code);
 load(fullfile(paths.dataset, 'bouts.mat'));
-bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'all');
+bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le');
 motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 
 ncomp_vars = table();
@@ -24,7 +24,7 @@ model = model_dddm2();
 model.mu1.ground_truth = 1.4;
 model.theta1.ground_truth = 0.7;
 model.mu2.ground_truth = 1.7;
-model.theta2.ground_truth = [0.8 2.2];
+model.theta2.ground_truth = [0 2.2];
 model.pmix.ground_truth = [0 0 0 0.2];
 model.tndt.ground_truth = 0.3;
 
@@ -120,7 +120,7 @@ histogram(abs(rt.st - rt.ig), 0:1/10:sim_params.T, 'EdgeColor', 'none', 'Normali
 apply_generic(gca)
 xlabel('|t_{simul} - t_{sampled}| (s)'); ylabel('pdf')  
 
-%% For some simulation it will go past ddm_params.T, so we need to censor those.
+% For some simulation it will go past ddm_params.T, so we need to censor those.
 
 %  Now we added our vector column to the bouts table. You can select which
 %  of the two to add (ig vs st)
@@ -128,7 +128,7 @@ xlabel('|t_{simul} - t_{sampled}| (s)'); ylabel('pdf')
 bouts_proc.durations_s = rt.st;
 
 % And then fit the model
-model_results = run_fitting_newer(bouts_proc, points, 'dddm2', paths, 'export', true, 'extra', [], 'ground_truth', gt_table, 'n_bads', 2, 'bads_display', 'none');
+model_results = run_fitting_newer(bouts_proc, points, 'dddm15', paths, 'export', true, 'extra', [], 'ground_truth', gt_table, 'n_bads', 2, 'bads_display', 'none');
 
 % Plot the posteriors distribution together with the ground truth
 plot_estimates('results', model_results, 'export', true, 'ylimits', [-2 5])
