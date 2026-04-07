@@ -19,8 +19,10 @@ bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'win
 % Extract the pre-freezing social motion
 sm_pre = extract_sm_from_bouts(bouts_proc, 'type', 'onsets', 'output_type', 'mat', 'window', [-60 0]);
 sm_freeze = extract_sm_from_bouts(bouts_proc, 'type', 'onlyfreeze', 'output_type', 'mat');
+sm_freeze_alternative = extract_sm_from_bouts(bouts_proc, 'type', 'onlyfreeze', 'output_type', 'mat', 'delay', 20);
+
 bouts_proc.smp = mean(sm_pre, 2, 'omitnan');
-bouts_proc.smp = bouts_proc.sm;
+bouts_proc.sm =  mean(sm_freeze_alternative, 2, 'omitnan');
 
 % Extract Social Motion Array or keep it Stationary
 extra.soc_mot_array = extract_sm_from_bouts(bouts_proc, 'type', 'onsets', 'output_type', 'mat', 'window', [0 630]);
@@ -28,9 +30,9 @@ extra.soc_mot_array = extract_sm_from_bouts(bouts_proc, 'type', 'onsets', 'outpu
 
 % Censoring and Truncation point for the fitting
 points.censoring = 10.5;
-points.truncation = 1.5;
+points.truncation = 0.5;
 
-model = 'ed3';
+model = 'dddm2';
 model_results = run_fitting_newer(bouts_proc, points, model, paths, 'export', true, 'bads_display', 'iter', 'n_bads', 2, 'extra', extra, 'vbmc_exhaustive', false, 'pass_ndt', true);
 plot_estimates('results', model_results, 'export', true, 'ylimits', [-2 5])
 

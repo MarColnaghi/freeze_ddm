@@ -7,8 +7,11 @@ addParameter(opt, 'window', [-180 300]);
 addParameter(opt, 'output_type', 'mat');
 addParameter(opt, 'size', 630);
 addParameter(opt, 'align', 'onset');
+addParameter(opt, 'delay', 0);
 
 parse(opt, varargin{:});
+
+delay = opt.Results.delay;
 
 chunk_len = opt.Results.size;
 window = opt.Results.window;
@@ -102,7 +105,7 @@ switch opt.Results.type
                 sm_output = cell(total_bouts, 1);
 
                 for idx_bouts = 1:total_bouts
-                    ons = bouts_le.onsets(idx_bouts);
+                    ons = bouts_le.onsets(idx_bouts) + delay;
                     off = bouts_le.ends(idx_bouts) - 1;
                     sum_motion = motion_cache(bouts_le.fly(idx_bouts));
 
@@ -117,9 +120,9 @@ switch opt.Results.type
                 sm_output = nan(total_bouts, max_len);
 
                 for idx_bouts = 1:total_bouts
-                    ons = bouts_le.onsets(idx_bouts);
+                    ons = bouts_le.onsets(idx_bouts) + delay;
                     off = bouts_le.ends(idx_bouts) - 1;
-                    try
+                    
                     sum_motion = motion_cache(bouts_le.fly(idx_bouts));
 
                     freeze_sig = sum_motion(ons:off) ./ 10;
@@ -133,8 +136,8 @@ switch opt.Results.type
                             sm_output(idx_bouts, end-L+1:end) = freeze_sig;
                     end
 
-                    catch
-                    end
+                    
+                    
                 end
 
         end
