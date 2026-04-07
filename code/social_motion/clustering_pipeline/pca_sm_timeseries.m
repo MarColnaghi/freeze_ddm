@@ -100,7 +100,15 @@ pc_to_use = 1:30; cumvar(max(pc_to_use));
 data_for_clustering = score(:, pc_to_use);
 col = cmapper([], n_clusters);
 
-[idx, C, sums, diffs] = kmeans(data_for_clustering, n_clusters, 'Replicates', 5, 'MaxIter', 10000);
+[idx, C, sums, diffs] = kmeans(data_for_clustering, n_clusters, 'Replicates', 5, 'MaxIter', 10000, 'Distance', 'correlation');
+
+repr = nan(n_clusters, size(sm_freeze_full, 2));
+
+for idx_cluster = 1:n_clusters
+    hold on
+    repr(idx_cluster, 1:size(sm_freeze_full, 2)) = mean(sm_freeze_full(idx == idx_cluster, :));
+    plot(1:size(sm_freeze_full, 2), repr(idx_cluster, :), 'LineWidth', 1.5, 'Color', col.pca(idx_cluster, :));
+end
 
 % Distance to the ASSIGNED cluster center for each trial
 dist_to_assigned = zeros(size(idx));
@@ -128,12 +136,13 @@ sorted_idx = sorted_data(:, 1);
 
 boundaries = [0; find(diff(sorted_idx)) + 0.5; size(sm_freeze_full, 1)];
 
-% Visualize the Heatmap
+%% Visualize the Heatmap
 fh = figure('color','w','Position',[100, 100, 600, 650]);
 tiledlayout(3, 1, 'Padding', 'compact', 'TileSpacing', 'tight')
 nexttile(2, [2 1])
 hold on
 imagesc(sm_freeze_full(sort_order, :), [0 1.2]);
+scatter(bouts_proc.durations(sort_order), 1:height(bouts_proc), 3, '|', 'k')
 ax = gca;
 apply_generic(gca, 'xlim', [0 630], 'no_y', true, 'ylim', [-100 size(sm_freeze_full, 1) + 100], 'xtick', 0:120:600)
 colormap(cbrewer2('Reds',[]));

@@ -22,7 +22,7 @@ sm_freeze = extract_sm_from_bouts(bouts_proc, 'type', 'onlyfreeze', 'output_type
 sm_freeze_alternative = extract_sm_from_bouts(bouts_proc, 'type', 'onlyfreeze', 'output_type', 'mat', 'delay', 20);
 
 bouts_proc.smp = mean(sm_pre, 2, 'omitnan');
-bouts_proc.sm =  mean(sm_freeze_alternative, 2, 'omitnan');
+%bouts_proc.sm =  mean(sm_freeze_alternative, 2, 'omitnan');
 
 % Extract Social Motion Array or keep it Stationary
 extra.soc_mot_array = extract_sm_from_bouts(bouts_proc, 'type', 'onsets', 'output_type', 'mat', 'window', [0 630]);
@@ -32,8 +32,8 @@ extra.soc_mot_array = extract_sm_from_bouts(bouts_proc, 'type', 'onsets', 'outpu
 points.censoring = 10.5;
 points.truncation = 0.5;
 
-model = 'dddm2';
-model_results = run_fitting_newer(bouts_proc, points, model, paths, 'export', true, 'bads_display', 'iter', 'n_bads', 2, 'extra', extra, 'vbmc_exhaustive', false, 'pass_ndt', true);
+model = 'dddim2';
+model_results = run_fitting_newer(bouts_proc, points, model, paths, 'export', true, 'bads_display', 'iter', 'n_bads', 2, 'extra', extra, 'vbmc_exhaustive', false, 'pass_ndt', false);
 plot_estimates('results', model_results, 'export', true, 'ylimits', [-2 5])
 
 [fh, ax, ax_inset] = fd_conditions('results', model_results, 'no_y', true, 'vis', true, 'bin_size', 5, 'col', 'gray2', 'censored_inset', true);

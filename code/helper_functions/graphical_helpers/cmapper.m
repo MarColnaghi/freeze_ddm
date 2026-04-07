@@ -153,7 +153,7 @@ col.early_sm = '#FF715B';
 col.late_sm = '#1EA896';
 
 
-col.pca = cbrewer2('Set2', quantiles);
+col.pca = cbrewer2('Set2', nq);
 end
 
 function cmap = get_var_cmap(col, varname)
