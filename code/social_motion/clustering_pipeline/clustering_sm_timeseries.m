@@ -10,29 +10,29 @@ motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 
 % Here you can change the window of loom-evoked
 thresholds = define_thresholds('le_window', struct('le_window_sl', [5 55], 'le_window_fl', [5 55]));
-%thresholds = define_thresholds;
+% thresholds = define_thresholds;
 
 bouts = bouts_formatting(bouts, thresholds);
 
 % Process the data: set thresholds for sm, fs and ln. Set minimum duration.
-bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', 'nloom', 2:20, 'min_dur', 30);
+bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', 'nloom', 2:20, 'min_dur', 12);
 
-% Extract the pre-freezing social motion
+%% Extract the pre-freezing social motion
 sm_freeze = extract_sm_from_bouts(bouts_proc, 'type', 'onlyfreeze', 'output_type', 'mat');
 inizio = 0;
-fine = 630;
+fine = 60;
 sm_freeze_full = extract_sm_from_bouts(bouts_proc, 'type', 'onsets', 'output_type', 'mat', 'window', [inizio fine]);
 
-%% sm_freeze_full is trials x timesteps (each row is a trial, each column a
+% sm_freeze_full is trials x timesteps (each row is a trial, each column a
 % timestep in the duration)
 
 % centered_sm_freeze = sm_freeze_full - mean(sm_freeze_full, 2);
 % centered_sm_freeze = zscore(sm_freeze_full, [], 2);
 
-clustering_type = 'pca';
+clustering_type = 'max';
 paths = path_generator('folder', fullfile('social_motion','clustering', clustering_type), 'bouts_id', id_code, 'imfirst', false);
 
-n_clusters = 12;
+n_clusters = 8;
 col = cmapper([], n_clusters);
 
 switch clustering_type
@@ -75,7 +75,28 @@ switch clustering_type
         centered_sm_freeze = sm_freeze_full;
         if strcmp(clustering_type, 'max')
             % Metric: Time of Max Peak
-            [~, metric] = max(centered_sm_freeze, [], 2);
+            % 1. Define your threshold
+            threshold_sm = 0.3;
+
+            % 2. Find the maximum value and its index for each row
+            % centered_sm_freeze is assumed to be your [Observations x Time] matrix
+            [max_vals, metric] = max(centered_sm_freeze, [], 2);
+
+            % 3. Identify which rows failed to reach the threshold
+            % This creates a logical mask (1 for fail, 0 for pass)
+            failed_to_reach = max_vals < threshold_sm;
+
+            % 4. Apply the threshold condition
+            % We set the index to NaN for any row where the max wasn't high enough.
+            % Note: metric must be converted to double to hold NaN values.
+            metric = double(metric);
+            metric(failed_to_reach) = NaN;
+
+            % --- OPTIONAL: Clean up the results ---
+            % If you want to know how many observations were rejected:
+            num_rejected = sum(failed_to_reach);
+            fprintf('Excluded %d rows that did not exceed threshold %0.2f\n', num_rejected, threshold_sm);
+
         else
             % Metric: Center of Mass
             pow = 6;
@@ -94,6 +115,31 @@ switch clustering_type
         % 3. Map these cluster labels back to the original row indices
         idx = zeros(n, 1);
         idx(sort_order) = temp_cluster_ids;
+
+    case 'first_cross'
+        threshold = 0.2;
+        centered_sm_freeze = sm_freeze_full;
+
+        metric = nan(size(centered_sm_freeze,1),1);
+        for row = 1:size(centered_sm_freeze,1)
+            tmp = find(centered_sm_freeze(row,:) > threshold, 1, 'first');
+            if ~isempty(tmp)
+                metric(row) = tmp;
+            end
+        end
+
+        % 1. Get the sort order based on the metric
+        [~, sort_order] = sort(metric);
+        
+        % 2. Assign Clusters based on position in the sorted list
+        n = size(centered_sm_freeze, 1);
+        % Create cluster labels (e.g., 1,1,1, 2,2,2...)
+        temp_cluster_ids = ceil((1:n)' * n_clusters / n);
+        
+        % 3. Map these cluster labels back to the original row indices
+        idx = zeros(n, 1);
+        idx(sort_order) = temp_cluster_ids;
+
 end
 
 
@@ -163,6 +209,12 @@ ylabel({'Mean', 'Social Motion'})
 linkaxes([ax(:)], 'x')
 
 exporter(fh, paths, 'clusters_profiles.pdf')
+exporter(fh, paths, 'clusters_profiles.png')
+
+% axes(ax(2))
+% clim([90 91.2])
+% exporter(fh, paths, 'clusters_profiles_nocolor.pdf')
+% exporter(fh, paths, 'clusters_profiles_nocolor.png')
 
 % Similarities
 
@@ -186,7 +238,10 @@ for idx_cluster = 1:n_clusters
     hold(ax_distr(idx_cluster), 'on')
 
     plot(t_vec, repr(idx_cluster, :), 'Color', col.pca(idx_cluster,:), 'LineWidth', 2)
-       
+    [m_med, i_med] = max(repr(idx_cluster, :));
+    t_med = t_vec(i_med);
+    text(t_med, m_med, num2str(round(t_med, 2)), 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'center')  
+
     % Histogram
     histogram(ax_distr(idx_cluster), bouts_proc.durations_s(idx == idx_cluster), ...
         min(bouts_proc.durations_s):bin_size:max(bouts_proc.durations_s) + 1, ...
@@ -237,6 +292,7 @@ for idx_cluster = 1:n_clusters
 end
 
 exporter(fh_distr, paths, 'clusters_freezedurations.pdf')
+exporter(fh_distr, paths, 'clusters_freezedurations.png')
 
 fh = figure('color','w','Position',[100, 100, 400, 400]);
 hold on
@@ -253,6 +309,119 @@ apply_generic(gca, 'xlim', [0 10.5], 'ylim', [0 1], 'tick_length', 0.025, 'xtick
 ylabel('ecdf')
 xlabel('Duration (s)')
 exporter(fh, paths, 'ecdf.pdf')
+exporter(fh, paths, 'ecdf.png')
+
+%% Check profiles vs Control Variables
+columns = 6;
+fh = figure('color','w','Position',[100, 100, 1600, 4000]);
+tiledlayout(4, columns, 'Padding', 'compact', 'TileSpacing', 'tight')
+nexttile(columns + 1, [3 3])
+ax(2) = gca;
+
+hold on
+x_axis = inizio:fine; 
+y_axis = 1:size(sorted_matrix, 1);
+h = imagesc(x_axis, y_axis, sm_freeze_full(sort_order, :), [0 2.2]);
+% set(h, 'AlphaData', ~isnan(sm_freeze(sort_order, :)));
+
+scatter(bouts_proc.durations(sort_order), 1:height(bouts_proc), 2, '|', 'k')
+apply_generic(gca, 'xlim', [0 630], 'no_y', true, 'ylim', [-100 size(centered_sm_freeze, 1) + 100], 'xtick', 0:120:600)
+colormap(cbrewer2('Reds',[]));
+
+%cb = colorbar(ax, 'Location', 'southoutside', 'FontSize', 18, 'LineWidth', 2);
+%cb.Label.String = 'Social Motion';
+
+for idx_cluster = 1:n_clusters
+    fill([ax(2).XLim(1)-2,ax(2).XLim(1)-2,ax(2).XLim(1)-17,ax(2).XLim(1)-17], [boundaries(idx_cluster) boundaries(idx_cluster + 1) boundaries(idx_cluster + 1)   boundaries(idx_cluster)], ...
+        col.pca(idx_cluster,:), 'EdgeColor','none', 'Clipping', 'off');
+    text(mean([ax(2).XLim(1)-2,ax(2).XLim(1)-17]), mean([boundaries(idx_cluster); boundaries(idx_cluster + 1)]), num2str(idx_cluster),...
+        'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle');
+    hold on
+
+end
+
+xlabel('Time');
+
+% Add horizontal lines to separate clusters
+hold on;
+for idx_cluster = 1:length(boundaries)
+    yline(boundaries(idx_cluster), 'k--', 'LineWidth', 1.1);
+end
+
+nexttile(1, [1 3])
+ax(1) = gca;
+hold on
+for idx_cluster = 1:n_clusters
+    plot(inizio:fine, repr(idx_cluster, :), 'LineWidth', 1.5, 'Color', col.pca(idx_cluster, :));
+end
+apply_generic(gca, 'ylim', [0 1.2],'ytick', [0 1.2], 'xlim', [0 630], 'no_x', true, 'font_size', 18);
+ylabel({'Mean', 'Social Motion'})
+
+linkaxes([ax(:)], 'x')
+
+plot_configs = {
+    bouts_proc.moving_flies, 'Greys',   5,  10;
+    bouts_proc.sloom / 25,   'Blues',   2,  11;
+    bouts_proc.nloom,        'Purples', 20, 12
+};
+
+for i = 1:size(plot_configs, 1)
+    data_raw = plot_configs{i, 1};
+    cmap_name = plot_configs{i, 2};
+    n_bins    = plot_configs{i, 3};
+    tile_idx  = plot_configs{i, 4};
+    
+    % 1. Pre-allocate and calculate histogram counts
+    values = zeros(n_clusters, n_bins);
+    for c = 1:n_clusters
+        values(c, :) = histcounts(data_raw(idx == c), n_bins);
+    end
+    
+    % 2. Normalize to Percentages (using element-wise division)
+    perc_values = (values ./ sum(values, 2)) * 100;
+    
+    % 3. Plotting
+    nexttile(tile_idx, [3 1])
+    hold on
+    xline([0 20 40 60 80 100], 'k--')
+    bh = bar(perc_values, 'stacked', 'Horizontal', 'on', 'EdgeColor', 'black');
+    
+    % 4. Apply Colors
+    colors = cbrewer2(cmap_name, n_bins);
+    for k = 1:numel(bh)
+        bh(k).FaceColor = 'flat';
+        bh(k).CData = colors(k, :);
+    end
+    
+    % 5. Alignment & Formatting
+    ax_bar = gca;
+    set(ax_bar, 'YLim', [0.5 n_clusters + 0.5]);
+    apply_generic(ax_bar, 'no_x', true, 'yticks', 1:12);
+end
+
+exporter(fh, paths, 'clusters_profiles_with_controlvars.pdf')
+exporter(fh, paths, 'clusters_profiles_with_controlvars.png')
+
+%%
+fh = figure('color','w','Position',[100, 100, 1600, 800]);
+
+cluster = 5;
+indices_of_cluster = find(idx == cluster);
+
+for idx_bouts_in_cluster = 1:length(indices_of_cluster)
+    
+    hold on
+    i = indices_of_cluster(idx_bouts_in_cluster);
+    plot(sm_freeze_full(i, :) + idx_bouts_in_cluster, x_axis + 1, 'Color', [0.9 0.9 0.9]);
+    plot(sm_freeze(i, :) + idx_bouts_in_cluster, 1:size(sm_freeze, 2), 'Color', 'k');
+
+    [c, ts] = max(sm_freeze_full(i, :) + idx_bouts_in_cluster);
+    plot(c, ts, 'Color', 'r', 'Marker', 'o');
+end
+
+apply_generic(gca, 'ylim', [0 630])
+
+
 
 %%
 fh = figure('color','w','Position',[100, 100, 400, 400]);
@@ -297,6 +466,3 @@ close(v);
 close(gcf);
 
 % Here we fit the different clusters
-
-
-
