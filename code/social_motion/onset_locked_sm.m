@@ -29,9 +29,9 @@ for idx_fly = 1:total_flies
     catch
     end
     
-    for i = 1:height(bouts_fly)
-        fly_loom_x_sm(bouts_fly.nloom(i), freeze_end(i):end) = nan;
-    end
+%     for i = 1:height(bouts_fly)
+%         fly_loom_x_sm(bouts_fly.nloom(i), freeze_end(i):end) = nan;
+%     end
     sm_around_loom(idx_fly, :, :) = fly_loom_x_sm;
 
 end
@@ -53,7 +53,15 @@ for idx_sloom = unique(sloom)'
         hold on
 
         mask = n_moving_flies == idx_moving_flies & sloom == idx_sloom;
-        sm_loom = squeeze(mean(sm_around_loom(mask, :, :), 1, 'omitnan'));
+        sm_loom = squeeze(medi% 1. Create a VideoReader object
+% Replace the filename with your specific .avi file
+v = VideoReader('MH-1CS1NorpA3LC6Chrimson_5F-20LoomOpto100mW5Hz2min33cm-FH1_1-2021-04-09T11_38_31.avi');
+
+% 2. Access the 'NumFrames' property
+totalFrames = v.NumFrames;
+
+% 3. Display the result
+fprintf('The video has %d frames.\n', totalFrames);an(sm_around_loom(mask, :, :), 1, 'omitnan'));
 
         colororder(col.vars.ln(end - total_looms:end, :))
         plot(offsets, sm_loom')
@@ -99,7 +107,7 @@ for idx_sloom = unique(sloom)'
     end
 end
 
-%exporter(fh, paths, 'freeze_onset_sm_std.pdf')
+exporter(fh, paths, 'freeze_onset_sm_std.pdf')
 
 
 

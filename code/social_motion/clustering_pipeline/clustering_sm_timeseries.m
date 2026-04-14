@@ -15,12 +15,12 @@ thresholds = define_thresholds('le_window', struct('le_window_sl', [5 55], 'le_w
 bouts = bouts_formatting(bouts, thresholds);
 
 % Process the data: set thresholds for sm, fs and ln. Set minimum duration.
-bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', 'nloom', 2:20, 'min_dur', 12);
+bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', 'nloom', 2:20, 'min_dur', 30);
 
 %% Extract the pre-freezing social motion
 sm_freeze = extract_sm_from_bouts(bouts_proc, 'type', 'onlyfreeze', 'output_type', 'mat');
 inizio = 0;
-fine = 60;
+fine = 630;
 sm_freeze_full = extract_sm_from_bouts(bouts_proc, 'type', 'onsets', 'output_type', 'mat', 'window', [inizio fine]);
 
 % sm_freeze_full is trials x timesteps (each row is a trial, each column a
@@ -33,7 +33,6 @@ clustering_type = 'max';
 paths = path_generator('folder', fullfile('social_motion','clustering', clustering_type), 'bouts_id', id_code, 'imfirst', false);
 
 n_clusters = 8;
-col = cmapper([], n_clusters);
 
 switch clustering_type
     case 'pca'
@@ -72,49 +71,47 @@ switch clustering_type
         [~, sort_order] = sortrows([idx, dist_to_assigned], [1 2]);
 
     case {'max', 'com'}
+
         centered_sm_freeze = sm_freeze_full;
         if strcmp(clustering_type, 'max')
-            % Metric: Time of Max Peak
-            % 1. Define your threshold
-            threshold_sm = 0.3;
-
-            % 2. Find the maximum value and its index for each row
-            % centered_sm_freeze is assumed to be your [Observations x Time] matrix
+            threshold_sm = 0.5;
             [max_vals, metric] = max(centered_sm_freeze, [], 2);
-
-            % 3. Identify which rows failed to reach the threshold
-            % This creates a logical mask (1 for fail, 0 for pass)
             failed_to_reach = max_vals < threshold_sm;
-
-            % 4. Apply the threshold condition
-            % We set the index to NaN for any row where the max wasn't high enough.
-            % Note: metric must be converted to double to hold NaN values.
             metric = double(metric);
             metric(failed_to_reach) = NaN;
-
-            % --- OPTIONAL: Clean up the results ---
-            % If you want to know how many observations were rejected:
-            num_rejected = sum(failed_to_reach);
-            fprintf('Excluded %d rows that did not exceed threshold %0.2f\n', num_rejected, threshold_sm);
-
         else
             % Metric: Center of Mass
             pow = 6;
             t = 1:size(centered_sm_freeze, 2);
             metric = sum(t .* (centered_sm_freeze.^ pow), 2) ./ sum(centered_sm_freeze.^ pow, 2);
+            % COM usually doesn't "fail," but if you have a threshold, apply it here
+            failed_to_reach = false(size(metric)); 
         end
         
-        % 1. Get the sort order based on the metric
+       % 1. Get the global sort order (Rank everyone by time)
         [~, sort_order] = sort(metric);
         
-        % 2. Assign Clusters based on position in the sorted list
+        % 2. Assign standard clusters based on position (Original behavior)
         n = size(centered_sm_freeze, 1);
-        % Create cluster labels (e.g., 1,1,1, 2,2,2...)
         temp_cluster_ids = ceil((1:n)' * n_clusters / n);
         
-        % 3. Map these cluster labels back to the original row indices
         idx = zeros(n, 1);
         idx(sort_order) = temp_cluster_ids;
+        
+        % 3. OVERRIDE: If they failed the threshold, move them to Cluster N+1
+        % This keeps the "Rejected" group distinct regardless of their peak time
+        if any(failed_to_reach)
+            idx(failed_to_reach) = n_clusters + 1;
+            
+            % 4. Re-calculate sort_order so Cluster 9 is at the bottom
+            % We sort by [Cluster ID, Metric]
+            [~, sort_order] = sortrows([idx, metric], [1 2]);
+            
+            % Update for plotting boundaries
+            actual_clusters = n_clusters + 1;
+        else
+            actual_clusters = n_clusters;
+        end
 
     case 'first_cross'
         threshold = 0.2;
@@ -142,24 +139,27 @@ switch clustering_type
 
 end
 
-
-% Define boundaries for plotting (using the sorted cluster IDs)
-cluster_id_sorted = idx(sort_order); 
-boundaries = [0; find(diff(cluster_id_sorted)) + 0.5; size(centered_sm_freeze, 1)];
-
 % Sort the matrices
 sorted_matrix = centered_sm_freeze(sort_order, :);
 bouts_sorted = bouts_proc(sort_order, :);
 
-% Extract mean timeseries
-repr = nan(n_clusters, size(centered_sm_freeze, 2));
-for idx_cluster = 1:n_clusters
-    % This now works because idx always refers to original row indices
-    rows_in_cluster = (idx == idx_cluster);
-    if any(rows_in_cluster)
-        repr(idx_cluster, :) = mean(sm_freeze_full(rows_in_cluster, :), 1);
-    end
+% Update the representation loop to account for the extra cluster
+all_unique_clusters = unique(idx);
+all_unique_clusters(all_unique_clusters == 0) = []; % Clean up
+repr = nan(length(all_unique_clusters), size(centered_sm_freeze, 2));
+
+for i = 1:length(all_unique_clusters)
+    curr_id = all_unique_clusters(i);
+    rows_in_cluster = (idx == curr_id);
+    repr(i, :) = mean(sm_freeze_full(rows_in_cluster, :), 1);
 end
+
+% Define boundaries for plotting (using the sorted cluster IDs)
+
+cluster_id_sorted = idx(sort_order);
+boundaries = [0; find(diff(cluster_id_sorted)) + 0.5; size(centered_sm_freeze, 1)];
+
+col = cmapper([], length(all_unique_clusters));
 
 % Visualize the Heatmap
 fh = figure('color','w','Position',[100, 100, 600, 4000]);
@@ -180,7 +180,7 @@ colormap(cbrewer2('Reds',[]));
 %cb = colorbar(ax, 'Location', 'southoutside', 'FontSize', 18, 'LineWidth', 2);
 %cb.Label.String = 'Social Motion';
 
-for idx_cluster = 1:n_clusters
+for idx_cluster = 1:length(all_unique_clusters)
     fill([ax(2).XLim(1)-2,ax(2).XLim(1)-2,ax(2).XLim(1)-17,ax(2).XLim(1)-17], [boundaries(idx_cluster) boundaries(idx_cluster + 1) boundaries(idx_cluster + 1)   boundaries(idx_cluster)], ...
         col.pca(idx_cluster,:), 'EdgeColor','none', 'Clipping', 'off');
     text(mean([ax(2).XLim(1)-2,ax(2).XLim(1)-17]), mean([boundaries(idx_cluster); boundaries(idx_cluster + 1)]), num2str(idx_cluster),...
@@ -200,7 +200,7 @@ end
 nexttile(1)
 ax(1) = gca;
 hold on
-for idx_cluster = 1:n_clusters
+for idx_cluster = 1:length(all_unique_clusters)
     plot(inizio:fine, repr(idx_cluster, :), 'LineWidth', 1.5, 'Color', col.pca(idx_cluster, :));
 end
 apply_generic(gca, 'ylim', [0 1.2],'ytick', [0 1.2], 'xlim', [0 630], 'no_x', true, 'font_size', 18);
@@ -221,19 +221,19 @@ exporter(fh, paths, 'clusters_profiles.png')
 fh = figure('color', 'w','Position', [100, 100, 400, 400]);
 D = pdist(repr, 'correlation');
 Z = linkage(D, 'ward');
-dh = dendrogram(Z, 'Reorder', 1:n_clusters);
+dh = dendrogram(Z, 'Reorder', 1:length(all_unique_clusters));
 set(dh, 'Color', 'k', 'LineWidth', 2);
 apply_generic(gca)
 exporter(fh, paths, 'clusters_similarity.pdf')
  
 fh_distr = figure('color', 'w','Position', [100, 100, 900, 550]);
-tiledlayout(ceil(n_clusters/4), 4, 'Padding', 'loose', 'TileSpacing', 'compact')
+tiledlayout(ceil(length(all_unique_clusters)/4), 4, 'Padding', 'loose', 'TileSpacing', 'compact')
 
 fps = 60;
 bin_size =  10 / fps;
 t_vec = (inizio:fine) ./ fps;
 
-for idx_cluster = 1:n_clusters
+for idx_cluster = 1:length(all_unique_clusters)
     ax_distr(idx_cluster) = nexttile;
     hold(ax_distr(idx_cluster), 'on')
 
@@ -297,7 +297,7 @@ exporter(fh_distr, paths, 'clusters_freezedurations.png')
 fh = figure('color','w','Position',[100, 100, 400, 400]);
 hold on
 
-for idx_cluster =  1:n_clusters
+for idx_cluster =  1:length(all_unique_clusters)
     
     [f, x] = ecdf(bouts_proc.durations_s(idx == idx_cluster));
 
@@ -310,6 +310,67 @@ ylabel('ecdf')
 xlabel('Duration (s)')
 exporter(fh, paths, 'ecdf.pdf')
 exporter(fh, paths, 'ecdf.png')
+
+%%
+fh= figure('color', 'w','Position', [100, 100, 1200, 550]);
+tlo = tiledlayout(ceil(n_clusters/4), 4, 'Padding', 'loose', 'TileSpacing', 'compact');
+
+for idx_cluster = 1:n_clusters
+    indices_of_cluster = find(idx == idx_cluster);
+    peak_buffer = 30; 
+    
+    % Initialize your data stacks
+    data_stacks = {[], [], []}; % Before, During, After
+    
+    for i = 1:length(indices_of_cluster)
+        row_idx = indices_of_cluster(i);
+        current_signal = sm_freeze_full(row_idx, :);
+        bout_end_idx = bouts_proc.durations(row_idx);
+        [~, peak_time_idx] = max(current_signal);
+        
+        if bout_end_idx < (peak_time_idx - peak_buffer)
+            data_stacks{1} = [data_stacks{1}; current_signal];
+        elseif bout_end_idx > (peak_time_idx + peak_buffer)
+            data_stacks{3} = [data_stacks{3}; current_signal];
+        else
+            data_stacks{2} = [data_stacks{2}; current_signal];
+        end
+    end
+
+    nexttile
+    hold on;
+    colors = cbrewer2('Set1', 3); 
+    colors = colors([2, 1, 3], :);
+    labels = {'Before', 'During', 'After'};
+    
+    scatter(600, 1.5, 500, col.pca(idx_cluster, :), 'filled')
+    text(600, 1.5, num2str(idx_cluster), 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', 'FontSize', 18)
+
+    for j = 1:3
+        current_group = data_stacks{j};
+        if size(current_group, 1) > 1
+            avg = mean(current_group, 1);
+            sem = std(current_group, 0, 1) ./ sqrt(size(current_group, 1));
+            
+            % --- USE YOUR FUNCTION HERE ---
+            % x, y1 (upper), y2 (lower), where (empty for all), varargin
+            fill_between(x_axis, avg + sem, avg - sem, [], ...
+                'FaceColor', colors(j,:), 'EdgeColor', 'none', 'FaceAlpha', 0.25);
+            
+            % Plot the mean line on top
+            plot(x_axis, avg, 'Color', colors(j,:), 'LineWidth', 1.5);
+            
+        elseif size(current_group, 1) == 1
+            plot(x_axis, current_group, 'Color', colors(j,:), 'LineWidth', 1.5);
+        end
+    end
+    
+    apply_generic(gca, 'ylim', [0 2], 'xlim', [min(x_axis) max(x_axis)], 'xticks', 0:200:600, 'no_y', true)
+end
+
+exporter(fh, paths, 'clusters_before_during_after.pdf')
+exporter(fh, paths, 'clusters_before_during_after.png')
+
 
 %% Check profiles vs Control Variables
 columns = 6;
@@ -324,14 +385,49 @@ y_axis = 1:size(sorted_matrix, 1);
 h = imagesc(x_axis, y_axis, sm_freeze_full(sort_order, :), [0 2.2]);
 % set(h, 'AlphaData', ~isnan(sm_freeze(sort_order, :)));
 
+% 2. Calculate Individual Peaks (Adjusted for x_axis start)
+% Find the index of the max in each row
+[~, peak_idx_raw] = max(sm_freeze_full(sort_order, :), [], 2);
+% Shift by 'inizio' to align with the plot's X-coordinates
+individual_peaks = x_axis(1) + (peak_idx_raw - 1); 
+
+% 1. Define your boundaries (ensure they are column vectors)
+left_bound  = (individual_peaks - peak_buffer)';
+right_bound = (individual_peaks + peak_buffer)';
+y_axis_vec  = y_axis(:)'; % Ensure row vector for fliplr
+
+% 2. Before Area Polygon
+% From 'inizio' to 'left_bound'
+x_before = [ones(size(left_bound)) * inizio, fliplr(left_bound)];
+y_before = [y_axis_vec, fliplr(y_axis_vec)];
+
+% 3. After Area Polygon
+% From 'right_bound' to 'fine'
+x_after = [right_bound, ones(size(right_bound)) * fine];
+y_after = [y_axis_vec, fliplr(y_axis_vec)];
+
+% 4. Plot the Shaded Areas
+hold on;
+% Before Area (using Red from Set1 as per your category colors)
+fill(x_before, y_before, colors(1,:), ...
+    'FaceAlpha', 0.3, 'EdgeColor', 'none', 'DisplayName', 'Before Zone');
+
+% After Area (using Green from Set1 as per your category colors)
+fill(x_after, y_after, colors(3,:), ...
+    'FaceAlpha', 0.3, 'EdgeColor', 'none', 'DisplayName', 'After Zone');
+
+% plot(individual_peaks - peak_buffer, y_axis,'LineWidth', 1, 'Color', [colors(1,:)]);
+% plot(individual_peaks + peak_buffer, y_axis, 'LineWidth', 1, 'Color', [colors(3,:)]);
 scatter(bouts_proc.durations(sort_order), 1:height(bouts_proc), 2, '|', 'k')
+
+
 apply_generic(gca, 'xlim', [0 630], 'no_y', true, 'ylim', [-100 size(centered_sm_freeze, 1) + 100], 'xtick', 0:120:600)
 colormap(cbrewer2('Reds',[]));
 
 %cb = colorbar(ax, 'Location', 'southoutside', 'FontSize', 18, 'LineWidth', 2);
 %cb.Label.String = 'Social Motion';
 
-for idx_cluster = 1:n_clusters
+for idx_cluster = 1:length(all_unique_clusters)
     fill([ax(2).XLim(1)-2,ax(2).XLim(1)-2,ax(2).XLim(1)-17,ax(2).XLim(1)-17], [boundaries(idx_cluster) boundaries(idx_cluster + 1) boundaries(idx_cluster + 1)   boundaries(idx_cluster)], ...
         col.pca(idx_cluster,:), 'EdgeColor','none', 'Clipping', 'off');
     text(mean([ax(2).XLim(1)-2,ax(2).XLim(1)-17]), mean([boundaries(idx_cluster); boundaries(idx_cluster + 1)]), num2str(idx_cluster),...
@@ -351,7 +447,7 @@ end
 nexttile(1, [1 3])
 ax(1) = gca;
 hold on
-for idx_cluster = 1:n_clusters
+for idx_cluster = 1:length(all_unique_clusters)
     plot(inizio:fine, repr(idx_cluster, :), 'LineWidth', 1.5, 'Color', col.pca(idx_cluster, :));
 end
 apply_generic(gca, 'ylim', [0 1.2],'ytick', [0 1.2], 'xlim', [0 630], 'no_x', true, 'font_size', 18);
@@ -372,8 +468,8 @@ for i = 1:size(plot_configs, 1)
     tile_idx  = plot_configs{i, 4};
     
     % 1. Pre-allocate and calculate histogram counts
-    values = zeros(n_clusters, n_bins);
-    for c = 1:n_clusters
+    values = zeros(length(all_unique_clusters), n_bins);
+    for c = 1:length(all_unique_clusters)
         values(c, :) = histcounts(data_raw(idx == c), n_bins);
     end
     
@@ -387,20 +483,21 @@ for i = 1:size(plot_configs, 1)
     bh = bar(perc_values, 'stacked', 'Horizontal', 'on', 'EdgeColor', 'black');
     
     % 4. Apply Colors
-    colors = cbrewer2(cmap_name, n_bins);
+    colors2 = cbrewer2(cmap_name, n_bins);
     for k = 1:numel(bh)
         bh(k).FaceColor = 'flat';
-        bh(k).CData = colors(k, :);
+        bh(k).CData = colors2(k, :);
     end
     
     % 5. Alignment & Formatting
     ax_bar = gca;
-    set(ax_bar, 'YLim', [0.5 n_clusters + 0.5]);
+    set(ax_bar, 'YLim', [0.5 length(all_unique_clusters) + 0.5]);
     apply_generic(ax_bar, 'no_x', true, 'yticks', 1:12);
 end
 
 exporter(fh, paths, 'clusters_profiles_with_controlvars.pdf')
 exporter(fh, paths, 'clusters_profiles_with_controlvars.png')
+
 
 %%
 fh = figure('color','w','Position',[100, 100, 1600, 800]);
@@ -423,46 +520,46 @@ apply_generic(gca, 'ylim', [0 630])
 
 
 
-%%
-fh = figure('color','w','Position',[100, 100, 400, 400]);
-hold on
-
-for idx_cluster =  1:n_clusters
-    
-    [f, x] = ecdf(bouts_proc.durations_s(idx == idx_cluster));
-
-    f_tvec = interp1(x(2:end), f(2:end), t_vec);
-    plot3(t_vec, f_tvec,  repr(idx_cluster,:),  'Color', col.pca(idx_cluster, :), 'LineWidth', 2.5);
-
-end
-
-apply_generic(gca, 'xlim', [0 10.5], 'ylim', [0 1], 'tick_length', 0.025, 'xticks', 0:2:10)
-ylabel('ecdf')
-xlabel('Duration (s)')
-
-% Set up the video writer
-v = VideoWriter(fullfile(paths.fig, 'ecdf3d.avi'));
-open(v);
-% Specify the number of frames for the animation
-numFrames = 400;
-
-% Rotate the surface plot and capture frames
-for k = 1:numFrames
-
-    if k < 60
-        view([0, 90]);
-    else
-
-        % Change the view angle
-        view([k, 90]);
-    end
-    % Capture the current frame
-    frame = getframe(gcf);
-    writeVideo(v, frame);
-end
-% Complete the video writing process
-close(v);
-% Close the figure display
-close(gcf);
-
-% Here we fit the different clusters
+% %%
+% fh = figure('color','w','Position',[100, 100, 400, 400]);
+% hold on
+% 
+% for idx_cluster =  1:length(all_unique_clusters)
+%     
+%     [f, x] = ecdf(bouts_proc.durations_s(idx == idx_cluster));
+% 
+%     f_tvec = interp1(x(2:end), f(2:end), t_vec);
+%     plot3(t_vec, f_tvec,  repr(idx_cluster,:),  'Color', col.pca(idx_cluster, :), 'LineWidth', 2.5);
+% 
+% end
+% 
+% apply_generic(gca, 'xlim', [0 10.5], 'ylim', [0 1], 'tick_length', 0.025, 'xticks', 0:2:10)
+% ylabel('ecdf')
+% xlabel('Duration (s)')
+% 
+% % Set up the video writer
+% v = VideoWriter(fullfile(paths.fig, 'ecdf3d.avi'));
+% open(v);
+% % Specify the number of frames for the animation
+% numFrames = 400;
+% 
+% % Rotate the surface plot and capture frames
+% for k = 1:numFrames
+% 
+%     if k < 60
+%         view([0, 90]);
+%     else
+% 
+%         % Change the view angle
+%         view([k, 90]);
+%     end
+%     % Capture the current frame
+%     frame = getframe(gcf);
+%     writeVideo(v, frame);
+% end
+% % Complete the video writing process
+% close(v);
+% % Close the figure display
+% close(gcf);
+% 
+% % Here we fit the different clusters
