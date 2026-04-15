@@ -2,19 +2,20 @@
 paths = path_generator('folder', 'sims/sanity_checks');
 
 % Select the trial 
-idx_trial = 332;
+idx_trial = 3945;
 
 % Select the parameters of the model
-true_bound = 2.1;
-beta_drift = 3.2;
-true_ndt = 0.2123;
+true_bound = 2.7;
+beta_drift = 4.2;
+true_ndt = 0;
 
 % Select the dt for signal upsampling
 dt = 1/300;
-fps = 1/300;
-
+fps = 1/60;
+inizio = 0;
+fine = 630;
 % Run this now for the timevarying model
-points.truncation = 1.1;
+points.truncation = 0.5;
 points.censoring = 10.5;
 n_T = points.censoring / dt;
 time_vector = 0:fps:points.censoring;
@@ -26,7 +27,7 @@ bouts_proc.smp = ones(height(bouts_proc), 1);
 bouts_proc.intercept = ones(height(bouts_proc), 1);
 
 sm = importdata(fullfile(paths.cache_path, "motion_cache.mat"));
-sm_signal = extract_sm_from_bouts(bouts_proc);
+sm_signal = extract_sm_from_bouts(bouts_proc, 'type', 'onsets', 'output_type', 'mat', 'window', [inizio fine]);
 
 sm_signal_us = interp1(time_vector(:), sm_signal', time_vector_us(:), 'nearest');
 
@@ -51,12 +52,13 @@ rt_simulated(isnan(rt_simulated)) = 11;
 rt_simulated(rt_simulated < points.truncation) = nan;
 rt_mex(rt_mex < points.truncation) = nan;
 
+bin_size = 1/60;
 figure('Color', 'w', 'Position', [10 10 610 210])
 hold on
-histogram(rt_simulated(~isnan(rt_simulated)), 0:1/20:points.censoring, ...
+histogram(rt_simulated(~isnan(rt_simulated)), time_vector_us(1:end-1) - dt/2, ...
     'Normalization', 'pdf', 'FaceColor', 'r', 'EdgeColor', 'none', ...
     'FaceAlpha', 0.3);
-histogram(rt_mex(~isnan(rt_mex)), 0:1/20:points.censoring, ...
+histogram(rt_mex(~isnan(rt_mex)), time_vector_us(1:end-1) - dt/2, ...
     'Normalization', 'pdf', 'FaceColor', 'b', 'EdgeColor', 'none', ...
     'FaceAlpha', 0.3);
 
@@ -66,6 +68,7 @@ params = param_res(true_bound, 'points', points, 'dt', dt);
 plot(pde_results.t(1:end-1), pde_results.pdf, 'k--', 'LineWidth', 1);
 stem(pde_results.t(end) + fps, pde_results.survival, 'k')
 
+plot(time_vector_us(1:end-1), mu_tv, 'k--')
 apply_generic(gca, 'no_y', true)
 
 % Now we will repeat the analysis but with a model with stationary evidence
@@ -88,10 +91,10 @@ rt_mex(rt_mex < points.truncation) = nan;
 
 figure('Color', 'w', 'Position', [10 10 610 210])
 hold on
-histogram(rt_simulated(~isnan(rt_simulated)), 0:1/20:points.censoring, ...
+histogram(rt_simulated(~isnan(rt_simulated)), time_vector_us(1:end-1) - dt/2, ...
     'Normalization', 'pdf', 'FaceColor', 'r', 'EdgeColor', 'none', ...
     'FaceAlpha', 0.3);
-histogram(rt_mex(~isnan(rt_mex)), 0:1/20:points.censoring, ...
+histogram(rt_mex(~isnan(rt_mex)), time_vector_us(1:end-1) - dt/2, ...
     'Normalization', 'pdf', 'FaceColor', 'b', 'EdgeColor', 'none', ...
     'FaceAlpha', 0.3);
 
