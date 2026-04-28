@@ -82,7 +82,7 @@ hold on
 % http://www.mathworks.co.uk/help/matlab/ref/patch_props.html
 set(h, varargin{:});
 % move it to the back
-uistack(h, 'bottom')
+%uistack(h, 'bottom')
 % return to initial hold state
 if initialHoldState==0
 	hold(ca, 'off');

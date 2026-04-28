@@ -72,7 +72,7 @@ bouts = table();
 
 fly_id = 0;
 
-for dataset = 1
+for dataset = 2
 
     directory = sprintf('/Users/marcocolnaghi/experimental_data/004--social_ddm/dataset_%d/', dataset);
     cd(directory)

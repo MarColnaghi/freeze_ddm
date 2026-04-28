@@ -153,7 +153,19 @@ col.early_sm = '#FF715B';
 col.late_sm = '#1EA896';
 
 
-col.pca = cbrewer2('Set2', nq);
+% Initialize the primary palette (limit Set2 to its max of 8)
+col.pca = cbrewer2('Set2', min(nq, 8));
+
+% Check if we need to append more colors
+if nq > 8
+    % Append colors from Dark2 for the remaining count
+    extra_colors = cbrewer2('Dark2', nq - 8);
+    col.pca = [col.pca; extra_colors];
+end
+
+col.pca = cbrewer2('Spectral', nq);
+% col.pca = colorcet('I2','N', nq);
+
 end
 
 function cmap = get_var_cmap(col, varname)
