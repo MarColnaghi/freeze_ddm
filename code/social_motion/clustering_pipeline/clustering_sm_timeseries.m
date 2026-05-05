@@ -16,17 +16,17 @@ bouts = bouts_formatting(bouts, thresholds);
 
 % Process the data: set thresholds for sm, fs and ln. Set minimum duration.
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', 'nloom', 2:20, 'min_dur', 30);
+bouts_proc = impose_contact_threshold(bouts_proc, 80);
 
 %% Extract the pre-freezing social motion
-sm_freeze = extract_sm_from_bouts(bouts_proc, 'type', 'onlyfreeze', 'output_type', 'mat');
 inizio = 0;
 fine = 630;
-sm_freeze_full = extract_sm_from_bouts(bouts_proc, 'type', 'onsets', 'output_type', 'mat', 'window', [inizio fine]);
+sm_freeze_full = extract_sm_from_bouts(bouts_proc, 'type', 'onsets', 'output_type', 'mat', 'window', [inizio fine], 'norm_factor', 10);
 
 % sm_freeze_full is trials x timesteps (each row is a trial, each column a
 % timestep in the duration)
 
-clustering_type = 'max';
+clustering_type = 'pca';
 paths = path_generator('folder', fullfile('social_motion','clustering', clustering_type), 'bouts_id', id_code, 'imfirst', false);
 
 n_clusters = 10;
@@ -35,6 +35,8 @@ switch clustering_type
     case 'pca'
         % 1. Run PCA
         centered_sm_freeze = zscore(sm_freeze_full, [], 2);
+        centered_sm_freeze = sm_freeze_full;
+
         [~, score] = pca(centered_sm_freeze);
 
         % 2. Cluster
@@ -72,7 +74,7 @@ switch clustering_type
         centered_sm_freeze = sm_freeze_full;
 
         if strcmp(clustering_type, 'max')
-            threshold_sm = 0.6;
+            threshold_sm = .5;
             [max_vals, metric] = max(centered_sm_freeze, [], 2);
             metric = double(metric);
 
@@ -181,6 +183,8 @@ end
 
 cluster_id_sorted = idx(sort_order);
 boundaries = [0; find(diff(cluster_id_sorted)) + 0.5; size(centered_sm_freeze, 1)];
+
+%% 
 
 col = cmapper([], length(all_unique_clusters));
 if any(invalid_mask)
@@ -619,6 +623,7 @@ x_axis_fit  = (1:new_cols) - ref_col_fit;
 % --- 6. -------- BREAK TIMES (CENTERED) --------
 
 break_times = bouts_proc.durations(sort_order);
+break_times(break_times > 630) = NaN;
 
 break_times_peak = break_times + shifts_peak - round(ref_peak);
 break_times_fit  = break_times + shifts_fit  - round(ref_fit);
@@ -865,9 +870,10 @@ fh = figure('color','w','Position',[100 100 750 400]);
 tiledlayout(1, 2, 'TileSpacing', 'compact', 'Padding', 'compact')
 nexttile
 hold on
+window = 15;
 
 before = break_times_peak_valid < -window;
-after  = break_times_peak_valid > 15;
+after  = break_times_peak_valid > window;
 during = ~(after | before);
 
 % Pack conditions into a cell array
@@ -910,8 +916,9 @@ xlabel('Time (Aligned to Peak)')
 
 nexttile
 hold on
-
-sm_freeze = extract_sm_from_bouts(bouts_proc, 'type', 'onlyfreeze', 'output_type', 'mat', 'align', 'offset');
+delay_after = 60;
+xline(0, 'k-.')
+sm_freeze = extract_sm_from_bouts(bouts_proc, 'type', 'onlyfreeze', 'output_type', 'mat', 'align', 'offset', 'delay_after', delay_after, 'norm_factor', 10);
 sm_freeze_valid = sm_freeze(sort_order(valid_sorted), :);
 durs = bouts_proc.durations(sort_order(valid_sorted));
 
@@ -949,7 +956,7 @@ for i = 1:5
     m = ~isnan(sem);
 
     % Time vector (aligned like your original intent)
-    t = -numel(mu) + 1 : 0;
+    t = -numel(mu) + 1 + delay_after : delay_after;
 
     % Shaded error
     fill_between(t(m), ...
@@ -969,10 +976,10 @@ for i = 1:5
 end
 
 zoomY = [0.3 .8];
-zoomX = [-120 0];
+zoomX = [-120 delay_after];
 
 fill([zoomX fliplr(zoomX)], [zoomY(1) zoomY(1) zoomY(2) zoomY(2)], [0 0 0],'FaceColor', 'none', 'EdgeColor', 'k', 'LineWidth', 2)
-apply_generic(gca, 'xlim', [-300 0], 'xticks', -360:120:0, 'ylim', [0 2])
+apply_generic(gca, 'xlim', [-300 delay_after], 'xticks', -360:120:0, 'ylim', [0 2])
 xticklabels(-6:2:0)
 xlabel('Time (Aligned to Offset)')
 
@@ -1003,7 +1010,7 @@ for i = 1:3
     sem = std(data, 0, 1, 'omitnan') ./ sqrt(sum(~isnan(data), 1));
 
     m = ~isnan(sem);
-    t = -numel(mu) + 1 : 0;
+    t = -numel(mu) + 1 + delay_after : delay_after;
 
     fill_between(t(m), ...
         mu(m) + sem(m), ...
@@ -1502,6 +1509,180 @@ xlabel('Time');
 linkaxes([ax_distr(1) ax_distr(4)], 'x')
 linkaxes([ax_distr(2) ax_distr(5)], 'x')
 linkaxes([ax_distr(3) ax_distr(6)], 'x')
+
+
+%% Load the distances
+
+delay_after = 60;
+distance_full = extract_sm_from_bouts(bouts_proc, 'type', 'onsets', 'output_type', 'mat', 'window', [inizio fine], 'cache', 'mindist_cache');
+distance = extract_sm_from_bouts(bouts_proc, 'type', 'onlyfreeze', 'output_type', 'mat', 'align', 'offset', 'delay_after', delay_after, 'cache', 'mindist_cache');
+
+% Now we plot the social motion timeseries based on whether the freeze ended or not at the peak
+fh = figure('color','w','Position',[100 100 750 400]);
+tiledlayout(1, 2, 'TileSpacing', 'compact', 'Padding', 'compact')
+nexttile
+hold on
+window = 15;
+
+before = break_times_peak_valid < -window;
+after  = break_times_peak_valid > window;
+during = ~(after | before);
+
+% Pack conditions into a cell array
+conds = {before, during, after};
+
+for i = 1:3
+
+    idxc = conds{i};
+    data = aligned_peak_valid(idxc, :);
+
+    % Mean and SEM
+    mu  = mean(data, 1, 'omitnan');
+    sem = std(data, 0, 1, 'omitnan') ./ sqrt(sum(~isnan(data), 1));
+
+    % Valid mask
+    m = ~isnan(sem);
+
+    % Shaded error ONLY for "before" (to match your original code)
+    if i == 1
+        fill_between(x_axis_peak(m), ...
+            mu(m) + sem(m), ...
+            mu(m) - sem(m), ...
+            [], ...
+            'FaceColor', colors(i, :), ...
+            'EdgeColor', 'none', ...
+            'FaceAlpha', 0.25);
+    end
+
+    % Mean line
+    plot(x_axis_peak, mu, ...
+        'Color', colors(i, :), ...
+        'LineWidth', 2);
+end
+
+apply_generic(gca, 'xlim', [-360 120]./2, 'xticks', -180:60:180, 'ylim', [0 2]);
+xticklabels(-3:1:3)
+
+ylabel('Social Motion')
+xlabel('Time (Aligned to Peak)')
+
+nexttile
+hold on
+delay_after = 60;
+sm_freeze_valid = distance(sort_order(valid_sorted), :);
+durs = bouts_proc.durations(sort_order(valid_sorted));
+
+before_early = before & durs >= 30 & durs < 60;
+before_mid = before & durs >= 60 & durs < 180;
+before_late = before & durs >= 180;
+
+sm_freeze_valid_beforeearly = sm_freeze_valid(before_early,:);
+sm_freeze_valid_beforemid = sm_freeze_valid(before_mid,:);
+sm_freeze_valid_beforelate = sm_freeze_valid(before_late,:);
+sm_freeze_valid_during = sm_freeze_valid(during,:);
+sm_freeze_valid_after = sm_freeze_valid(after,:);
+
+sm_sets = {
+    sm_freeze_valid_beforeearly
+    sm_freeze_valid_beforemid
+    sm_freeze_valid_beforelate
+    sm_freeze_valid_during
+    sm_freeze_valid_after
+    };
+
+colors_before = cbrewer2('Blues', 4);
+colors_loop = [colors_before(2:end,:); colors(2:3, :)];
+
+
+for i = 1:5
+
+    data = sm_sets{i};
+
+    % Mean and SEM
+    mu = mean(data, 1, 'omitnan');
+    sem = std(data, 0, 1, 'omitnan') ./ sqrt(sum(~isnan(data), 1));
+
+    % Valid indices
+    m = ~isnan(sem);
+
+    % Time vector (aligned like your original intent)
+    t = -numel(mu) + 1 + delay_after : delay_after;
+
+    % Shaded error
+    fill_between(t(m), ...
+        mu(m) + sem(m), ...
+        mu(m) - sem(m), ...
+        [], ...
+        'FaceColor', colors_loop(i, :), ...
+        'EdgeColor', 'none', ...
+        'FaceAlpha', 0.25);
+
+    % Mean line
+    plot(t, mu, ...
+        'Color', colors_loop(i, :), ...
+        'LineWidth', 2);
+    %     plot(t, sum(~isnan(data), 1), 'Color',  colors_loop(i, :))
+
+end
+
+zoomY = [0.3 .8];
+zoomX = [-120 delay_after];
+
+fill([zoomX fliplr(zoomX)], [zoomY(1) zoomY(1) zoomY(2) zoomY(2)], [0 0 0],'FaceColor', 'none', 'EdgeColor', 'k', 'LineWidth', 2)
+apply_generic(gca, 'xlim', [-300 delay_after], 'xticks', -360:120:0, 'ylim', [0 2])
+xticklabels(-6:2:0)
+xlabel('Time (Aligned to Offset)')
+
+% Get position of second tile
+ax2 = gca;
+pos = ax2.Position;
+
+% Define inset relative to that tile
+inset_pos = [
+    pos(1) + 0.2*pos(3), ...
+    pos(2) + 0.55*pos(4), ...
+    0.5*pos(3), ...
+    0.35*pos(4)
+    ];
+
+ax_inset = axes('Position', inset_pos);
+hold(ax_inset, 'on')
+box(ax_inset, 'on')
+
+for i = 1:3
+
+    data = sm_sets{i};
+    if isempty(data)
+        continue
+    end
+
+    mu  = mean(data, 1, 'omitnan');
+    sem = std(data, 0, 1, 'omitnan') ./ sqrt(sum(~isnan(data), 1));
+
+    m = ~isnan(sem);
+    t = -numel(mu) + 1 + delay_after : delay_after;
+
+    fill_between(t(m), ...
+        mu(m) + sem(m), ...
+        mu(m) - sem(m), ...
+        [], ...
+        'FaceColor', colors_loop(i,:), ...
+        'EdgeColor', 'none', ...
+        'FaceAlpha', 0.25);
+
+    plot(t, mu, ...
+        'Color', colors_loop(i,:), ...
+        'LineWidth', 1.5);
+
+    apply_generic(ax_inset, 'xlim', zoomX, 'xticks', -360:120:0, 'ylim', zoomY, 'yticks', [0.3 .8])
+    xticklabels(-6:2:0)
+
+end
+
+%exporter(fh, paths, 'sm_aligned_2_offset.pdf')
+%exporter(fh, paths, 'sm_aligned_2_offset.png')
+
+
 
 %exporter(fh, paths, 'peak_vs_magnitude_sorted_ls_split.pdf')
 %exporter(fh, paths, 'peak_vs_magnitude_sorted_ls_split.png')

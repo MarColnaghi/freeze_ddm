@@ -1,4 +1,5 @@
 function [before_freeze, during_freeze] = extract_sm_columns(bouts_proc, motion_cache, varargin)
+    
     opt = inputParser;
     addParameter(opt, 'chunk_dur', 30);
     addParameter(opt, 'ons', 'onsets');

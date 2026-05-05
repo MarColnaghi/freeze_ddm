@@ -7,17 +7,19 @@ addParameter(opt, 'window', [-180 300]);
 addParameter(opt, 'output_type', 'mat');
 addParameter(opt, 'size', 630);
 addParameter(opt, 'align', 'onset');
-addParameter(opt, 'delay', 0);
+addParameter(opt, 'delay_after', 0);
+addParameter(opt, 'cache', 'motion_cache');
+addParameter(opt, 'norm_factor', 1);
 
 parse(opt, varargin{:});
 
-delay = opt.Results.delay;
-
-chunk_len = opt.Results.size;
+norm_factor = opt.Results.norm_factor;
+delay_after = opt.Results.delay_after;
+cache = opt.Results.cache;
 window = opt.Results.window;
 
 paths = path_generator('folder', 'social_motion');
-motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
+cache = importdata(fullfile(paths.cache_path, strcat(cache, '.mat')));
 loom_cache = importdata(fullfile(paths.cache_path, 'loom_cache.mat'));
 
 
@@ -27,15 +29,15 @@ switch opt.Results.type
 
         offsets = (window(1) : window(2));
         total_looms = 20;
-        total_flies = size(motion_cache, 1);
+        total_flies = size(cache, 1);
 
         n_moving_flies = nan(total_flies, 1);
         sloom = nan(total_flies, 1);
         sm_output = nan(total_flies, total_looms, length(offsets));
 
         for idx_fly = 1:total_flies
-            
-            sm_fly = motion_cache(idx_fly);
+
+            sm_fly = cache(idx_fly);
             freeze_frames = find(diff(loom_cache(idx_fly)) == 1);
             idx_slice = freeze_frames(:) + offsets;
             fly_loom_x_sm = sm_fly(idx_slice);
@@ -54,7 +56,7 @@ switch opt.Results.type
         win_start = opt.Results.window(1);
         win_end   = opt.Results.window(2);
         win_width = opt.Results.window(2) - opt.Results.window(1) + 1;
-        
+
         switch opt.Results.output_type
             case 'cell'
                 % Pre-allocate a cell array for speed
@@ -69,7 +71,7 @@ switch opt.Results.type
         for idx_bouts = 1:total_bouts
             ons = bouts_le.onsets(idx_bouts);
             fly_idx = bouts_le.fly(idx_bouts);
-            sum_motion = motion_cache(fly_idx);
+            sum_motion = cache(fly_idx);
 
             % Calculate absolute indices in the motion data
             idx_range = (ons + win_start) : (ons + win_end);
@@ -87,10 +89,10 @@ switch opt.Results.type
             % Normalize and assign
             switch opt.Results.output_type
                 case 'cell'
-                    sm_output{idx_bouts} = chunk_data ./ 10;
+                    sm_output{idx_bouts} = chunk_data ./ norm_factor;
 
                 case 'mat'
-                    sm_output(idx_bouts, :) = chunk_data ./ 10;
+                    sm_output(idx_bouts, :) = chunk_data ./ norm_factor;
             end
         end
 
@@ -101,43 +103,56 @@ switch opt.Results.type
         switch opt.Results.output_type
 
             case 'cell'
-
                 sm_output = cell(total_bouts, 1);
-
                 for idx_bouts = 1:total_bouts
-                    ons = bouts_le.onsets(idx_bouts) + delay;
-                    off = bouts_le.ends(idx_bouts) - 1;
-                    sum_motion = motion_cache(bouts_le.fly(idx_bouts));
+                    sum_motion = cache(bouts_le.fly(idx_bouts));
+                    max_idx = numel(sum_motion); % Get the limit for this specific fly
 
-                    sm_output{idx_bouts} = sum_motion(ons:off) ./ 10;
+                    ons = bouts_le.onsets(idx_bouts);
+                    % Ensure 'off' does not exceed the vector length
+                    requested_off = bouts_le.ends(idx_bouts) - 1 + delay_after;
+                    off = min(requested_off, max_idx);
+
+                    % Extract data
+                    sig = sum_motion(ons:off) ./ norm_factor;
+
+                    % If we were cut short by the boundary, pad with NaNs
+                    if requested_off > max_idx
+                        padding_needed = requested_off - max_idx;
+                        sig = [sig; nan(padding_needed, 1)]; % Assuming column vectors
+                    end
+
+                    sm_output{idx_bouts} = sig;
                 end
 
             case 'mat'
-
-                freeze_lens = bouts_le.ends - bouts_le.onsets;
+                % Note: If delay_after is significant, max_len should account for it
+                freeze_lens = (bouts_le.ends - bouts_le.onsets) + delay_after;
                 max_len = max(freeze_lens);
-
                 sm_output = nan(total_bouts, max_len);
 
                 for idx_bouts = 1:total_bouts
-                    ons = bouts_le.onsets(idx_bouts) + delay;
-                    off = bouts_le.ends(idx_bouts) - 1;
-                    
-                    sum_motion = motion_cache(bouts_le.fly(idx_bouts));
+                    sum_motion = cache(bouts_le.fly(idx_bouts));
+                    max_idx = numel(sum_motion);
 
-                    freeze_sig = sum_motion(ons:off) ./ 10;
-                    L = numel(freeze_sig);
+                    ons = bouts_le.onsets(idx_bouts);
+                    requested_off = bouts_le.ends(idx_bouts) - 1 + delay_after;
+                    off = min(requested_off, max_idx);
+
+                    freeze_sig = sum_motion(ons:off) ./ norm_factor;
+                    L_actual = numel(freeze_sig);
+                    L_total = requested_off - ons + 1; % Total length including requested delay
+
+                    % Create a temporary segment that includes padding if necessary
+                    full_segment = nan(1, L_total);
+                    full_segment(1:L_actual) = freeze_sig;
 
                     switch opt.Results.align
                         case 'onset'
-                            
-                            sm_output(idx_bouts, 1:L) = freeze_sig;
+                            sm_output(idx_bouts, 1:L_total) = full_segment;
                         case 'offset'
-                            sm_output(idx_bouts, end-L+1:end) = freeze_sig;
+                            sm_output(idx_bouts, end-L_total+1:end) = full_segment;
                     end
-
-                    
-                    
                 end
 
         end

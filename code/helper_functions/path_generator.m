@@ -48,7 +48,8 @@ function [path] = path_generator(varargin)
     if opt.Results.imfirst
         sub_folder = 'fill_in_combinations_imfirst';
     end
-    
+
+    path.exp_data = fullfile('/Users', 'marcocolnaghi', 'experimental_data', '004--social_ddm', 'dataset_1');
     path.dataset = fullfile(dat_base, sub_folder, opt.Results.bouts_id);
     path.cache_path = fullfile(dat_base, 'caches');
 end

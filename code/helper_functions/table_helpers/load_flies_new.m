@@ -72,7 +72,7 @@ bouts = table();
 
 fly_id = 0;
 
-for dataset = 2
+for dataset = 1
 
     directory = sprintf('/Users/marcocolnaghi/experimental_data/004--social_ddm/dataset_%d/', dataset);
     cd(directory)
@@ -110,7 +110,6 @@ for dataset = 2
                 fly_id = fly_id + 1;
                 tokens = regexp(listing(kf).name, '\.fly(\d+)\.csv', 'tokens');
                 fly_number = str2double(tokens{1}{1});
-
 
                 if dataset == 2
                     match = regexp(listing(kf).name, '-(\w+TNT)_', 'tokens');
@@ -193,8 +192,6 @@ for dataset = 2
                 z.avg_fs_loom(loom_ts_previous > 0) = compute_means(Fly1.velocity(1:end), loom_ts_previous(loom_ts_previous > 0) - 60, loom_ts_previous(loom_ts_previous > 0) - 1);
 
                 z.avg_fs = compute_means(Fly1.velocity(1:end), run_ends - run_lengths, run_ends - 1);
-
-
                 z.avg_pc = compute_means(Fly1.pixelchange(1:end), run_ends - run_lengths, run_ends - 1);
 
                 z.genotype = genotype .* ones(length(run_lengths), 1);

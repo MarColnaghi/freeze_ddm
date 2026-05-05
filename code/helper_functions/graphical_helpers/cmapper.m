@@ -166,6 +166,14 @@ end
 col.pca = cbrewer2('Spectral', nq);
 % col.pca = colorcet('I2','N', nq);
 
+% standard colors
+col.var.sm = cbrewer2('Reds', 1);
+col.var.ss = cbrewer2('Greens', 1);
+col.var.sa = [243 128 234]./255;
+col.var.mindist = [239 122 133] ./255;
+col.var.mindist = [239 122 133] ./255;
+
+
 end
 
 function cmap = get_var_cmap(col, varname)
