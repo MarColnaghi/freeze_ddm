@@ -8,8 +8,8 @@ paths = path_generator('folder', 'social_motion/clustering', 'bouts_id', id_code
 bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
 
 motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
-speed_cache = importdata(fullfile(paths.cache_path, 'speed_cache.mat'));
-angle_cache = importdata(fullfile(paths.cache_path, 'angle_cache.mat'));
+speed_cache = importdata(fullfile(paths.cache_path, 'sumspeed_cache.mat'));
+angle_cache = importdata(fullfile(paths.cache_path, 'sumangle_cache.mat'));
 loom_cache = importdata(fullfile(paths.cache_path, 'loom_cache.mat'));
 
 %% 
@@ -27,15 +27,12 @@ else
     warning('No file found for fly %d', idx_fly);
 end
 
-%
-
-a = corrcoef(speed_cache(idx_fly), motion_cache(idx_fly))
-b = corrcoef(speed_cache(idx_fly), angle_cache(idx_fly))
-c = corrcoef(angle_cache(idx_fly), motion_cache(idx_fly))
-
+a = corrcoef(speed_cache(idx_fly), motion_cache(idx_fly));
+b = corrcoef(speed_cache(idx_fly), angle_cache(idx_fly));
+c = corrcoef(angle_cache(idx_fly), motion_cache(idx_fly));
 
 fh = figure('color','w','Position',[100, 100, 950, 1200]);
-t = tiledlayout(3, 1, 'TileSpacing', 'tight');
+tl = tiledlayout(3, 1, 'TileSpacing', 'tight');
 ax = gobjects(3, 1); % Pre-allocate axes handles
 
 % Define labels and limits for each tile to keep the loop clean

@@ -72,13 +72,13 @@ bouts = table();
 
 fly_id = 0;
 
-for dataset = 1
+for dataset = 0
 
     directory = sprintf('/Users/marcocolnaghi/experimental_data/004--social_ddm/dataset_%d/', dataset);
     cd(directory)
     n_moving = 0:4;
 
-    if dataset == 1
+    if dataset == 0 
         token = '1CS%dNorpA%dLC6ChR_5F-%dcm*';
         speeds = [25,50];
         genotype = 1;
@@ -93,7 +93,7 @@ for dataset = 1
 
         for moving_flies = 1:length(n_moving)
 
-            if dataset == 1
+            if dataset == 0
                 listing = dir([directory, sprintf(token, n_moving(moving_flies), 4-n_moving(moving_flies), speeds(idx_sloom))]);
 
             elseif dataset == 2
@@ -179,6 +179,7 @@ for dataset = 1
                 capped_lengths = min(run_lengths, 630);
                 z.avg_sm = compute_means(Fly1.sum_motion(1:end), onsets , onsets + capped_lengths - 1);
                 z.avg_ss = compute_means(Fly1.sum_speed(1:end), onsets, onsets + capped_lengths - 1);
+                z.avg_sa = compute_means(Fly1.sum_angle(1:end), onsets, onsets + capped_lengths - 1);
 
                 l.ts_sm = arrayfun(@(start_idx, end_idx) ...
                     Fly1.sum_motion(start_idx:end_idx), ...

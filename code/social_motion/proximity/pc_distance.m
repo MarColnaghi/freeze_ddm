@@ -68,7 +68,7 @@ ax(1) = gca;
 for i = 1:length(fn)
     res = analysis_output.(fn{i});
     cfg = styles.(fn{i});
-    histogram(res.dist_raw, params.edges, 'Normalization', 'pdf', 'FaceColor', cfg.color)
+    histogram(res.dist_raw, params.edges, 'Normalization', 'pdf', 'FaceColor', cfg.color, 'EdgeColor', 'none')
 end
 apply_generic(gca, 'font_size', 24, 'tick_length', 0.015, 'line_width', 2, 'xlim', [0 900]);
 xline(60, '--', 'Color', 'k', 'LineWidth', 1.5, 'HandleVisibility', 'off');

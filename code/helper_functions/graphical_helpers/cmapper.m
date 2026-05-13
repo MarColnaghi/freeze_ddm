@@ -171,7 +171,8 @@ col.var.sm = cbrewer2('Reds', 1);
 col.var.ss = cbrewer2('Greens', 1);
 col.var.sa = [243 128 234]./255;
 col.var.mindist = [239 122 133] ./255;
-col.var.mindist = [239 122 133] ./255;
+col.var.distance = [239 122 133] ./255;
+col.var.pc = [40 40 40] ./255;
 
 
 end

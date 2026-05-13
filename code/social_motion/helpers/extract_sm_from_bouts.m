@@ -97,36 +97,32 @@ switch opt.Results.type
         end
 
     case 'onlyfreeze'
-
         total_bouts = height(bouts_le);
-
         switch opt.Results.output_type
-
             case 'cell'
                 sm_output = cell(total_bouts, 1);
                 for idx_bouts = 1:total_bouts
                     sum_motion = cache(bouts_le.fly(idx_bouts));
-                    max_idx = numel(sum_motion); % Get the limit for this specific fly
+                    max_idx = numel(sum_motion);
 
                     ons = bouts_le.onsets(idx_bouts);
-                    % Ensure 'off' does not exceed the vector length
-                    requested_off = bouts_le.ends(idx_bouts) - 1 + delay_after;
-                    off = min(requested_off, max_idx);
+                    % Consistent calculation of requested end
+                    req_off = bouts_le.ends(idx_bouts) - 1 + delay_after;
+                    off = min(req_off, max_idx);
 
-                    % Extract data
+                    % Force column vector (:) to prevent concatenation errors
                     sig = sum_motion(ons:off) ./ norm_factor;
 
-                    % If we were cut short by the boundary, pad with NaNs
-                    if requested_off > max_idx
-                        padding_needed = requested_off - max_idx;
-                        sig = [sig; nan(padding_needed, 1)]; % Assuming column vectors
+                    if req_off > max_idx
+                        padding_needed = req_off - max_idx;
+                        sig = [sig(:); nan(padding_needed, 1)];
                     end
-
                     sm_output{idx_bouts} = sig;
                 end
 
             case 'mat'
-                % Note: If delay_after is significant, max_len should account for it
+                % FIX 1: Ensure max_len exactly matches the logic inside the loop
+                % We calculate the width based on the intended window size for all rows
                 freeze_lens = (bouts_le.ends - bouts_le.onsets) + delay_after;
                 max_len = max(freeze_lens);
                 sm_output = nan(total_bouts, max_len);
@@ -136,25 +132,32 @@ switch opt.Results.type
                     max_idx = numel(sum_motion);
 
                     ons = bouts_le.onsets(idx_bouts);
-                    requested_off = bouts_le.ends(idx_bouts) - 1 + delay_after;
-                    off = min(requested_off, max_idx);
+                    req_off = bouts_le.ends(idx_bouts) - 1 + delay_after;
+                    off = min(req_off, max_idx);
 
+                    % Extract the available signal
                     freeze_sig = sum_motion(ons:off) ./ norm_factor;
-                    L_actual = numel(freeze_sig);
-                    L_total = requested_off - ons + 1; % Total length including requested delay
 
-                    % Create a temporary segment that includes padding if necessary
-                    full_segment = nan(1, L_total);
+                    % FIX 2: Create a row vector of the exact width needed for this bout
+                    % This ensures it matches the pre-calculated 'freeze_lens'
+                    this_bout_len = freeze_lens(idx_bouts);
+                    full_segment = nan(1, this_bout_len);
+
+                    % Place the actual signal into the segment (the rest remains NaN)
+                    L_actual = numel(freeze_sig);
                     full_segment(1:L_actual) = freeze_sig;
 
+                    % FIX 3: Robust Assignment
+                    % We use 1:this_bout_len to ensure we don't exceed max_len
                     switch opt.Results.align
                         case 'onset'
-                            sm_output(idx_bouts, 1:L_total) = full_segment;
+                            sm_output(idx_bouts, 1:this_bout_len) = full_segment;
                         case 'offset'
-                            sm_output(idx_bouts, end-L_total+1:end) = full_segment;
+                            % Right-aligning within the matrix
+                            start_col = max_len - this_bout_len + 1;
+                            sm_output(idx_bouts, start_col:end) = full_segment;
                     end
                 end
-
         end
 
 

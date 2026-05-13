@@ -9,33 +9,91 @@ bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
 motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 
 % Here you can change the window of loom-evoked
-thresholds = define_thresholds('le_window', struct('le_window_sl', [5 55], 'le_window_fl', [5 55]));
+thresholds = define_thresholds('le_window', struct('le_window_sl', [0 55], 'le_window_fl', [0 55]));
 % thresholds = define_thresholds;
 
 bouts = bouts_formatting(bouts, thresholds);
 
 % Process the data: set thresholds for sm, fs and ln. Set minimum duration.
+threshold = 70;
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', 'nloom', 2:20, 'min_dur', 30);
-bouts_proc = impose_contact_threshold(bouts_proc, 80);
+[bouts_proc, contact_mask, is_below_threshold] = impose_contact_threshold(bouts_proc, 'threshold', threshold, 'type', 'onlyfreeze');
+
+bouts_proc = bouts_proc(contact_mask == 0, :);
+is_below_threshold = is_below_threshold(contact_mask == 0, :);
 
 %% Extract the pre-freezing social motion
+
 inizio = 0;
 fine = 630;
-sm_freeze_full = extract_sm_from_bouts(bouts_proc, 'type', 'onsets', 'output_type', 'mat', 'window', [inizio fine], 'norm_factor', 10);
+sm_freeze_full = extract_sm_from_bouts(bouts_proc, 'type', 'onsets', 'output_type', 'mat', 'window', [inizio fine], 'norm_factor', 10, 'cache', 'motion_cache');
+sm_freeze_full = sm_freeze_full .* ~is_below_threshold;
+
+% sm_freeze_full = extract_sm_from_bouts(bouts_proc, 'type', 'onlyfreeze', 'output_type', 'mat', 'align', 'onset', 'norm_factor', 10, 'cache', 'motion_cache');
+% sm_freeze_full = sm_freeze_full(:, 1:631);
+% sm_freeze_full = movmean(sm_freeze_full, 3, 2, 'omitnan');
+% sm_freeze_full(:, 1:30) = 0;
 
 % sm_freeze_full is trials x timesteps (each row is a trial, each column a
 % timestep in the duration)
 
-clustering_type = 'pca';
+clustering_type = 'max';
 paths = path_generator('folder', fullfile('social_motion','clustering', clustering_type), 'bouts_id', id_code, 'imfirst', false);
 
+
+
+%%
+
+
+% Visualize the Heatmap
+fh = figure('color','w','Position',[100, 100, 600, 4000]);
+tiledlayout(4, 1, 'Padding', 'compact', 'TileSpacing', 'tight')
+nexttile(2, [3 1])
+ax_distr(2) = gca;
+
+hold on
+x_axis = inizio:fine;
+y_axis = 1:size(sm_freeze_full, 1);
+h = imagesc(x_axis, y_axis, sm_freeze_full, [0 2]);
+% set(h, 'AlphaData', ~isnan(sm_freeze(sort_order, :)));
+
+scatter(bouts_proc.durations, 1:height(bouts_proc), 2, '|', 'k')
+apply_generic(gca, 'xlim', [0 630], 'no_y', true, 'ylim', [-100 size(sm_freeze_full, 1) + 100], 'xtick', 0:120:600)
+colormap(cbrewer2('Reds',[]));
+
+%cb = colorbar(ax, 'Location', 'southoutside', 'FontSize', 18, 'LineWidth', 2);
+%cb.Label.String = 'Social Motion';
+xticklabels({'Freeze\newlineOnset', '2', '4', '6', '8', '10'});
+
+% Set the interpreter to TeX so it recognizes the \newline command
+ax = gca;
+ax.TickLabelInterpreter = 'tex';
+xtickangle(0);
+
+xlabel('Time (s)');
+
+nexttile(1)
+ax_distr(1) = gca;
+hold on
+apply_generic(gca, 'ylim', [0 1.2],'ytick', [0 1.2], 'xlim', [0 630], 'no_x', true, 'font_size', 18, 'xticks', 0:120:600);
+ylabel({'Mean', 'Social Motion'})
+
+linkaxes([ax_distr(:)], 'x')
+axi = gca;
+axi.YAxis.Color = [1 1 1];
+axi.XAxis.Color = [1 1 1];
+
+exporter(fh, paths, 'notordered_profiles.pdf')
+exporter(fh, paths, 'notordered_profiles.png')
+
+%%
 n_clusters = 10;
 
 switch clustering_type
     case 'pca'
         % 1. Run PCA
         centered_sm_freeze = zscore(sm_freeze_full, [], 2);
-        centered_sm_freeze = sm_freeze_full;
+        % centered_sm_freeze = sm_freeze_full;
 
         [~, score] = pca(centered_sm_freeze);
 
@@ -74,7 +132,7 @@ switch clustering_type
         centered_sm_freeze = sm_freeze_full;
 
         if strcmp(clustering_type, 'max')
-            threshold_sm = .5;
+            threshold_sm = .1;
             [max_vals, metric] = max(centered_sm_freeze, [], 2);
             metric = double(metric);
 
@@ -84,7 +142,7 @@ switch clustering_type
 
         else
             % Metric: Center of Mass
-            pow = 6;
+            pow = 9;
             t = 1:size(centered_sm_freeze, 2);
             metric = sum(t .* (centered_sm_freeze.^pow), 2) ./ sum(centered_sm_freeze.^pow, 2);
 
@@ -139,7 +197,7 @@ switch clustering_type
         [~, sort_order] = sortrows([idx, metric], [1 2]);
 
     case 'first_cross'
-        threshold = 0.2;
+        threshold = 0.75;
         centered_sm_freeze = sm_freeze_full;
 
         metric = nan(size(centered_sm_freeze,1),1);
@@ -200,12 +258,23 @@ ax_distr(2) = gca;
 hold on
 x_axis = inizio:fine;
 y_axis = 1:size(sorted_matrix, 1);
-h = imagesc(x_axis, y_axis, sm_freeze_full(sort_order, :), [0 1.2]);
+h = imagesc(x_axis, y_axis, sm_freeze_full(sort_order, :), [0 2]);
 % set(h, 'AlphaData', ~isnan(sm_freeze(sort_order, :)));
 
 scatter(bouts_proc.durations(sort_order), 1:height(bouts_proc), 2, '|', 'k')
-apply_generic(gca, 'xlim', [0 630], 'no_y', true, 'ylim', [-100 size(centered_sm_freeze, 1) + 100], 'xtick', 0:120:600)
+apply_generic(gca, 'xlim', [0 630], 'no_y', true, 'ylim', [-100 size(sm_freeze_full, 1) + 100], 'xtick', 0:120:600)
 colormap(cbrewer2('Reds',[]));
+
+%cb = colorbar(ax, 'Location', 'southoutside', 'FontSize', 18, 'LineWidth', 2);
+%cb.Label.String = 'Social Motion';
+xticklabels({'Freeze\newlineOnset', '2', '4', '6', '8', '10'});
+
+% Set the interpreter to TeX so it recognizes the \newline command
+ax = gca;
+ax.TickLabelInterpreter = 'tex';
+xtickangle(0);
+
+xlabel('Time (s)');
 
 %cb = colorbar(ax, 'Location', 'southoutside', 'FontSize', 18, 'LineWidth', 2);
 %cb.Label.String = 'Social Motion';
@@ -218,8 +287,6 @@ for idx_cluster = 1:length(all_unique_clusters)
     hold on
 
 end
-
-xlabel('Time');
 
 % Add horizontal lines to separate clusters
 hold on;
@@ -237,6 +304,7 @@ apply_generic(gca, 'ylim', [0 1.2],'ytick', [0 1.2], 'xlim', [0 630], 'no_x', tr
 ylabel({'Mean', 'Social Motion'})
 
 linkaxes([ax_distr(:)], 'x')
+xlim([0 630]);
 
 exporter(fh, paths, 'clusters_profiles.pdf')
 exporter(fh, paths, 'clusters_profiles.png')
@@ -247,7 +315,7 @@ exporter(fh, paths, 'clusters_profiles_nocolor.pdf')
 exporter(fh, paths, 'clusters_profiles_nocolor.png')
 
 axes(ax_distr(2))
-clim([0 1.2])
+clim([0 2])
 % Similaritiesc
 
 fh = figure('color', 'w','Position', [100, 100, 400, 400]);
@@ -679,7 +747,7 @@ new_boundaries = boundaries - boundaries(2);
 new_boundaries(1) = [];
 new_boundaries(end) = [];
 
-fh = figure('color','w','Position',[100 100 1800 800]);
+fh = figure('color','w','Position',[100 100 1800 1000]);
 tiledlayout(4, 3, 'TileSpacing', 'compact', 'Padding', 'compact')
 colsm = cbrewer2('Reds', 1);
 
@@ -694,7 +762,7 @@ hold on
 histogram(break_times_valid, 0:bin_size:90000, 'Normalization','pdf', ...
     'FaceColor','k','EdgeColor','none')
 
-apply_generic(ax_distr(1), 'ylim', [0 .02], 'xlim', [0 630], 'font_size', 18);
+apply_generic(ax_distr(1), 'ylim', [0 .02], 'xlim', [0 630], 'font_size', 18, 'yticks', [0 0.01 0.02]);
 ylabel('Break Density')
 
 yyaxis right
@@ -704,7 +772,7 @@ xline(1,'k--')
 ylim([0 3])
 set(gca,'XTick',[], 'FontSize', 18)
 ylabel('Mean SM')
-ax_distr(1).YAxis(2).Color = [0.78, 0.21, 0.24];
+ax_distr(1).YAxis(2).Color = colsm;
 
 % --- PEAK ALIGNED
 nexttile
@@ -713,7 +781,8 @@ hold on
 histogram(break_times_peak_valid, -601:bin_size:max(break_times_peak_valid), ...
     'Normalization','pdf', 'FaceColor','k','EdgeColor','none')
 
-apply_generic(ax_distr(2), 'ylim', [0 .01], 'xlim', [-630 630]./2, 'font_size', 18);
+apply_generic(ax_distr(2), 'ylim', [0 .02], 'xlim', [-630 630]./2, 'font_size', 18, 'yticks', [0 0.01 0.02]);
+ylabel('Break Density')
 
 yyaxis right
 
@@ -723,12 +792,13 @@ for idx_valid_cluster = 1:n_clusters
 end
 
 avg = mean(aligned_peak_valid,1,'omitnan');
-plot(x_axis_peak, avg, 'k-', 'LineWidth', 2, 'Color', 'k')
+plot(x_axis_peak, avg, 'k-', 'LineWidth', 2, 'Color', colsm)
+ylabel('Mean SM')
 
 xline(1,'k--')
 ylim([0 3])
 set(gca,'XTick',[], 'FontSize', 18)
-ax_distr(2).YAxis(2).Color = [0.78, 0.21, 0.24];
+ax_distr(2).YAxis(2).Color = colsm;
 
 % --- MAGNITUDE SORTED
 nexttile
@@ -750,8 +820,7 @@ end
 
 ylabel('CDF')
 set(gca,'FontSize',18)
-apply_generic(ax_distr(3), 'ylim', [0 1], 'xlim', [-630 630]./2, 'font_size', 18);
-
+apply_generic(ax_distr(3), 'ylim', [0 1], 'xlim', [-630 630]./2, 'font_size', 18)
 yyaxis right
 avg = mean(aligned_peak_mag,1,'omitnan');
 for idx_mag_clusters = 1:n_mag_clusters
@@ -772,8 +841,9 @@ ax_distr(4) = gca;
 imagesc(1:n_cols, 1:n_rows_valid, sorted_matrix_valid, [0 3.2])
 set(gca,'YDir','normal')
 hold on
-scatter(break_times_valid, 1:n_rows_valid, 2, '|', 'k')
-apply_generic(gca, 'no_y', true, 'xlim', [0 630])
+scatter(break_times_valid, 1:n_rows_valid, 3, '|', 'k')
+apply_generic(gca, 'no_y', true, 'xlim', [0 630], 'xticks', 0:120:600)
+xticklabels(0:2:10)
 colormap(cbrewer2('Reds',[]))
 
 for idx_cluster = 1:n_clusters
@@ -785,7 +855,7 @@ for idx_cluster = 1:n_clusters
 
 end
 
-xlabel('Time');
+xlabel('Time (s)');
 
 % Add horizontal lines to separate clusters
 hold on;
@@ -800,9 +870,10 @@ ax_distr(5) = gca;
 imagesc(x_axis_peak, 1:n_rows_valid, aligned_peak_valid, [0 3.2])
 set(gca,'YDir','normal')
 hold on
-scatter(break_times_peak_valid, 1:n_rows_valid, 2, '|', 'k')
+scatter(break_times_peak_valid, 1:n_rows_valid, 3, '|', 'k')
 
-apply_generic(gca, 'no_y', true, 'xlim', [-630 630]./2)
+apply_generic(gca, 'no_y', true, 'xlim', [-630 630]./2, 'xticks', -360:120:360)
+xticklabels(-6:2:6)
 colormap(cbrewer2('Reds',[]))
 
 for idx_cluster = 1:n_clusters
@@ -814,9 +885,9 @@ for idx_cluster = 1:n_clusters
 
 end
 
-xlabel('Time');
+xlabel('Time (s)');
 
-% Add horizontal lines to separate clusters
+%Add horizontal lines to separate clusters
 hold on;
 for idx_cluster = 1:n_clusters
     yline(new_boundaries(idx_cluster), 'k--', 'LineWidth', 1.1);
@@ -828,8 +899,9 @@ ax_distr(6) = gca;
 imagesc(x_axis_peak, 1:n_rows_mag, aligned_peak_mag, [0 3.2])
 set(gca,'YDir','normal')
 hold on
-scatter(break_times_peak_mag, 1:n_rows_mag, 2, '|', 'k')
-apply_generic(gca, 'no_y', true, 'xlim', [-630 630]./2)
+scatter(break_times_peak_mag, 1:n_rows_mag, 3, '|', 'k')
+apply_generic(gca, 'no_y', true, 'xlim', [-630 630]./2, 'xticks', -360:120:360)
+xticklabels(-6:2:6)
 colormap(cbrewer2('Reds',[]))
 
 x_left = ax_distr(6).XLim(1);
@@ -850,7 +922,7 @@ for k = 1:n_mag_clusters
         'VerticalAlignment','middle');
 end
 
-xlabel('Time');
+xlabel('Time (s)');
 
 % ================= LINK =================
 
@@ -858,14 +930,18 @@ linkaxes([ax_distr(1) ax_distr(4)], 'x')
 linkaxes([ax_distr(2) ax_distr(5)], 'x')
 linkaxes([ax_distr(3) ax_distr(6)], 'x')
 
+set(gcf, 'GraphicsSmoothing', 'off');
 exporter(fh, paths, 'peak_vs_magnitude_sorted.pdf')
 exporter(fh, paths, 'peak_vs_magnitude_sorted.png')
+% 
+% exporter(fh, paths, 'peak_vs_magnitude_sorted_forar.pdf')
+% exporter(fh, paths, 'peak_vs_magnitude_sorted_forar.png')
 
 % window = 15;
 % axes(ax(2))
 
 
-%% Now we plot the social motion timeseries based on whether the freeze ended or not at the peak
+c%% Now we plot the social motion timeseries based on whether the freeze ended or not at the peak
 fh = figure('color','w','Position',[100 100 750 400]);
 tiledlayout(1, 2, 'TileSpacing', 'compact', 'Padding', 'compact')
 nexttile

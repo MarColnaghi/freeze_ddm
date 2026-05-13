@@ -132,13 +132,12 @@ for idx_param = params
         for idx_sloom = sloom_vals
             bouts_sloom = bouts_proc(bouts_proc.ls==idx_sloom,:);
             qmask = quantiles(bouts_proc.ls==idx_sloom);
-
+            censored = bouts_sloom.contacts;
             nexttile([7 tile_width]); hold on
             plot_duration_distribution( ...
                 bouts_sloom.durations_s, qmask, ...
-                cmap, num_quantiles, type, period);
+                cmap, num_quantiles, type, period, censored);
 
-            xlabel('Freeze Duration (s)');
             ylabel(type);
             apply_generic(gca,'tick_length',0.025,'font_size',26, ...
                 'yticks',[0 1],'xticks',[0 10])
@@ -157,6 +156,8 @@ for idx_param = params
 
             ax_bottom(end+1) = gca; %#ok<AGROW>
         end
+        xlabel('Freeze Duration (s)');
+
     end
 
     if numel(ax_bottom) > 1
@@ -166,6 +167,8 @@ for idx_param = params
     %% ===================== Export =====================
     if export
         exporter(fh, paths, sprintf('fd_%s_%s.pdf', param, period))
+                exporter(fh, paths, sprintf('fd_%s_%s.png', param, period))
+
     end
 end
 end
@@ -226,15 +229,17 @@ end
 
 % ---------------------------------------------------------------------
 
-function plot_duration_distribution(durations,qmask,cmap,nq,type,period)
+function plot_duration_distribution(durations,qmask,cmap,nq,type,period, censored)
 
 switch type
     case 'cumulative'
         for q = 1:nq
             d = durations(qmask==q);
+            c = censored(qmask==q);
             if isempty(d), continue, end
-            [f,x] = ecdf(d);
-            plot(x,f,'LineWidth', 4 ,'Color',cmap(1+q,:))
+            sum(c)
+            [f,x] = ecdf(d);%, 'Censoring', c);
+            plot(x, f,'LineWidth', 4 ,'Color',cmap(1+q,:) )
         end
         ylim([0 1])
         pad_ylim(gca,0.025)
