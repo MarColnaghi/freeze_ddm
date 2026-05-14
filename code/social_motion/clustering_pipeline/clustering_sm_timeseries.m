@@ -15,9 +15,9 @@ thresholds = define_thresholds('le_window', struct('le_window_sl', [0 55], 'le_w
 bouts = bouts_formatting(bouts, thresholds);
 
 % Process the data: set thresholds for sm, fs and ln. Set minimum duration.
-threshold = 70;
+threshold = 0;
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', 'nloom', 2:20, 'min_dur', 30);
-[bouts_proc, contact_mask, is_below_threshold] = impose_contact_threshold(bouts_proc, 'threshold', threshold, 'type', 'onlyfreeze');
+[bouts_proc, contact_mask, is_below_threshold] = impose_contact_threshold(bouts_proc, 'threshold', threshold, 'type', 'ili');
 
 bouts_proc = bouts_proc(contact_mask == 0, :);
 is_below_threshold = is_below_threshold(contact_mask == 0, :);
@@ -41,7 +41,6 @@ clustering_type = 'max';
 paths = path_generator('folder', fullfile('social_motion','clustering', clustering_type), 'bouts_id', id_code, 'imfirst', false);
 
 
-
 %%
 
 
@@ -50,15 +49,16 @@ fh = figure('color','w','Position',[100, 100, 600, 4000]);
 tiledlayout(4, 1, 'Padding', 'compact', 'TileSpacing', 'tight')
 nexttile(2, [3 1])
 ax_distr(2) = gca;
+[~, sort_order] = sort(bouts_proc.sm);
 
 hold on
 x_axis = inizio:fine;
-y_axis = 1:size(sm_freeze_full, 1);
-h = imagesc(x_axis, y_axis, sm_freeze_full, [0 2]);
+y_axis = 1:size(sm_freeze_full(sort_order, :), 1);
+h = imagesc(x_axis, y_axis, sm_freeze_full(sort_order, :), [0 2]);
 % set(h, 'AlphaData', ~isnan(sm_freeze(sort_order, :)));
 
-scatter(bouts_proc.durations, 1:height(bouts_proc), 2, '|', 'k')
-apply_generic(gca, 'xlim', [0 630], 'no_y', true, 'ylim', [-100 size(sm_freeze_full, 1) + 100], 'xtick', 0:120:600)
+scatter(bouts_proc.durations(sort_order), 1:height(bouts_proc), 2, '|', 'k')
+apply_generic(gca, 'xlim', [0 630], 'no_y', true, 'ylim', [-100 size(sm_freeze_full(sort_order, :), 1) + 100], 'xtick', 0:120:600)
 colormap(cbrewer2('Reds',[]));
 
 %cb = colorbar(ax, 'Location', 'southoutside', 'FontSize', 18, 'LineWidth', 2);
@@ -132,7 +132,7 @@ switch clustering_type
         centered_sm_freeze = sm_freeze_full;
 
         if strcmp(clustering_type, 'max')
-            threshold_sm = .1;
+            threshold_sm = .5;
             [max_vals, metric] = max(centered_sm_freeze, [], 2);
             metric = double(metric);
 
@@ -439,193 +439,20 @@ xlabel('Duration (s)')
 exporter(fh, paths, 'ecdf.pdf')
 exporter(fh, paths, 'ecdf.png')
 
-%%
-fh = figure('color', 'w','Position', [100, 100, 1100, 550]);
-tlo = tiledlayout(ceil(n_clusters/4), 4, 'Padding', 'loose', 'TileSpacing', 'compact');
 
-for idx_cluster = 1:n_clusters
-    indices_of_cluster = find(idx == idx_cluster);
-    peak_buffer = 30;
-
-    % Initialize your data stacks
-    data_stacks = {[], [], []}; % Before, During, After
-
-    for i = 1:length(indices_of_cluster)
-        row_idx = indices_of_cluster(i);
-        current_signal = sm_freeze_full(row_idx, :);
-        bout_end_idx = bouts_proc.durations(row_idx);
-        [~, peak_time_idx] = max(current_signal);
-
-        if bout_end_idx < (peak_time_idx - peak_buffer)
-            data_stacks{1} = [data_stacks{1}; current_signal];
-        elseif bout_end_idx > (peak_time_idx + peak_buffer)
-            data_stacks{3} = [data_stacks{3}; current_signal];
-        else
-            data_stacks{2} = [data_stacks{2}; current_signal];
-        end
-    end
-
-    nexttile
-    hold on;
-    colors = cbrewer2('Set1', 3);
-    colors = colors([2, 1, 3], :);
-    labels = {'Before', 'During', 'After'};
-
-    scatter(600, 1.5, 500, col.pca(idx_cluster, :), 'filled')
-    text(600, 1.5, num2str(idx_cluster), 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', 'FontSize', 18)
-
-    for j = 1:3
-        current_group = data_stacks{j};
-        if size(current_group, 1) > 1
-            avg = mean(current_group, 1);
-            sem = std(current_group, 0, 1) ./ sqrt(size(current_group, 1));
-
-            % --- USE YOUR FUNCTION HERE ---
-            % x, y1 (upper), y2 (lower), where (empty for all), varargin
-            fill_between(x_axis, avg + sem, avg - sem, [], ...
-                'FaceColor', colors(j,:), 'EdgeColor', 'none', 'FaceAlpha', 0.25);
-
-            % Plot the mean line on top
-            plot(x_axis, avg, 'Color', colors(j,:), 'LineWidth', 1.5);
-
-        elseif size(current_group, 1) == 1
-            plot(x_axis, current_group, 'Color', colors(j,:), 'LineWidth', 1.5);
-        end
-    end
-
-    apply_generic(gca, 'ylim', [0 2], 'xlim', [min(x_axis) max(x_axis)], 'xticks', 0:120:600, 'no_y', true)
-    xticklabels(0:2:10)
-end
-
-exporter(fh, paths, 'clusters_before_during_after.pdf')
-exporter(fh, paths, 'clusters_before_during_after.png')
-
-
-%% Check profiles vs Control Variables
-columns = 6;
-fh = figure('color','w','Position',[100, 100, 1600, 4000]);
-tiledlayout(4, columns, 'Padding', 'compact', 'TileSpacing', 'tight')
-nexttile(columns + 1, [3 3])
-ax_distr(2) = gca;
-
-hold on
-x_axis = inizio:fine;
-y_axis = 1:size(sorted_matrix, 1);
-h = imagesc(x_axis, y_axis, sm_freeze_full(sort_order, :), [0 2.2]);
-% set(h, 'AlphaData', ~isnan(sm_freeze(sort_order, :)));
+%% --- 1. VALID MASK
 
 % 2. Calculate Individual Peaks (Adjusted for x_axis start)
 % Find the index of the max in each row
 [~, peak_idx_raw] = max(sm_freeze_full(sort_order, :), [], 2);
 % Shift by 'inizio' to align with the plot's X-coordinates
 individual_peaks = x_axis(1) + (peak_idx_raw - 1);
+peak_buffer = 30;
 
 % 1. Define your boundaries (ensure they are column vectors)
 left_bound  = (individual_peaks - peak_buffer)';
 right_bound = (individual_peaks + peak_buffer)';
 y_axis_vec  = y_axis(:)'; % Ensure row vector for fliplr
-
-% 2. Before Area Polygon
-% From 'inizio' to 'left_bound'
-x_before = [ones(size(left_bound)) * inizio, fliplr(left_bound)];
-y_before = [y_axis_vec, fliplr(y_axis_vec)];
-
-% 3. After Area Polygon
-% From 'right_bound' to 'fine'
-x_after = [right_bound, ones(size(right_bound)) * fine];
-y_after = [y_axis_vec, fliplr(y_axis_vec)];
-
-% 4. Plot the Shaded Areas
-hold on;
-% Before Area (using Red from Set1 as per your category colors)
-fill(x_before, y_before, colors(1,:), ...
-    'FaceAlpha', 0.3, 'EdgeColor', 'none', 'DisplayName', 'Before Zone');
-
-% After Area (using Green from Set1 as per your category colors)
-fill(x_after, y_after, colors(3,:), ...
-    'FaceAlpha', 0.3, 'EdgeColor', 'none', 'DisplayName', 'After Zone');
-
-% plot(individual_peaks - peak_buffer, y_axis,'LineWidth', 1, 'Color', [colors(1,:)]);
-% plot(individual_peaks + peak_buffer, y_axis, 'LineWidth', 1, 'Color', [colors(3,:)]);
-scatter(bouts_proc.durations(sort_order), 1:height(bouts_proc), 2, '|', 'k')
-
-
-apply_generic(gca, 'xlim', [0 630], 'no_y', true, 'ylim', [-100 size(centered_sm_freeze, 1) + 100], 'xtick', 0:120:600)
-colormap(cbrewer2('Reds',[]));
-
-%cb = colorbar(ax, 'Location', 'southoutside', 'FontSize', 18, 'LineWidth', 2);
-%cb.Label.String = 'Social Motion';
-
-for idx_cluster = 1:length(all_unique_clusters)
-    fill([ax_distr(2).XLim(1)-2,ax_distr(2).XLim(1)-2,ax_distr(2).XLim(1)-17,ax_distr(2).XLim(1)-17], [boundaries(idx_cluster) boundaries(idx_cluster + 1) boundaries(idx_cluster + 1)   boundaries(idx_cluster)], ...
-        col.pca(idx_cluster,:), 'EdgeColor','none', 'Clipping', 'off');
-    text(mean([ax_distr(2).XLim(1)-2,ax_distr(2).XLim(1)-17]), mean([boundaries(idx_cluster); boundaries(idx_cluster + 1)]), num2str(idx_cluster),...
-        'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle');
-    hold on
-
-end
-
-xlabel('Time');
-
-% Add horizontal lines to separate clusters
-hold on;
-for idx_cluster = 1:length(boundaries)
-    yline(boundaries(idx_cluster), 'k--', 'LineWidth', 1.1);
-end
-
-nexttile(1, [1 3])
-ax_distr(1) = gca;
-hold on
-for idx_cluster = 1:length(all_unique_clusters)
-    plot(inizio:fine, repr(idx_cluster, :), 'LineWidth', 1.5, 'Color', col.pca(idx_cluster, :));
-end
-apply_generic(gca, 'ylim', [0 1.2],'ytick', [0 1.2], 'xlim', [0 630], 'no_x', true, 'font_size', 18);
-ylabel({'Mean', 'Social Motion'})
-
-plot_configs = {
-    bouts_proc.moving_flies, 'Greys',   5,  10;
-    bouts_proc.sloom / 25,   'Blues',   2,  11;
-    bouts_proc.nloom,        'Purples', 20, 12
-    };
-
-for i = 1:size(plot_configs, 1)
-    data_raw = plot_configs{i, 1};
-    cmap_name = plot_configs{i, 2};
-    n_bins    = plot_configs{i, 3};
-    tile_idx  = plot_configs{i, 4};
-
-    % 1. Pre-allocate and calculate histogram counts
-    values = zeros(length(all_unique_clusters), n_bins);
-    for c = 1:length(all_unique_clusters)
-        values(c, :) = histcounts(data_raw(idx == c), n_bins);
-    end
-
-    % 2. Normalize to Percentages (using element-wise division)
-    perc_values = (values ./ sum(values, 2)) * 100;
-
-    % 3. Plotting
-    nexttile(tile_idx, [3 1])
-    hold on
-    xline([0 20 40 60 80 100], 'k--')
-    bh = bar(perc_values, 'stacked', 'Horizontal', 'on', 'EdgeColor', 'black');
-
-    % 4. Apply Colors
-    colors2 = cbrewer2(cmap_name, n_bins);
-    for k = 1:numel(bh)
-        bh(k).FaceColor = 'flat';
-        bh(k).CData = colors2(k, :);
-    end
-
-    % 5. Alignment & Formatting
-    ax_bar = gca;
-    set(ax_bar, 'YLim', [0.5 length(all_unique_clusters) + 0.5]);
-    apply_generic(ax_bar, 'no_x', true, 'yticks', 1:12);
-end
-
-exporter(fh, paths, 'clusters_profiles_with_controlvars.pdf')
-exporter(fh, paths, 'clusters_profiles_with_controlvars.png')
-
-%% --- 1. VALID MASK
 
 
 valid_sorted = valid_mask(sort_order);   % already in sorted order
@@ -751,7 +578,7 @@ fh = figure('color','w','Position',[100 100 1800 1000]);
 tiledlayout(4, 3, 'TileSpacing', 'compact', 'Padding', 'compact')
 colsm = cbrewer2('Reds', 1);
 
-bin_size = 4;
+bin_size = 10;
 
 % ================= TOP ROW =================
 
@@ -778,10 +605,38 @@ ax_distr(1).YAxis(2).Color = colsm;
 nexttile
 ax_distr(2) = gca;
 hold on
-histogram(break_times_peak_valid, -601:bin_size:max(break_times_peak_valid), ...
-    'Normalization','pdf', 'FaceColor','k','EdgeColor','none')
 
-apply_generic(ax_distr(2), 'ylim', [0 .02], 'xlim', [-630 630]./2, 'font_size', 18, 'yticks', [0 0.01 0.02]);
+edges = -601:bin_size:max(break_times_peak_valid);
+
+% Compute counts
+[counts, ~] = histcounts(break_times_peak_valid, edges);
+
+% Bin centers
+bin_centers = edges(1:end-1) + diff(edges)/2;
+
+% Bin the availability time series using same edges
+available_per_bin = sum(~isnan(aligned_peak_valid),1);
+available_binned = zeros(size(counts));
+
+for i = 1:length(counts)
+    idx = x_axis_peak >= edges(i) & x_axis_peak < edges(i+1);
+    available_binned(i) = sum(available_per_bin(idx));
+end
+
+% Correct counts
+counts_corrected = counts ./ available_binned;
+
+% Normalize as PDF
+counts_corrected = counts_corrected ./ ...
+    (sum(counts_corrected) * bin_size);
+
+% Create histogram object
+h = histogram('BinEdges', edges, ...
+              'BinCounts', counts_corrected, ...
+              'FaceColor', 'k', ...
+              'EdgeColor', 'none');
+
+apply_generic(ax_distr(2), 'ylim', [0 .005], 'xlim', [-630 630]./2, 'font_size', 18, 'yticks', [0 0.01 0.02]);
 ylabel('Break Density')
 
 yyaxis right
@@ -940,8 +795,12 @@ exporter(fh, paths, 'peak_vs_magnitude_sorted.png')
 % window = 15;
 % axes(ax(2))
 
+%%
 
-c%% Now we plot the social motion timeseries based on whether the freeze ended or not at the peak
+colors = cbrewer2('Set1', 3);
+colors = colors([2, 1, 3], :);
+
+% Now we plot the social motion timeseries based on whether the freeze ended or not at the peak
 fh = figure('color','w','Position',[100 100 750 400]);
 tiledlayout(1, 2, 'TileSpacing', 'compact', 'Padding', 'compact')
 nexttile
@@ -1108,7 +967,43 @@ end
 exporter(fh, paths, 'sm_aligned_2_offset.pdf')
 exporter(fh, paths, 'sm_aligned_2_offset.png')
 
+
 %%
+
+
+n_trials = 400;
+selected_trials = sort(randi(size(aligned_peak_valid, 1), n_trials, 1));
+
+fh = figure('color','w','Position',[100 100 400 1200]);
+tiledlayout(1, 1, 'TileSpacing', 'tight', 'Padding', 'tight')
+nexttile
+hold on
+for idx_trial = 1:n_trials
+    n = selected_trials(idx_trial);
+    plot(x_axis_peak, aligned_peak_valid(n, :) + idx_trial, 'k-')
+end
+
+% x positions
+x_breaks = break_times_peak_valid(selected_trials);
+
+% row indices
+rows = selected_trials;
+
+% convert break times to column indices
+cols = x_breaks + 1;
+
+% extract corresponding y values
+% scatter
+apply_generic(gca, 'no_y', true, 'xlim', [-600 600]./2, 'xticks', -360:120:360, 'no_x', true)
+xticklabels(-6:2:6)
+
+exporter(fh, paths, 'sm_traces_aligned_2_peak.pdf')
+exporter(fh, paths, 'sm_traces_aligned_2_peak.png')
+
+%%
+fh = figure('Position', [100 100 1300 700], 'Color', 'w');
+
+
 
 fh = figure('Position', [100 100 1300 700], 'Color', 'w');
 tl = tiledlayout(3, 4, 'TileSpacing', 'loose', 'Padding', 'compact');
@@ -1759,6 +1654,190 @@ end
 %exporter(fh, paths, 'sm_aligned_2_offset.png')
 
 
+% fh = figure('color', 'w','Position', [100, 100, 1100, 550]);
+% tlo = tiledlayout(ceil(n_clusters/4), 4, 'Padding', 'loose', 'TileSpacing', 'compact');
+% 
+% for idx_cluster = 1:n_clusters
+%     indices_of_cluster = find(idx == idx_cluster);
+%     peak_buffer = 30;
+% 
+%     % Initialize your data stacks
+%     data_stacks = {[], [], []}; % Before, During, After
+% 
+%     for i = 1:length(indices_of_cluster)
+%         row_idx = indices_of_cluster(i);
+%         current_signal = sm_freeze_full(row_idx, :);
+%         bout_end_idx = bouts_proc.durations(row_idx);
+%         [~, peak_time_idx] = max(current_signal);
+% 
+%         if bout_end_idx < (peak_time_idx - peak_buffer)
+%             data_stacks{1} = [data_stacks{1}; current_signal];
+%         elseif bout_end_idx > (peak_time_idx + peak_buffer)
+%             data_stacks{3} = [data_stacks{3}; current_signal];
+%         else
+%             data_stacks{2} = [data_stacks{2}; current_signal];
+%         end
+%     end
+% 
+%     nexttile
+%     hold on;
+%     colors = cbrewer2('Set1', 3);
+%     colors = colors([2, 1, 3], :);
+%     labels = {'Before', 'During', 'After'};
+% 
+%     scatter(600, 1.5, 500, col.pca(idx_cluster, :), 'filled')
+%     text(600, 1.5, num2str(idx_cluster), 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', 'FontSize', 18)
+% 
+%     for j = 1:3
+%         current_group = data_stacks{j};
+%         if size(current_group, 1) > 1
+%             avg = mean(current_group, 1);
+%             sem = std(current_group, 0, 1) ./ sqrt(size(current_group, 1));
+% 
+%             % --- USE YOUR FUNCTION HERE ---
+%             % x, y1 (upper), y2 (lower), where (empty for all), varargin
+%             fill_between(x_axis, avg + sem, avg - sem, [], ...
+%                 'FaceColor', colors(j,:), 'EdgeColor', 'none', 'FaceAlpha', 0.25);
+% 
+%             % Plot the mean line on top
+%             plot(x_axis, avg, 'Color', colors(j,:), 'LineWidth', 1.5);
+% 
+%         elseif size(current_group, 1) == 1
+%             plot(x_axis, current_group, 'Color', colors(j,:), 'LineWidth', 1.5);
+%         end
+%     end
+% 
+%     apply_generic(gca, 'ylim', [0 2], 'xlim', [min(x_axis) max(x_axis)], 'xticks', 0:120:600, 'no_y', true)
+%     xticklabels(0:2:10)
+% end
+% 
+% exporter(fh, paths, 'clusters_before_during_after.pdf')
+% exporter(fh, paths, 'clusters_before_during_after.png')
+% 
+% 
+% %% Check profiles vs Control Variables
+% columns = 6;
+% fh = figure('color','w','Position',[100, 100, 1600, 4000]);
+% tiledlayout(4, columns, 'Padding', 'compact', 'TileSpacing', 'tight')
+% nexttile(columns + 1, [3 3])
+% ax_distr(2) = gca;
+% 
+% hold on
+% x_axis = inizio:fine;
+% y_axis = 1:size(sorted_matrix, 1);
+% h = imagesc(x_axis, y_axis, sm_freeze_full(sort_order, :), [0 2.2]);
+% % set(h, 'AlphaData', ~isnan(sm_freeze(sort_order, :)));
+% 
+% % 2. Calculate Individual Peaks (Adjusted for x_axis start)
+% % Find the index of the max in each row
+% [~, peak_idx_raw] = max(sm_freeze_full(sort_order, :), [], 2);
+% % Shift by 'inizio' to align with the plot's X-coordinates
+% individual_peaks = x_axis(1) + (peak_idx_raw - 1);
+% 
+% % 1. Define your boundaries (ensure they are column vectors)
+% left_bound  = (individual_peaks - peak_buffer)';
+% right_bound = (individual_peaks + peak_buffer)';
+% y_axis_vec  = y_axis(:)'; % Ensure row vector for fliplr
+% 
+% % 2. Before Area Polygon
+% % From 'inizio' to 'left_bound'
+% x_before = [ones(size(left_bound)) * inizio, fliplr(left_bound)];
+% y_before = [y_axis_vec, fliplr(y_axis_vec)];
+% 
+% % 3. After Area Polygon
+% % From 'right_bound' to 'fine'
+% x_after = [right_bound, ones(size(right_bound)) * fine];
+% y_after = [y_axis_vec, fliplr(y_axis_vec)];
+% 
+% % 4. Plot the Shaded Areas
+% hold on;
+% % Before Area (using Red from Set1 as per your category colors)
+% fill(x_before, y_before, colors(1,:), ...
+%     'FaceAlpha', 0.3, 'EdgeColor', 'none', 'DisplayName', 'Before Zone');
+% 
+% % After Area (using Green from Set1 as per your category colors)
+% fill(x_after, y_after, colors(3,:), ...
+%     'FaceAlpha', 0.3, 'EdgeColor', 'none', 'DisplayName', 'After Zone');
+% 
+% % plot(individual_peaks - peak_buffer, y_axis,'LineWidth', 1, 'Color', [colors(1,:)]);
+% % plot(individual_peaks + peak_buffer, y_axis, 'LineWidth', 1, 'Color', [colors(3,:)]);
+% scatter(bouts_proc.durations(sort_order), 1:height(bouts_proc), 2, '|', 'k')
+% 
+% 
+% apply_generic(gca, 'xlim', [0 630], 'no_y', true, 'ylim', [-100 size(centered_sm_freeze, 1) + 100], 'xtick', 0:120:600)
+% colormap(cbrewer2('Reds',[]));
+% 
+% %cb = colorbar(ax, 'Location', 'southoutside', 'FontSize', 18, 'LineWidth', 2);
+% %cb.Label.String = 'Social Motion';
+% 
+% for idx_cluster = 1:length(all_unique_clusters)
+%     fill([ax_distr(2).XLim(1)-2,ax_distr(2).XLim(1)-2,ax_distr(2).XLim(1)-17,ax_distr(2).XLim(1)-17], [boundaries(idx_cluster) boundaries(idx_cluster + 1) boundaries(idx_cluster + 1)   boundaries(idx_cluster)], ...
+%         col.pca(idx_cluster,:), 'EdgeColor','none', 'Clipping', 'off');
+%     text(mean([ax_distr(2).XLim(1)-2,ax_distr(2).XLim(1)-17]), mean([boundaries(idx_cluster); boundaries(idx_cluster + 1)]), num2str(idx_cluster),...
+%         'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle');
+%     hold on
+% 
+% end
+% 
+% xlabel('Time');
+% 
+% % Add horizontal lines to separate clusters
+% hold on;
+% for idx_cluster = 1:length(boundaries)
+%     yline(boundaries(idx_cluster), 'k--', 'LineWidth', 1.1);
+% end
+% 
+% nexttile(1, [1 3])
+% ax_distr(1) = gca;
+% hold on
+% for idx_cluster = 1:length(all_unique_clusters)
+%     plot(inizio:fine, repr(idx_cluster, :), 'LineWidth', 1.5, 'Color', col.pca(idx_cluster, :));
+% end
+% apply_generic(gca, 'ylim', [0 1.2],'ytick', [0 1.2], 'xlim', [0 630], 'no_x', true, 'font_size', 18);
+% ylabel({'Mean', 'Social Motion'})
+% 
+% plot_configs = {
+%     bouts_proc.moving_flies, 'Greys',   5,  10;
+%     bouts_proc.sloom / 25,   'Blues',   2,  11;
+%     bouts_proc.nloom,        'Purples', 20, 12
+%     };
+% 
+% for i = 1:size(plot_configs, 1)
+%     data_raw = plot_configs{i, 1};
+%     cmap_name = plot_configs{i, 2};
+%     n_bins    = plot_configs{i, 3};
+%     tile_idx  = plot_configs{i, 4};
+% 
+%     % 1. Pre-allocate and calculate histogram counts
+%     values = zeros(length(all_unique_clusters), n_bins);
+%     for c = 1:length(all_unique_clusters)
+%         values(c, :) = histcounts(data_raw(idx == c), n_bins);
+%     end
+% 
+%     % 2. Normalize to Percentages (using element-wise division)
+%     perc_values = (values ./ sum(values, 2)) * 100;
+% 
+%     % 3. Plotting
+%     nexttile(tile_idx, [3 1])
+%     hold on
+%     xline([0 20 40 60 80 100], 'k--')
+%     bh = bar(perc_values, 'stacked', 'Horizontal', 'on', 'EdgeColor', 'black');
+% 
+%     % 4. Apply Colors
+%     colors2 = cbrewer2(cmap_name, n_bins);
+%     for k = 1:numel(bh)
+%         bh(k).FaceColor = 'flat';
+%         bh(k).CData = colors2(k, :);
+%     end
+% 
+%     % 5. Alignment & Formatting
+%     ax_bar = gca;
+%     set(ax_bar, 'YLim', [0.5 length(all_unique_clusters) + 0.5]);
+%     apply_generic(ax_bar, 'no_x', true, 'yticks', 1:12);
+% end
+% 
+% exporter(fh, paths, 'clusters_profiles_with_controlvars.pdf')
+% exporter(fh, paths, 'clusters_profiles_with_controlvars.png')
 
 %exporter(fh, paths, 'peak_vs_magnitude_sorted_ls_split.pdf')
 %exporter(fh, paths, 'peak_vs_magnitude_sorted_ls_split.png')

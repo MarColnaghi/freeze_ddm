@@ -15,18 +15,18 @@ bouts = bouts_formatting(bouts, thresholds);
 
 % Process the data: set thresholds for sm, fs and ln. Set minimum duration.
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', 'nloom', 2:20, 'min_dur', 30);
-threshold = 70;
+threshold = 80;
 [bouts_proc, contact_mask, is_below_threshold] = impose_contact_threshold(bouts_proc, 'threshold', threshold);
-% censoring = bouts_proc.durations < 630;
-% bouts_no_contacts = bouts_proc(~contact_mask & censoring, :);
-% bouts_with_contacts = bouts_proc(contact_mask & censoring, :);
-% 
-% 
-% root_datasets = fileparts(fileparts(paths.dataset));
-% cd(root_datasets)
-% 
-% writetable(bouts_no_contacts, sprintf('bouts_no_contacts_%d.csv', threshold))
-% writetable(bouts_with_contacts, sprintf('bouts_with_contacts_%d.csv', threshold))
+censoring = bouts_proc.durations < 630;
+bouts_no_contacts = bouts_proc(~contact_mask & censoring, :);
+bouts_with_contacts = bouts_proc(contact_mask & censoring, :);
+
+
+root_datasets = fileparts(fileparts(paths.dataset));
+cd(root_datasets)
+
+writetable(bouts_no_contacts, sprintf('bouts_no_contacts_%d.csv', threshold))
+writetable(bouts_with_contacts, sprintf('bouts_with_contacts_%d.csv', threshold))
 
 %%
 
