@@ -7,8 +7,9 @@ bouts = importdata(fullfile(paths_out.dataset, 'bouts.mat'));
 bouts_spontaneous = data_parser_new(bouts, 'period', 'bsl', 'window', 'all', 'type', 'immobility', 'nloom', 2:20);
 bouts_le = data_parser_new(bouts, 'period', 'loom', 'window', 'le', 'type', 'immobility', 'nloom', 2:20, 'min_dur', 18);
 
-sm_spontaneous = extract_sm_from_bouts(bouts_spontaneous, 'type', 'onlyfreeze', 'align', 'offset');
-sm_le = extract_sm_from_bouts(bouts_le, 'type', 'onlyfreeze', 'align', 'offset');
+sm_spontaneous = extract_sm_from_bouts(bouts_spontaneous, 'type', 'onlyfreeze', 'align', 'offset', 'norm_fact', 10);
+sm_le = extract_sm_from_bouts(bouts_le, 'type', 'onlyfreeze', 'align', 'offset', 'norm_fact', 10);
+
 t_sp = (-(size(sm_spontaneous, 2)-1) : 0 )/ fs;
 t_le = (-(size(sm_le, 2)-1) : 0 )/ fs;
 

@@ -29,7 +29,6 @@ for idx_collision_threshold = 1:numel(thresholds_collisions)
     [bouts_proc, contact_mask_ili] = impose_contact_threshold(bouts_proc, 'threshold', curr_thre, 'type', 'ili');
     tot_n_collisions_ili(idx_collision_threshold) = sum(contact_mask_ili);
 
-
 end
 
 fh = figure('color','w','Position', [100, 100, 700, 600]);

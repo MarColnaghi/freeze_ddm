@@ -795,6 +795,232 @@ exporter(fh, paths, 'peak_vs_magnitude_sorted.png')
 % window = 15;
 % axes(ax(2))
 
+
+%% --- 11. -------- PLOTTING --------
+
+new_boundaries = boundaries - boundaries(2);
+new_boundaries(1) = [];
+new_boundaries(end) = [];
+
+fh = figure('color','w','Position',[100 100 1200 700]);
+tiledlayout(4, 3, 'TileSpacing', 'compact', 'Padding', 'compact')
+colsm = cbrewer2('Reds', 1);
+
+bin_size = 10;
+
+% ================= TOP ROW =================
+
+% --- ORIGINAL
+nexttile
+ax_distr(1) = gca;
+hold on
+histogram(break_times_valid, 0:bin_size:90000, 'Normalization','pdf', ...
+    'FaceColor','k','EdgeColor','none')
+
+apply_generic(ax_distr(1), 'ylim', [0 .02], 'xlim', [0 630], 'font_size', 18, 'yticks', [0 0.01 0.02]);
+ylabel('Break Density')
+
+yyaxis right
+avg = mean(sorted_matrix_valid,1,'omitnan');
+plot(1:n_cols, avg, 'r-', 'LineWidth', 2, 'Color', colsm)
+xline(1,'k--')
+ylim([0 3])
+set(gca,'XTick',[], 'FontSize', 18)
+ylabel('Mean SM')
+ax_distr(1).YAxis(2).Color = colsm;
+
+% --- PEAK ALIGNED
+nexttile
+ax_distr(2) = gca;
+hold on
+
+edges = -601:bin_size:max(break_times_peak_valid);
+
+% Compute counts
+[counts, ~] = histcounts(break_times_peak_valid, edges);
+
+% Bin centers
+bin_centers = edges(1:end-1) + diff(edges)/2;
+
+% Bin the availability time series using same edges
+available_per_bin = sum(~isnan(aligned_peak_valid),1);
+available_binned = zeros(size(counts));
+
+for i = 1:length(counts)
+    idx = x_axis_peak >= edges(i) & x_axis_peak < edges(i+1);
+    available_binned(i) = sum(available_per_bin(idx));
+end
+
+% Correct counts
+counts_corrected = counts ./ available_binned;
+
+% Normalize as PDF
+counts_corrected = counts_corrected ./ ...
+    (sum(counts_corrected) * bin_size);
+
+% Create histogram object
+h = histogram('BinEdges', edges, ...
+              'BinCounts', counts_corrected, ...
+              'FaceColor', 'k', ...
+              'EdgeColor', 'none');
+
+apply_generic(ax_distr(2), 'ylim', [0 .005], 'xlim', [-630 630]./2, 'font_size', 18, 'yticks', [0 0.01 0.02]);
+ylabel('Break Density')
+
+yyaxis right
+
+% for idx_valid_cluster = 1:n_clusters
+%     avg = mean(aligned_peak_valid(temp_cluster_ids == idx_valid_cluster,:), 1,'omitnan');
+%     plot(x_axis_peak, avg, 'r-', 'LineWidth', 1.5, 'Color', col.pca(idx_valid_cluster + 1 , :))
+% end
+
+avg = mean(aligned_peak_valid,1,'omitnan');
+plot(x_axis_peak, avg, 'k-', 'LineWidth', 2, 'Color', colsm)
+ylabel('Mean SM')
+
+xline(1,'k--')
+ylim([0 3])
+set(gca,'XTick',[], 'FontSize', 18)
+ax_distr(2).YAxis(2).Color = colsm;
+
+% --- MAGNITUDE SORTED
+nexttile
+ax_distr(3) = gca;
+hold on
+colmag = flipud(cbrewer2('Set2', n_mag_clusters));
+
+for k = 1:n_mag_clusters
+
+    data = break_times_peak_mag(idx_mag_cluster_sorted == k);
+    data = data(~isnan(data));
+
+    [f, x] = ecdf(data);
+
+    plot(x, f, ...
+        'Color', colmag(k,:), ...
+        'LineWidth', 2);
+end
+
+ylabel('CDF')
+set(gca,'FontSize',18)
+apply_generic(ax_distr(3), 'ylim', [0 1], 'xlim', [-630 630]./2, 'font_size', 18)
+yyaxis right
+avg = mean(aligned_peak_mag,1,'omitnan');
+for idx_mag_clusters = 1:n_mag_clusters
+    plot(x_axis_peak, mean(aligned_peak_mag(idx_mag_cluster_sorted == idx_mag_clusters, :), 1, 'omitnan'), 'k-', 'Color', colmag(idx_mag_clusters,:), 'LineWidth', 1)
+end
+
+xline(1,'k--')
+ylim([0 3])
+set(gca,'XTick',[], 'FontSize', 18)
+ax_distr(3).YAxis(2).Color = colsm;
+
+
+% ================= HEATMAPS =================
+
+% --- ORIGINAL
+nexttile(4,[3 1])
+ax_distr(4) = gca;
+imagesc(1:n_cols, 1:n_rows_valid, sorted_matrix_valid, [0 5])
+set(gca,'YDir','normal')
+hold on
+scatter(break_times_valid, 1:n_rows_valid, 3, '|', 'k')
+apply_generic(gca, 'no_y', true, 'xlim', [0 630], 'xticks', 0:120:600)
+xticklabels(0:2:10)
+colormap(cbrewer2('Reds',[]))
+
+for idx_cluster = 3 % :n_clusters
+    fill([ax_distr(4).XLim(1)-2,ax_distr(4).XLim(1)-2,ax_distr(4).XLim(1)-17,ax_distr(4).XLim(1)-17], [new_boundaries(idx_cluster)  new_boundaries(idx_cluster +1) new_boundaries(idx_cluster +1)   new_boundaries(idx_cluster)], ...
+        col.pca(idx_cluster,:), 'EdgeColor','none', 'Clipping', 'off');
+    text(mean([ax_distr(4).XLim(1)-2,ax_distr(4).XLim(1)-17]), mean([new_boundaries(idx_cluster); new_boundaries(idx_cluster + 1)]), num2str(idx_cluster + 1),...
+        'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle');
+    hold on
+
+end
+
+xlabel('Time (s)');
+
+% Add horizontal lines to separate clusters
+hold on;
+for idx_cluster = 3:4%1:n_clusters
+    yline(new_boundaries(idx_cluster), 'k--', 'LineWidth', 1.1);
+end
+
+
+% --- PEAK ALIGNED
+nexttile(5,[3 1])
+ax_distr(5) = gca;
+
+h = imagesc(x_axis_peak, 1:n_rows_valid, aligned_peak_valid, [0 5]);
+set(h, 'AlphaData', ~isnan(aligned_peak_valid));
+
+set(gca,'YDir','normal')
+hold on
+scatter(break_times_peak_valid, 1:n_rows_valid, 3, '|', 'k')
+
+apply_generic(gca, 'no_y', true, 'xlim', [-630 630]./2, 'xticks', -360:120:360)
+xticklabels(-6:2:6)
+colormap(cbrewer2('Reds',[]))
+
+for idx_cluster = 3% 1:n_clusters
+    fill([ax_distr(5).XLim(1)-2,ax_distr(5).XLim(1)-2,ax_distr(5).XLim(1)-17,ax_distr(5).XLim(1)-17], [new_boundaries(idx_cluster)  new_boundaries(idx_cluster+1) new_boundaries(idx_cluster+1)   new_boundaries(idx_cluster)], ...
+        col.pca(idx_cluster,:), 'EdgeColor','none', 'Clipping', 'off');
+    text(mean([ax_distr(5).XLim(1)-2,ax_distr(5).XLim(1)-17]), mean([new_boundaries(idx_cluster ); new_boundaries(idx_cluster +1)]), num2str(idx_cluster +1 ),...
+        'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle');
+    hold on
+
+end
+
+xlabel('Time (s)');
+
+%Add horizontal lines to separate clusters
+hold on;
+for idx_cluster = 3:4%1:n_clusters
+    yline(new_boundaries(idx_cluster), 'k--', 'LineWidth', 1.1);
+end
+
+% --- MAG SORTED
+nexttile(6,[3 1])
+ax_distr(6) = gca;
+imagesc(x_axis_peak, 1:n_rows_mag, aligned_peak_mag, [0 3.2])
+set(gca,'YDir','normal')
+hold on
+scatter(break_times_peak_mag, 1:n_rows_mag, 3, '|', 'k')
+apply_generic(gca, 'no_y', true, 'xlim', [-630 630]./2, 'xticks', -360:120:360)
+xticklabels(-6:2:6)
+colormap(cbrewer2('Reds',[]))
+
+x_left = ax_distr(6).XLim(1);
+
+for k = 1:n_mag_clusters
+
+    y1 = boundaries_sm(k) + 1;
+    y2 = boundaries_sm(k + 1);
+
+    fill([x_left-2, x_left-2, x_left-17, x_left-17], ...
+        [y1 y2 y2 y1], ...
+        colmag(k,:), ...
+        'EdgeColor','none', ...
+        'Clipping','off');
+
+    text(x_left-9.5, mean([y1 y2]), num2str(k), ...
+        'HorizontalAlignment','center', ...
+        'VerticalAlignment','middle');
+end
+
+xlabel('Time (s)');
+
+% ================= LINK =================
+
+linkaxes([ax_distr(1) ax_distr(4)], 'x')
+linkaxes([ax_distr(2) ax_distr(5)], 'x')
+linkaxes([ax_distr(3) ax_distr(6)], 'x')
+
+set(gcf, 'GraphicsSmoothing', 'off');
+exporter(fh, paths, 'peak_vs_magnitude_sorted_4poster.pdf')
+exporter(fh, paths, 'peak_vs_magnitude_sorted_4poster.png')
+% 
+
 %%
 
 colors = cbrewer2('Set1', 3);

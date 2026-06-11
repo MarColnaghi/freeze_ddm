@@ -238,7 +238,7 @@ switch type
             c = censored(qmask==q);
             if isempty(d), continue, end
             sum(c)
-            [f,x] = ecdf(d);%, 'Censoring', c);
+            [f,x] = ecdf(d, 'Censoring', c);
             plot(x, f,'LineWidth', 4 ,'Color',cmap(1+q,:) )
         end
         ylim([0 1])

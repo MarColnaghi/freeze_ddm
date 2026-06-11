@@ -21,13 +21,6 @@ censoring = bouts_proc.durations < 630;
 bouts_no_contacts = bouts_proc(~contact_mask & censoring, :);
 bouts_with_contacts = bouts_proc(contact_mask & censoring, :);
 
-
-root_datasets = fileparts(fileparts(paths.dataset));
-cd(root_datasets)
-
-writetable(bouts_no_contacts, sprintf('bouts_no_contacts_%d.csv', threshold))
-writetable(bouts_with_contacts, sprintf('bouts_with_contacts_%d.csv', threshold))
-
 %%
 
 inizio = 0;
@@ -197,6 +190,7 @@ end
 
 exporter(fh, paths, 'clusters_by_sm_quantiles_nocolor.pdf')
 exporter(fh, paths, 'clusters_by_sm_quantiles_nocolor.png')
+
 %%
 
 fh = figure('color','w','Position',[100, 100, 600, 400]);
