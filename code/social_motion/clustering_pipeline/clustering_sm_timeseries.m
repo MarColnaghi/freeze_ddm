@@ -40,10 +40,7 @@ sm_freeze_full = sm_freeze_full .* ~is_below_threshold;
 clustering_type = 'max';
 paths = path_generator('folder', fullfile('social_motion','clustering', clustering_type), 'bouts_id', id_code, 'imfirst', false);
 
-
-%%
-
-
+%% 
 % Visualize the Heatmap
 fh = figure('color','w','Position',[100, 100, 600, 4000]);
 tiledlayout(4, 1, 'Padding', 'compact', 'TileSpacing', 'tight')
