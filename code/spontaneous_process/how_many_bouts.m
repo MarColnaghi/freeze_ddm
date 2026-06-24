@@ -11,8 +11,10 @@ fh = figure('Position', [100 100 800 410], 'Color', 'w');
 t = tiledlayout(2, 1, 'TileSpacing', 'compact', 'Padding', 'loose');
 bouts_spontaneous = data_parser_new(bouts, 'period', 'bsl', 'type', 'immobility', 'window', 'all');
 
-[counts_x_fly] = histcounts(bouts_spontaneous.fly, 0.5:1:max(bouts_spontaneous.fly) + 0.5);
 [~, ~, fly_idx] = unique(bouts_spontaneous.fly, 'stable');
+% Count bouts per fly using the same basis as the per-fly stats below, so
+% indexing stays aligned even when fly ids are non-contiguous.
+counts_x_fly = accumarray(fly_idx, 1)';
 
 select_method = 'sum';
 

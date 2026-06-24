@@ -33,14 +33,14 @@ fps = 60;
 
 % ── Kernel window (relative to the un-freeze decision; 0 = escape) ───────
 % Causal history = social motion BEFORE the decision. Acausal = control.
-kernel_past_s   = 6.0;   % seconds of causal history (set the integration horizon)
-kernel_future_s = 2;   % seconds of acausal control (should come out ≈ 0)
+kernel_past_s   = 3.0;   % seconds of causal history (set the integration horizon)
+kernel_future_s = 1;   % seconds of acausal control (should come out ≈ 0)
 
 % ── Discretisation / basis / fit settings ───────────────────────────────
 dt_frames   = 6;     % hazard sampled every dt_frames (6 = 0.1 s → 10 Hz); cuts autocorrelation
 nb_kernel   = 12;     % raised-cosine bumps over the CAUSAL (past) lags (lowered 5→4: fewer DOF ⇒ less ringing)
 nb_acausal  = 4;     % bumps over the ACAUSAL (future) lags
-bump_width  = 1.75;   % kernel bump half-width in units of center spacing (>1 ⇒ more overlap ⇒ smoother band)
+bump_width  = 1.25;   % kernel bump half-width in units of center spacing (>1 ⇒ more overlap ⇒ smoother band)
 % Kernel-basis + shuffle mode:
 %   'full'  → single CONTINUOUS basis over the whole window + full-window shuffle.
 %             Clean, continuous kernel; flat leakage-free null; no τ=0 seam. (recommended)
@@ -49,16 +49,22 @@ bump_width  = 1.75;   % kernel bump half-width in units of center spacing (>1 �
 %             introduces an artificial discontinuity / edge artifact at the break point.
 % Both use nb_kernel+nb_acausal total bumps, so model complexity matches across modes.
 
-shuffle_mode = 'full';
+shuffle_mode = 'split';
 use_penalty = true;  % true → P-spline roughness penalty on the kernel (λ by 1-SE rule);
                      % false → plain unpenalised logistic kernel (original behaviour)
-anchor_zero = true;  % 'full' mode: force one bump center exactly on τ=0, so a causal
+anchor_zero = false;  % 'full' mode: force one bump center exactly on τ=0, so a causal
                      % effect at escape isn't pushed to the nearest off-zero center
 nb_baseline = 6;     % raised-cosine bumps for the baseline hazard vs time-in-freeze
 cv_folds    = 5;     % grouped (by bout) cross-validation folds
-n_shuffle   = 25;  % within-window time-shuffles (overnight: 1000+ → tight null & p-floor 1/(n+1))
+n_shuffle   = 200;  % within-window time-shuffles (overnight: 1000+ → tight null & p-floor 1/(n+1))
 save_out    = true;  % save results .mat + figures to disk (overnight runs)
-rng(7);
+% Per-bout-mean centering (Mundlak within/between decomposition): subtract each
+% bout's own mean sm so the KERNEL reflects WITHIN-bout fluctuations only, and add
+% the per-bout mean as a separate covariate that absorbs/reports the BETWEEN-bout
+% level effect. Tests whether a causal kernel survives removing between-bout level
+% (high-motion bouts being short) — i.e. is the timing effect genuinely within-bout.
+center_per_bout = true;
+rng(1);
 
 % ── Load + filter (same pipeline as check_fd_distributions.m) ────────────
 threshold_imm = 2; threshold_mob = 2; threshold_pc = 4;
@@ -70,11 +76,11 @@ motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 thresholds = define_thresholds('le_window', struct('le_window_sl', [5 55], 'le_window_fl', [5 55]));
 bouts      = bouts_formatting(bouts, thresholds);
 
-trunc_point  = 30;
+trunc_point  = 18;
 bl = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', ...
         'nloom', 2:20, 'min_dur', trunc_point);
 
-contact_threshold = 80;   % px — conservative, above the empirical contamination distance
+contact_threshold = 75;   % px — conservative, above the empirical contamination distance
 bl = impose_contact_threshold(bl, 'threshold', contact_threshold, 'type', 'onlyfreeze');
 
 % ending_time = observed (possibly censored) freeze length, in frames
@@ -137,6 +143,7 @@ slo   = nan(max_rows, 1);           % loom speed
 fmean = nan(max_rows, 1);           % Stage-2: mean sm over causal window
 fmax  = nan(max_rows, 1);           % Stage-2: max  sm over causal window
 fslp  = nan(max_rows, 1);           % Stage-2: slope of sm over causal window
+bmean = nan(max_rows, 1);           % per-bout mean sm (Mundlak between-bout covariate)
 
 % precompute slope regressor (linear fit of s_caus vs caus_t)
 A_slope = [caus_t - mean(caus_t)];
@@ -159,6 +166,11 @@ for b = 1:height(bl)
     grid = (entry_fr:dt_frames:dur)';
     if isempty(grid) || grid(end) < dur, grid = [grid; dur]; end %#ok<AGROW>
 
+    % per-bout mean sm (z-scored), over the frozen frames — the between-bout level
+    seg_idx = on : min(on + dur - 1, L);
+    mbar    = (mean(sm(seg_idx), 'omitnan') - sm_mu) / sm_sd;
+    if isnan(mbar), mbar = 0; end           % degenerate bout → no centering shift
+
     for gi = 1:numel(grid)
         f     = grid(gi);
         t_abs = on + f - 1;
@@ -168,6 +180,7 @@ for b = 1:height(bl)
 
         s = (sm(t_abs - lag_fr) - sm_mu) / sm_sd;   % z-scored history, length nLag
         if any(isnan(s)), continue; end
+        if center_per_bout, s = s - mbar; end       % within-bout transform (Mundlak)
 
         r = r + 1;
         Xk(r,:) = (s' * Bk);                 % project onto kernel basis
@@ -176,6 +189,7 @@ for b = 1:height(bl)
         gid(r)  = bl.bout_id(b);
         mov(r)  = bl.moving_flies(b);
         slo(r)  = bl.sloom(b);
+        bmean(r)= mbar;                      % between-bout level covariate (const within bout)
 
         sc       = s(caus_mask);
         fmean(r) = mean(sc);
@@ -192,6 +206,7 @@ end
 % trim
 Xk=Xk(1:r,:); S=S(1:r,:); tinf=tinf(1:r); yev=yev(1:r); gid=gid(1:r);
 mov=mov(1:r); slo=slo(1:r); fmean=fmean(1:r); fmax=fmax(1:r); fslp=fslp(1:r);
+bmean=bmean(1:r);
 fprintf('Design: %d at-risk intervals, %d un-freeze events (hazard %.3f)\n', ...
     r, sum(yev), mean(yev));
 
@@ -216,7 +231,16 @@ rowfold = fold(gid);
 % a per-fold fitglm refit does not guarantee when a fold misses a category).
 [~,~,im] = unique(mov);  Dmov = dummyvar(im);  Dmov = Dmov(:,2:end);   % drop reference level
 [~,~,is] = unique(slo);  Dslo = dummyvar(is);  Dslo = Dslo(:,2:end);
-Xdes     = [ones(r,1), Xk, Bb, Dmov, Dslo];
+% Mundlak: append the per-bout mean as an (unpenalised) covariate. The kernel
+% (built from within-bout-centred s) then carries the WITHIN-bout effect and this
+% column carries the BETWEEN-bout level effect.
+if center_per_bout
+    Xdes      = [ones(r,1), Xk, Bb, Dmov, Dslo, bmean];
+    bmean_col = size(Xdes,2);
+else
+    Xdes      = [ones(r,1), Xk, Bb, Dmov, Dslo];
+    bmean_col = [];
+end
 ker_cols = 1 + (1:nb_k);                  % kernel-coefficient indices within Xdes
 t_rel    = -lag_fr / fps;                 % time relative to escape (s): <0 past, >0 future
 
@@ -283,6 +307,7 @@ T.mov = categorical(mov);  T.slo = categorical(slo);
 kterms = strjoin(arrayfun(@(j) sprintf('k%d',j), 1:nb_k,        'uni', 0), ' + ');
 hterms = strjoin(arrayfun(@(j) sprintf('h%d',j), 1:nb_base_use, 'uni', 0), ' + ');
 f_full = sprintf('y ~ %s + %s + mov + slo', kterms, hterms);
+if center_per_bout, T.bmean = bmean; f_full = [f_full ' + bmean']; end
 mdl    = fitglm(T, f_full, 'Distribution','binomial', 'Link','logit');
 cn = mdl.CoefficientNames;  kidx = zeros(nb_k,1);
 for j = 1:nb_k, kidx(j) = find(strcmp(cn, sprintf('k%d',j))); end
@@ -293,6 +318,87 @@ beta_k = beta_all(ker_cols);
 Cov_k  = V_all(ker_cols, ker_cols);
 kernel    = Bk * beta_k;                          % per-lag weight (penalised)
 kernel_se = sqrt(sum((Bk * Cov_k) .* Bk, 2));     % var = bᵀ Σ b per lag
+
+% ════════════════════════════════════════════════════════════════════════
+% Nuisance read-out + ablations
+% The baseline(time-in-freeze) and the mov/slo controls are fit but otherwise
+% marginalised. Inspect them, and check how much the kernel actually leans on
+% them: re-fit dropping controls / baseline / both, holding λ fixed so the ONLY
+% thing that changes is the nuisance set. A kernel that barely moves ⇒ the
+% nuisances are not confounding it; a big move ⇒ they were carrying real
+% variance the kernel would otherwise absorb.
+% ════════════════════════════════════════════════════════════════════════
+% (a) pull the already-fitted nuisance coefficients out of beta_all / V_all
+base_cols = ker_cols(end) + (1:nb_base_use);
+nctrl     = size(Dmov,2) + size(Dslo,2);
+ctrl_cols = base_cols(end) + (1:nctrl);
+beta0     = beta_all(1);
+beta_base = beta_all(base_cols);
+beta_ctrl = beta_all(ctrl_cols);
+se_ctrl   = sqrt(diag(V_all(ctrl_cols, ctrl_cols)));
+
+mov_lv = unique(mov);  slo_lv = unique(slo);      % reference (first) level was dropped
+ctrl_lab = [arrayfun(@(v) sprintf('mov=%g', v), mov_lv(2:end), 'uni',0); ...
+            arrayfun(@(v) sprintf('slo=%g', v), slo_lv(2:end), 'uni',0)];
+fprintf('\n── Nuisance coefficients (log-odds; kernel/controls at reference) ──\n');
+fprintf('intercept = %+.3f\n', beta0);
+for j = 1:nctrl
+    fprintf('  %-10s = %+.3f ± %.3f  (z=%+.1f)\n', ...
+        ctrl_lab{j}, beta_ctrl(j), se_ctrl(j), beta_ctrl(j)/max(se_ctrl(j),eps));
+end
+if nctrl == 0, fprintf('  (no controls: mov/slo each had a single level)\n'); end
+
+% Mundlak between-bout level coefficient (log-odds per 1 SD of bout-mean sm).
+% With center_per_bout, the kernel above is WITHIN-bout; this is the BETWEEN-bout
+% effect that the simpler (global-z) kernel would otherwise have absorbed.
+if center_per_bout && ~isempty(bmean_col)
+    beta_bmean = beta_all(bmean_col);
+    se_bmean   = sqrt(V_all(bmean_col, bmean_col));
+    fprintf('between-bout mean sm (Mundlak) = %+.3f ± %.3f  (z=%+.1f)  [kernel = WITHIN-bout]\n', ...
+        beta_bmean, se_bmean, beta_bmean/max(se_bmean,eps));
+else
+    beta_bmean = NaN; se_bmean = NaN;
+    fprintf('per-bout centering OFF → kernel mixes within- and between-bout sm.\n');
+end
+
+% (b) baseline hazard vs time-in-freeze (kernel at sm=mean → z=0 → Xk·β=0)
+base_logit = beta0 + Bb * beta_base;
+[ts, iso]  = sort(tinf);
+fh_base = figure('Color','w','Position',[90 90 760 420]);
+yyaxis left
+plot(ts, 1./(1+exp(-base_logit(iso))), 'LineWidth', 2)
+ylabel('baseline hazard  P(unfreeze \mid frozen, sm = mean)')
+yyaxis right
+histogram(tinf(yev==1), 30, 'FaceAlpha',0.25, 'EdgeColor','none')
+ylabel('# observed un-freezes')
+xlabel('time in freeze (s)')
+title('Fitted baseline hazard vs time-in-freeze')
+
+% (c) ablations: drop controls / baseline / both, same λ, refit the kernel
+abl_name = {'full','no controls','no baseline','kernel only'};
+abl_des  = { Xdes, [ones(r,1) Xk Bb], [ones(r,1) Xk Dmov Dslo], [ones(r,1) Xk] };
+abl_ker  = nan(nLag, numel(abl_des));
+for a = 1:numel(abl_des)
+    Xa = abl_des{a};
+    Pa = zeros(size(Xa,2));  Pa(ker_cols,ker_cols) = Dk' * Dk;   % kernel cols stay at 1+(1:nb_k)
+    ba = penalized_logit(Xa, yev, lambda * Pa);
+    abl_ker(:,a) = Bk * ba(ker_cols);
+end
+pk = max(abs(abl_ker(:,1)));
+fprintf('\n── Kernel sensitivity to nuisance terms (max |Δβ(τ)| vs full, %% of full peak) ──\n');
+for a = 2:numel(abl_des)
+    fprintf('  %-12s : %.1f%%\n', abl_name{a}, 100*max(abs(abl_ker(:,a)-abl_ker(:,1)))/max(pk,eps));
+end
+
+fh_abl = figure('Color','w','Position',[100 100 760 460]); hold on
+cmap_a = lines(numel(abl_des));
+for a = 1:numel(abl_des)
+    plot(t_rel, abl_ker(:,a), 'Color',cmap_a(a,:), 'LineWidth', 2-0.4*(a>1));
+end
+yline(0,'k:'); xline(0,'--k','escape')
+xlabel('Time rel. to un-freeze (s)'); ylabel('\beta(\tau)')
+title('Kernel sensitivity: dropping controls / baseline(t)  (\lambda fixed)')
+legend(abl_name, 'Location','best', 'box','off')
 
 % ── Diagnostics figure: why the raw kernel rings, and the penalty's effect ─
 fh_diag = figure('Color','w','Position',[60 60 1100 760]);
@@ -583,19 +689,23 @@ if save_out
             'bump_width',bump_width, 'nb_baseline',nb_baseline, 'cv_folds',cv_folds, ...
             'n_shuffle',n_shuffle, 'contact_threshold',contact_threshold, 'trunc_point',trunc_point, ...
             'shuffle_mode',shuffle_mode, 'use_penalty',use_penalty, 'lambda',lambda, ...
-            'anchor_zero',anchor_zero);
+            'anchor_zero',anchor_zero, 'center_per_bout',center_per_bout);
         save(fullfile(outdir, ['hazard_kernel_' stamp '.mat']), ...
             'kernel','kernel_se','kernel_unpen','t_rel','lag_fr','kernels_sh','sh_mu','sh_sd', ...
             'll_real','ll_null','pval','aic','cvll','specs','params', ...
             'tau_hat','tau_ci','R2_exp','tau_com','A_hat','c_hat','tau_boot', ...
             'beta_k','Cov_k','Bk','caus_mask','fps', 'use_penalty', ...
             'lambda','lam_grid','cvll_lam','cvse_lam','Rk','VIF','active', ...
-            'acf_sm','eta_ev','eta_exc','rho_acf','rho_eta', '-v7.3');
+            'acf_sm','eta_ev','eta_exc','rho_acf','rho_eta', ...
+            'beta0','beta_base','beta_ctrl','se_ctrl','ctrl_lab','base_logit', ...
+            'abl_ker','abl_name','center_per_bout','beta_bmean','se_bmean', '-v7.3');
         exportgraphics(fh_kernel, fullfile(outdir, ['hazard_kernel_'  stamp '.png']), 'Resolution',200);
         exportgraphics(fh_ctrl,   fullfile(outdir, ['hazard_control_' stamp '.png']), 'Resolution',200);
         exportgraphics(fh_leak,   fullfile(outdir, ['hazard_leakfit_' stamp '.png']), 'Resolution',200);
         exportgraphics(fh_diag,   fullfile(outdir, ['hazard_diag_'    stamp '.png']), 'Resolution',200);
         exportgraphics(fh_acf,    fullfile(outdir, ['hazard_acf_'     stamp '.png']), 'Resolution',200);
+        exportgraphics(fh_base,   fullfile(outdir, ['hazard_baseline_' stamp '.png']), 'Resolution',200);
+        exportgraphics(fh_abl,    fullfile(outdir, ['hazard_ablation_' stamp '.png']), 'Resolution',200);
         fprintf('\nSaved results + figures to %s (stamp %s)\n', outdir, stamp);
     catch ME
         warning('save_out failed: %s', ME.message);

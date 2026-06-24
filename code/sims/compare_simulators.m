@@ -32,7 +32,7 @@ beta  = 4.2;                           % drift gain (rate per unit social motion
 use_real = true;
 if use_real
     paths      = path_generator('folder', 'sims/sanity_checks');
-    idx_trial  = 7327;%3331;%2305;%2132; %3331 is fantastic;%3945;
+    idx_trial  = 3945;412;%7327;%3331;%2305;%2132; %3331 is fantastic;%3945;
     bouts      = importdata(fullfile(paths.dataset, 'bouts.mat'));
     bouts_proc = data_parser_new(bouts, 'type','immobility', 'period','loom', ...
                                  'window','le', 'nloom', 2:20);
@@ -241,6 +241,7 @@ title('(b) Median FPT & censoring');
 
 subplot(2,2,3);                    % (c) full FPT distribution across the sweep
 imagesc(ctrs_sw, 1:numel(lam_list), pdf_mat');
+clim([0 2])
 set(gca,'YTick',1:numel(lam_list),'YTickLabel',compose('%.2f',decay_ax(:)));
 xlim([0 min(T_dd)]); colorbar
 xlabel('first-passage time (s)'); ylabel('decay = 1-\lambda dt');

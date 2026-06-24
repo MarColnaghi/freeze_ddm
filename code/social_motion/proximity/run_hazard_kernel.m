@@ -48,6 +48,10 @@ shuffle_mode = geto(opts,'shuffle_mode','full');
 trunc_point  = geto(opts,'trunc_point',30);
 do_plot    = geto(opts,'do_plot',false);
 do_stage2  = geto(opts,'do_stage2',true);
+do_unpen   = geto(opts,'do_unpen',true);       % compute the unpenalised overlay kernel (plain
+                                               % fitglm). Skip for big/collinear designs where the
+                                               % MLE may not converge — only the PENALISED kernel
+                                               % is reported, so this is purely cosmetic.
 use_penalty= geto(opts,'use_penalty',true);   % P-spline roughness penalty on the kernel (λ by 1-SE)
 anchor_zero= geto(opts,'anchor_zero',true);    % 'full' mode: force a bump center on τ=0
 fig_title  = geto(opts,'fig_title','');
@@ -89,9 +93,17 @@ sm_mu = s1/nn;  sm_sd = sqrt(s2/nn - sm_mu^2);
 % ── build long (person-period) design ─────────────────────────────────────
 max_rows = sum(ceil(bl.dur_frames/dt_frames)) + height(bl);
 Xk=nan(max_rows,nb_k); tinf=nan(max_rows,1);
-S=nan(max_rows,nLag);   % raw z-scored history (shuffle control + ACF/ETA diagnostic)
 yev=zeros(max_rows,1); gid=nan(max_rows,1); mov=nan(max_rows,1); slo=nan(max_rows,1);
 fmean=nan(max_rows,1); fmax=nan(max_rows,1); fslp=nan(max_rows,1);
+
+% The full per-interval sm history S (max_rows x nLag) is ONLY needed for the
+% time-shuffle control; for large/augmented datasets it can be tens of GB, so
+% allocate it only when shuffling. The ACF / event-triggered diagnostics are
+% accumulated online below, so they never need the full matrix.
+keep_S = n_shuffle > 0;
+if keep_S, S = nan(max_rows, nLag); else, S = []; end
+zero_idx = find(lag_fr==0, 1);
+acc_s = zeros(nLag,1); acc_ss0 = zeros(nLag,1); acc_se = zeros(nLag,1); n_ev = 0;
 
 A_slope = caus_t - mean(caus_t);
 A_slope = A_slope / (A_slope'*A_slope);
@@ -109,15 +121,21 @@ for b = 1:height(bl)
         s = (sm(t_abs - lag_fr) - sm_mu)/sm_sd;
         if any(isnan(s)), continue; end
         r = r+1;
-        Xk(r,:) = s'*Bk;   S(r,:) = s';
+        Xk(r,:) = s'*Bk;
+        if keep_S, S(r,:) = s'; end
         tinf(r) = f/fps;   gid(r) = bl.bout_id(b);
         mov(r)  = bl.moving_flies(b);  slo(r) = bl.sloom(b);
         sc = s(caus_mask);
         fmean(r)=mean(sc); fmax(r)=max(sc); fslp(r)=A_slope'*(sc-mean(sc));
-        if gi==numel(grid) && ~bl.is_censored(b), yev(r)=1; end
+        % online accumulators for the ACF / event-triggered diagnostics
+        acc_s = acc_s + s;  acc_ss0 = acc_ss0 + s*s(zero_idx);
+        if gi==numel(grid) && ~bl.is_censored(b)
+            yev(r)=1; acc_se = acc_se + s; n_ev = n_ev + 1;
+        end
     end
 end
-Xk=Xk(1:r,:); tinf=tinf(1:r); yev=yev(1:r); gid=gid(1:r); S=S(1:r,:);
+Xk=Xk(1:r,:); tinf=tinf(1:r); yev=yev(1:r); gid=gid(1:r);
+if keep_S, S=S(1:r,:); end
 mov=mov(1:r); slo=slo(1:r); fmean=fmean(1:r); fmax=fmax(1:r); fslp=fslp(1:r);
 res.n_int = r; res.n_events = sum(yev);
 
@@ -168,10 +186,16 @@ end
 P_pen = lambda*Pk;
 
 % ── kernel: unpenalised (fitglm, overlay) + penalised (reported) ──────────
-[mdl, ~] = fit_kernel_glm(Xk, Bb, ctrl_tbl, ctrl_terms, yev);
-cn = mdl.CoefficientNames; kidx = zeros(nb_k,1);
-for j=1:nb_k, kidx(j)=find(strcmp(cn,sprintf('k%d',j))); end
-kernel_unpen = Bk*mdl.Coefficients.Estimate(kidx);
+% The unpenalised MLE is only a cosmetic overlay; on large/collinear designs it
+% may hit glmfit's iteration cap (a benign warning). Skip it when do_unpen=false.
+if do_unpen
+    [mdl, ~] = fit_kernel_glm(Xk, Bb, ctrl_tbl, ctrl_terms, yev);
+    cn = mdl.CoefficientNames; kidx = zeros(nb_k,1);
+    for j=1:nb_k, kidx(j)=find(strcmp(cn,sprintf('k%d',j))); end
+    kernel_unpen = Bk*mdl.Coefficients.Estimate(kidx);
+else
+    kernel_unpen = nan(size(Bk,1),1);
+end
 
 [beta_all, V_all] = penalized_logit(Xdes, yev, P_pen);
 beta_k = beta_all(ker_cols);
@@ -190,10 +214,11 @@ res.lam_grid=lam_grid; res.cvll_lam=cvll_lam; res.cvse_lam=cvse_lam;
 % A symmetric β(τ) is the signature of an autocorrelated regressor (sm elevated
 % AROUND escape) rather than directed causality. Store R(τ), the event-triggered
 % sm excess, and how strongly the kernel correlates with each.
-zero_idx = find(lag_fr==0,1); ev = yev==1;
-if any(ev), eta_ev = mean(S(ev,:),1)'; else, eta_ev = nan(nLag,1); end
-eta_exc = eta_ev - mean(S,1)';
-acf_sm  = mean(S.*S(:,zero_idx),1)'; acf_sm = acf_sm/acf_sm(zero_idx);
+% Computed from the online accumulators (no full-S storage needed).
+if n_ev > 0, eta_ev = acc_se / n_ev; else, eta_ev = nan(nLag,1); end
+mean_s  = acc_s / max(r,1);
+eta_exc = eta_ev - mean_s;
+acf_sm  = acc_ss0 / max(r,1);  acf_sm = acf_sm / acf_sm(zero_idx);
 res.acf_sm=acf_sm; res.eta_ev=eta_ev; res.eta_exc=eta_exc;
 res.rho_acf = corr(kernel, acf_sm);
 res.rho_eta = corr(kernel, eta_exc, 'rows','complete');
