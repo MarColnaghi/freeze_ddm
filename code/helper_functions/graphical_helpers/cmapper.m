@@ -139,7 +139,7 @@ col.bsl  = 'k';
 
 %%
 
-col.n_mov_flies = cbrewer2('RdBu', 5);
+col.n_mov_flies = colorcet('I2','N', 5);
 
 col.ll = cbrewer2('RdBu', 5);
 

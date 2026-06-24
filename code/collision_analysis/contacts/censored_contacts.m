@@ -15,7 +15,7 @@ thresholds = define_thresholds('le_window', struct('le_window_sl', [0 55], 'le_w
 
 bouts = bouts_formatting(bouts, thresholds);
 
-threshold = 90;
+threshold = 80;
 
 % Process the data: set thresholds for sm, fs and ln. Set minimum duration.
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', 'nloom', 2:20, 'min_dur', 30);

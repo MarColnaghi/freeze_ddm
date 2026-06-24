@@ -8,55 +8,21 @@
 %% Load Data and Preprocess
 clear all; close all; clc;
 
-% Load Colors
-num_quantiles = 5;
-extra.quantiles = num_quantiles;
-col = cmapper([], extra.quantiles);
+% Colors
+col       = cmapper([], 5);
 col_nloom = cmapper([], 30);
 
-% Load Paths
-paths = path_generator('folder', fullfile('descriptive','rasters'));
+% Shared data loading (see load_contact_timeseries)
+ls   = 50;                       % loom speed
+data = load_contact_timeseries(ls);
 
-% Load timeseries file
-sm_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
-pc_cache = importdata(fullfile(paths.cache_path, 'pixel_cache.mat'));
-fr_cache = importdata(fullfile(paths.cache_path, 'freeze_cache.mat'));
-fs_cache = importdata(fullfile(paths.cache_path, 'speed_cache.mat'));
-md_cache = importdata(fullfile(paths.cache_path, 'mindist_cache.mat'));
+sm_mat         = data.sm;
+fr_mat         = data.fr;
+md_mat         = data.md;
+selected_flies = data.selected_flies;
+n_moving_flies = data.n_moving_flies;
 
-loom_cache = importdata(fullfile(paths.cache_path, 'loom_cache.mat'));
-
-% Load the bouts file to extract 
-threshold_imm = 2; threshold_mob = 2; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
-thresholds = define_thresholds;
-bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
-bouts = bouts_formatting(bouts, thresholds);
-
-%  Select loom speed
-ls = 50;
-selected_flies = unique(bouts.fly(bouts.sloom == ls, :));
-n_moving_flies = accumarray(bouts.fly, bouts.moving_flies, [], @unique);
-n_moving_flies = n_moving_flies(selected_flies);
-
-sm_mat = cache2mat(sm_cache, 'selected_flies', selected_flies');
-fs_mat = cache2mat(fs_cache, 'selected_flies', selected_flies');
-fr_mat = cache2mat(fr_cache, 'selected_flies', selected_flies');
-pc_mat = cache2mat(pc_cache, 'selected_flies', selected_flies');
-md_mat = cache2mat(md_cache, 'selected_flies', selected_flies');
-loom_mat = cache2mat(loom_cache, 'selected_flies', selected_flies');
-
-% Loom Times
-loom_ts = diff(loom_mat, [], 2) == 1;
-[r, c] = find(loom_ts);
-n_flies = size(loom_mat, 1);
-
-loom_times = nan(n_flies, 20);
-
-for f = 1:n_flies
-    loom_times(f, :) = find(loom_ts(f, :));
-end
-
-median_loom_ts = median(loom_times, 1);
+median_loom_ts     = median(data.loom_times, 1);
 threshold_distance = 70;
 
 % Construct table
@@ -70,19 +36,45 @@ ts.sm = sm_mat;
 ts.fly = selected_flies;
 ts = sortrows(ts, {'moving_flies', 'sum_contact'}, 'ascend', 'ComparisonMethod','abs');
 
+% Contact occupancy: fraction of flies in contact at each frame (any contact,
+% regardless of ordering), computed separately for each moving-flies subgroup
+% and aligned to the raster timeline below.
+in_contact = md_mat < threshold_distance;
+conditions = unique(n_moving_flies)';
+p_contact  = NaN(numel(conditions), size(md_mat, 2));
+for c = 1:numel(conditions)
+    p_contact(c, :) = mean(in_contact(n_moving_flies == conditions(c), :), 1);
+end
+smooth_win = 6;                                   % frames (~0.5 s) rolling average
+p_contact  = movmean(p_contact, smooth_win, 2);
+
 % Create figure
-fh = figure('color', 'w', 'Position', [100 200 750 800]);
-tl = tiledlayout(2, 1, 'TileSpacing', 'compact', 'Padding', 'loose');
+fh = figure('color', 'w', 'Position', [100 200 750 850]);
+tl = tiledlayout(4, 1, 'TileSpacing', 'compact', 'Padding', 'loose');
 
 col.n_mov_flies = colorcet('I2','N', 5);
 
-nexttile(1, [2,1])
+xl = [16200, size(md_mat, 2)];
+
+% --- Top tile: population contact fraction over time ---
+ax_top = nexttile(1, [1, 1]);
 hold on
-ax = gca;
+for c = 1:numel(conditions)
+    plot(p_contact(c, :), 'Color', col.n_mov_flies(c, :), 'LineWidth', 1.5)
+end
+for i = 1:length(median_loom_ts)
+    xline(ax_top, median_loom_ts(i), 'Color', col_nloom.vars.nloom(10 + i, :), 'LineWidth', 1, 'HandleVisibility', 'off');
+end
+apply_generic(ax_top, 'no_xticks', true, 'xlim', xl, 'font_size', 20)
+ylabel('Fraction in contact')
+
+% --- Bottom tiles: contact raster ---
+ax = nexttile(2, [3, 1]);
+hold on
 
 fre_imgsc = imagesc(ax, ts.contact, [0, 1]);
 colormap(ax, ('gray'));
-apply_generic(ax, 'xticks', [0, 18000, size(fr_mat, 2)], 'no_yticks', true, 'ylim', [- 10 size(fr_mat, 1) + 10], 'xlim', [16200, size(fr_mat, 2)], 'font_size', 32)
+apply_generic(ax, 'xticks', [0, 18000, size(fr_mat, 2)], 'no_yticks', true, 'ylim', [- 10 size(fr_mat, 1) + 10], 'xlim', xl, 'font_size', 32)
 xticklabels({});
 
 ylabel('Focal Flies')
@@ -99,4 +91,4 @@ for idx_moving = 0:4
         col.n_mov_flies(idx_moving + 1,:), 'EdgeColor','none', 'Clipping', 'off');
 end
 
-linkaxes([ax], 'x');
+linkaxes([ax_top, ax], 'x');
