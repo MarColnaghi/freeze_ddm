@@ -9,16 +9,6 @@
 clear all; close all; clc;
 
 % Load Colors
-col = cmapper;
-
-% Load Paths
-paths = path_generator('folder', 'collision_analysis');
-
-% Different version
-
-clearvars
-
-% Load Colors
 num_quantiles = 5;
 extra.quantiles = num_quantiles;
 col = cmapper([], extra.quantiles);

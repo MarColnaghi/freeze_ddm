@@ -4,7 +4,7 @@ clearvars
 % Load the table first. We will take advantage of an already existing
 % dataset.
 threshold_imm = 2; threshold_mob = 2; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
-paths = path_generator('folder', 'social_motion/proximity', 'bouts_id', id_code, 'imfirst', false);
+paths = path_generator('folder', 'collision_analysis', 'bouts_id', id_code, 'imfirst', false);
 bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
 motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 
@@ -16,7 +16,7 @@ bouts = bouts_formatting(bouts, thresholds);
 
 % Process the data: set thresholds for sm, fs and ln. Set minimum duration.
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', 'nloom', 2:20, 'min_dur', 30);
-bouts_proc = impose_contact_threshold(bouts_proc, 80);
+bouts_proc = impose_contact_threshold(bouts_proc, 'threshold', 80);
 
 %% Extract the pre-freezing social motion
 inizio = 0;
@@ -27,7 +27,7 @@ distance_ili = extract_sm_from_bouts(bouts_proc, 'type', 'onsets', 'output_type'
 % timestep in the duration)
 
 clustering_type = 'first_cross';
-paths = path_generator('folder', fullfile('social_motion','clustering', clustering_type), 'bouts_id', id_code, 'imfirst', false);
+paths = path_generator('folder', fullfile('collision_analysis', clustering_type), 'bouts_id', id_code, 'imfirst', false);
 
 n_clusters = 10;
 

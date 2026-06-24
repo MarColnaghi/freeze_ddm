@@ -3,7 +3,7 @@ clearvars
 % Load the table first. We will take advantage of an already existing
 % dataset.
 threshold_imm = 2; threshold_mob = 2; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
-paths = path_generator('folder', 'social_motion/proximity', 'bouts_id', id_code, 'imfirst', false);
+paths = path_generator('folder', 'collision_analysis', 'bouts_id', id_code, 'imfirst', false);
 bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
 motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 
@@ -43,7 +43,7 @@ xlabel('Threshold Value')
 ylabel('Count')
 
 text(thresholds_collisions, ...
-     tot_n_collisions + 40, ...
+     tot_n_collisions_of + 40, ...
      string(round(tot_n_collisions_of/ height(bouts_proc), 2)), ...
      'HorizontalAlignment','center', ...
      'VerticalAlignment','bottom', 'FontSize', 16)

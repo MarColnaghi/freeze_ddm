@@ -4,7 +4,7 @@ clearvars
 % Load the table first. We will take advantage of an already existing
 % dataset.
 threshold_imm = 2; threshold_mob = 2; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
-paths = path_generator('folder', 'social_motion/clustering', 'bouts_id', id_code, 'imfirst', false);
+paths = path_generator('folder', 'collision_analysis', 'bouts_id', id_code, 'imfirst', false);
 bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
 motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 mindist_cache = importdata(fullfile(paths.cache_path, 'mindist_cache.mat'));
@@ -14,7 +14,6 @@ thresholds = define_thresholds('le_window', struct('le_window_sl', [0 55], 'le_w
 % thresholds = define_thresholds;
 
 bouts = bouts_formatting(bouts, thresholds);
-bouts = bouts_proc();
 
 threshold = 90;
 
