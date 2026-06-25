@@ -11,7 +11,7 @@
 %  (5) leak sweep: PERFECT integrator (lambda=0, flat memory) -> EXTREMA
 %      detector (lambda=1/dt, delta memory), parametrically.
 %  Shared dynamics: x(k+1)=x(k)(1-lambda*dt)+drift(k)*dt+sigma*sqrt(dt)*randn,
-%  start x=0, cross at x>=theta, drift = per-frame RATE, frame k <-> time k*dt.
+%  start x=0, cross at x>=theta, drift = per-frame9 RATE, frame k <-> time k*dt.
 % ════════════════════════════════════════════════════════════════════════
 this_dir = fileparts(mfilename('fullpath'));
 addpath(fullfile(this_dir, 'simulators'));
@@ -32,7 +32,7 @@ beta  = 4.2;                           % drift gain (rate per unit social motion
 use_real = true;
 if use_real
     paths      = path_generator('folder', 'sims/sanity_checks');
-    idx_trial  = 3945;412;%7327;%3331;%2305;%2132; %3331 is fantastic;%3945;
+    idx_trial  = 2020;1918;% 1001;% 100 is great; 4548; 878; 917; 6666;3945;412;%7327;%3331;%2305;%2132; %3331 is fantastic;%3945;
     bouts      = importdata(fullfile(paths.dataset, 'bouts.mat'));
     bouts_proc = data_parser_new(bouts, 'type','immobility', 'period','loom', ...
                                  'window','le', 'nloom', 2:20);
@@ -88,7 +88,7 @@ end
 %% ── (2) DISTRIBUTION: leaky(lambda=0) vs sim_ddm_seeded ──────────────────
 N = 50000;
 
-lambda = 3;
+lambda = 5;
 
 % leaky: N independent trials from one global stream (seed=[] -> no reseed)
 rng(1);
@@ -267,9 +267,9 @@ paths = path_generator('folder', 'sims/sanity_checks');
 
 
 % Select the parameters of the model
-true_bound = 2.7;
-beta_drift = 4.2;
-true_ndt = 2;
+true_bound = 2.9;
+beta_drift = 6.2;
+true_ndt = 0.5;
 
 % Select the dt for signal upsampling
 dt = 1/300;

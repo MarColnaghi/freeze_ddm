@@ -1,3 +1,13 @@
+clearvars
+
+% Standalone data load (previously inherited from clustering_sm_timeseries'
+% workspace): the same contact-filtered pre-freeze social motion.
+data_pf        = load_prefreeze_sm();
+bouts_proc     = data_pf.bouts_proc;
+sm_freeze_full = data_pf.sm_freeze_full;
+sm_freeze      = extract_sm_from_bouts(bouts_proc, 'type', 'onlyfreeze', 'output_type', 'mat', 'align', 'offset', 'delay_after', 60, 'norm_factor', 10);
+n_clusters     = 10;
+
 model_list = {'dddim2'};
 run_list   = {'run03_260407'};
 version = {''};
@@ -92,7 +102,6 @@ out_all_tv = data(1).out_all_tv(sort_order, :);
 out_all_st = data(1).out_all_st(sort_order, :);
 
 % --- 3. Main Loop: Iterate over Bouts ---
-n_bouts     = height(freezes_ref);
 censoring_val = data(1).results.points.censoring;
 res_points = data(1).results.points; % Slice to avoid passing large 'data' struct
 
