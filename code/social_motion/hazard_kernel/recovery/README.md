@@ -1,4 +1,4 @@
-# kernel_analysis — accumulator-driven datasets → hazard-kernel recovery
+# recovery — accumulator-driven datasets → hazard-kernel recovery
 
 Parameter-recovery validation for the social-motion hazard-kernel analysis.
 
@@ -6,7 +6,7 @@ We generate **synthetic freeze datasets** in which the freeze duration is the
 first-passage time of a **leaky accumulator** integrating the *real* social-motion
 each fly experienced, then run the **same** hazard-kernel analysis used on real
 data (`run_hazard_kernel`, the function-form core of
-`../proximity/hazard_kernel_sm.m`) and check whether it recovers the leak
+`../hazard_kernel_sm.m`) and check whether it recovers the leak
 time-constant we put in.
 
 Because the accumulator is driven by the real `sm` trace — the same series the
@@ -19,7 +19,7 @@ analysis, so this is an honest test of the method rather than a toy.
   `sm` drive + generative params `P`, simulates `P.n_aug` accumulator
   trajectories per real bout (augmentation) and returns a synthetic bout table
   (`bl`) ready for `run_hazard_kernel`, plus duration/censoring diagnostics.
-  Uses `sim_leaky_accumulator` (`../../sims/simulators`).
+  Uses `sim_leaky_accumulator` (`../../../sims/simulators`).
 - **`kernel_recovery_sweep.m`** — driver. Loads real bouts + `motion_cache`,
   builds the `sm` drive, and sweeps one generative parameter (`sweep_var`):
   - `'beta'` — social GAIN, leak fixed at `tau_fixed` (specificity / amplitude

@@ -69,7 +69,7 @@ rng(1);
 % ── Load + filter (same pipeline as check_fd_distributions.m) ────────────
 threshold_imm = 2; threshold_mob = 2; threshold_pc = 4;
 id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
-paths        = path_generator('folder', 'social_motion/proximity', 'bouts_id', id_code, 'imfirst', false);
+paths        = path_generator('folder', 'social_motion/hazard_kernel', 'bouts_id', id_code, 'imfirst', false);
 bouts        = importdata(fullfile(paths.dataset, 'bouts.mat'));
 motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 

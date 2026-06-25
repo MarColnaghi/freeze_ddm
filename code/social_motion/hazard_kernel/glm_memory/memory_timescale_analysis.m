@@ -18,7 +18,7 @@ clearvars; clc; close all;
 % scripts that reuse this engine and the SAME design/CV folds.
 % ════════════════════════════════════════════════════════════════════════
 
-addpath('/Users/marcocolnaghi/PhD/freeze_ddm/code/social_motion/proximity');   % path_generator, data parsing
+addpath('/Users/marcocolnaghi/PhD/freeze_ddm/code/social_motion/hazard_kernel');   % path_generator, data parsing
 here = fileparts(mfilename('fullpath')); addpath(here);                          % glm engine
 
 % ── Settings ──────────────────────────────────────────────────────────────
@@ -40,7 +40,7 @@ fps = dopts.fps;
 % ── Load + filter (same pipeline as hazard_kernel_sm.m) ───────────────────
 threshold_imm = 2; threshold_mob = 2; threshold_pc = 4;
 id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
-paths        = path_generator('folder','social_motion/proximity','bouts_id',id_code,'imfirst',false);
+paths        = path_generator('folder','social_motion/hazard_kernel','bouts_id',id_code,'imfirst',false);
 bouts        = importdata(fullfile(paths.dataset,'bouts.mat'));
 motion_cache = importdata(fullfile(paths.cache_path,'motion_cache.mat'));
 thresholds   = define_thresholds('le_window', struct('le_window_sl',[5 55],'le_window_fl',[5 55]));
