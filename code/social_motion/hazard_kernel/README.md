@@ -39,3 +39,37 @@ hazard_kernel/
 ├── glm_memory/                model-comparison memory-timescale pipeline
 └── recovery/                  synthetic parameter-recovery (+ results/)
 ```
+
+## Relation to reverse-correlation kernels (Okazawa et al. 2018)
+Okazawa, Sha, Purcell & Kiani 2018 (*Nat. Commun.* 9:3479) also speak of a
+"kernel," but it is a **different object** from our `β(τ)`:
+
+- **Their psychophysical kernel** is a *reverse correlation*:
+  `K(t) = E[s(t)|choice1] − E[s(t)|choice2]` — average the stimulus *conditioned
+  on the outcome*, subtract the two choices. It targets the linear **sensory
+  weight** `w(t)` (`K ∝ w` under SDT/simple DDM), and their whole point is that
+  it is *distorted* by the decision process (bound crossing, non-decision time).
+  One binary choice per trial; x-axis = position within trial / time-to-response.
+- **Our hazard kernel** `β(τ)` is a *forward* penalized-logistic GLM on
+  person-period survival data: `logit P(unfreeze|frozen) = baseline(t) +
+  Σ_τ β(τ)·sm(t−τ) + controls`. It targets the **integration / memory timescale
+  itself** (broad ⇒ integration, sharp near τ≈0 ⇒ instantaneous). Many at-risk
+  steps per bout, one absorbing event; x-axis = lag τ relative to "now".
+
+So the two are duals: `E[stim|outcome]` (reverse) vs. `P(event|stim history)`
+(forward). What Okazawa treat as a *nuisance* (decision dynamics) is exactly our
+*target*; their DDM-simulation validation is mirrored by `recovery/`.
+
+**Bridge — STA↔GLM duality.** For white/Gaussian input an event-triggered
+average and a forward-GLM filter coincide up to scale. We already compute *both*:
+`eta_exc` (`run_hazard_kernel.m`) is an Okazawa-style reverse-correlation kernel
+on our data, and `rho_eta` correlates it against the fitted `β(τ)`. They diverge
+when the input is autocorrelated — which `sm` is — and only the forward GLM
+partials that out. This maps Okazawa's "kernel ≠ sensory weight" onto our
+"event-triggered sm ≠ causal hazard kernel"; our acausal τ<0 segment, time-shuffle
+null, and ACF diagnostic (`rho_acf`) are the freeze-DDM analog of their
+non-decision-time correction.
+
+**Practical note.** Their non-decision-time result predicts our *causal* kernel
+may peak at a short *positive* lag (sensory/motor latency), not exactly at τ=0 —
+a dip at τ≈0 is expected, not evidence against integration.
