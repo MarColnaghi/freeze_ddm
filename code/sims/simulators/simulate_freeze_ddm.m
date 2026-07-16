@@ -20,8 +20,13 @@ function [rt, info] = simulate_freeze_ddm(signal, p, N)
 %     sigma              diffusion SD (default 1). NB the mex takes sigma^2;
 %                        this wrapper squares it for you.
 %     leak               leak rate lambda, 1/s (default 0 = perfect integrator).
-%     initial_value_frac start point as a fraction of theta (default 0);
-%                        x0 = initial_value_frac*theta (absolute units).
+%     initial_value_frac start point as a FRACTION of theta (x0 = frac*theta).
+%                        This is the bayes_fpe convention
+%                        (initial_value_1 = initial_value_frac_1 * bound_1).
+%     x0                 start point in ABSOLUTE units (same scale as theta),
+%                        matching what the underlying simulators take directly.
+%                        Give initial_value_frac OR x0, never both (it is
+%                        ambiguous, so it errors). Neither -> x0 = 0.
 %     delayed_start      accumulation start delay, s (default 0): the first
 %                        round(delayed_start/dt) frames are skipped and the
 %                        value is added back to the returned RT.
@@ -48,7 +53,6 @@ function [rt, info] = simulate_freeze_ddm(signal, p, N)
     theta   = getf(p, 'theta', 1);
     sigma   = getf(p, 'sigma', 1);
     lambda  = getf(p, 'leak', 0);
-    ivf     = getf(p, 'initial_value_frac', 0);
     dstart  = getf(p, 'delayed_start', 0);
     ndt     = getf(p, 'ndt', 0);
     pcont   = getf(p, 'contaminant_prob', 0);
@@ -60,11 +64,26 @@ function [rt, info] = simulate_freeze_ddm(signal, p, N)
     drift = drift(:);
     t_max = numel(drift) * dt;                 % full pre-slice grid, for lapses
 
-    % ---- start-timing: skip the pre-start frames, start at x0 = frac*theta --
+    % ---- start-timing: skip the pre-start frames ---------------------------
     n_skip = round(dstart / dt);
     n_skip = max(0, min(n_skip, numel(drift) - 1));
     drift_sim = drift(n_skip + 1 : end);
-    x0 = ivf * theta;
+
+    % ---- start point: fraction-of-theta OR absolute, never both ------------
+    has_ivf = has(p, 'initial_value_frac');
+    has_x0  = has(p, 'x0');
+    if has_ivf && has_x0
+        error('simulate_freeze_ddm:AmbiguousStartPoint', ...
+              ['Give p.initial_value_frac (fraction of theta) OR p.x0 ' ...
+               '(absolute), not both. Got initial_value_frac=%g (-> x0=%g) ' ...
+               'and x0=%g.'], p.initial_value_frac, p.initial_value_frac*theta, p.x0);
+    elseif has_ivf
+        x0 = p.initial_value_frac * theta;
+    elseif has_x0
+        x0 = p.x0;
+    else
+        x0 = 0;
+    end
 
     if backend == "auto", backend = "mex"; end
 
@@ -106,11 +125,16 @@ end
 
 % =========================================================================
 function v = getf(p, name, default)
-    if isstruct(p) && isfield(p, name) && ~isempty(p.(name))
+    if has(p, name)
         v = p.(name);
     else
         v = default;
     end
+end
+
+function tf = has(p, name)
+% True when the field is present AND non-empty (so [] means "not given").
+    tf = isstruct(p) && isfield(p, name) && ~isempty(p.(name));
 end
 
 function v = must(p, name)

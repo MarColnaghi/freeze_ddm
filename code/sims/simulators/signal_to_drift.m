@@ -1,7 +1,7 @@
-function drift = signal_to_drift(signal, p)
+function [drift, full] = signal_to_drift(signal, p)
 % SIGNAL_TO_DRIFT  Turn a raw per-frame signal into an effective drift vector.
 %
-%   drift = signal_to_drift(signal, p)
+%   [drift, full] = signal_to_drift(signal, p)
 %
 %   Ports the bayes_fpe_fork signal-preprocessing front-end so the freeze_ddm
 %   Monte-Carlo simulators can use the same knobs the fitted (Fokker-Planck)
@@ -28,6 +28,35 @@ function drift = signal_to_drift(signal, p)
 %
 %   p.dt (seconds/frame) is required whenever a time-based step is used
 %   (sensory delay, filter, or time kernel).
+%
+%   PRE-ONSET STREAM (p.n_pre, default 0)
+%   -------------------------------------
+%   A sensory_delay L means that at freeze-relative time tau the accumulator uses
+%   evidence from raw[tau - L]. For tau < L that index is NEGATIVE, i.e. BEFORE
+%   freeze onset. bayes_fpe fills that window with ZEROS -- not a physiological
+%   claim, just a consequence of its signal array starting at freeze onset
+%   (delay_tv_signals_with_zero_pad, left=0.0, tv_core.py:326). Zero-padding makes
+%   sensory_delay do double duty: it delays evidence AND deletes the first L
+%   seconds of it.
+%
+%   Set p.n_pre = number of PRE-ONSET frames prepended to `signal` to feed the
+%   REAL stream into that window instead. Then:
+%     - the freeze-relative time axis is ((0:T-1) - n_pre)*dt, so index n_pre+1 is
+%       t = 0 and the first n_pre samples carry negative times;
+%     - the delay's interpolation pulls real samples for tau - L < 0, and the zero
+%       fill applies ONLY beyond the supplied margin (the fallback);
+%     - the leading n_pre samples are TRIMMED before returning, so `drift` is
+%       always aligned to freeze onset (t = 0 at index 1) exactly as before.
+%   n_pre = 0 (default) reproduces the bayes_fpe zero-pad byte-for-byte, so the
+%   verified equivalence holds as the limiting case.
+%
+%   NB this is a DELIBERATE departure from bayes_fpe, which has no such mode.
+%   With n_pre > 0 the causal filter also warms up on real pre-onset data rather
+%   than being initialised at signal(1) -- another (documented) divergence.
+%
+%   full : optional 2nd output, for plotting only. Struct with the UNTRIMMED
+%          transformed drift (.drift, [nTrials x T]) and its signed freeze-relative
+%          time axis (.t, 1 x T, negative before onset), plus .n_pre.
 
     % ---- normalise input to rows [nTrials x T]; remember shape to restore ----
     was_col = iscolumn(signal);
@@ -40,12 +69,26 @@ function drift = signal_to_drift(signal, p)
 
     dt = getf(p, 'dt', []);
 
+    % Freeze-relative time axis: st(n_pre+1) == 0, so the first n_pre samples are
+    % pre-onset and carry NEGATIVE times. n_pre = 0 -> st = (0:T-1)*dt as before.
+    n_pre = getf(p, 'n_pre', 0);
+    assert(n_pre >= 0 && n_pre == round(n_pre) && n_pre < T, ...
+           'signal_to_drift: p.n_pre must be an integer in [0, size(signal,2)).');
+    if n_pre > 0
+        assert(~isempty(dt), 'signal_to_drift: p.dt required when p.n_pre > 0.');
+    end
+    if ~isempty(dt)
+        st = ((0:T-1) - n_pre) * dt;      % 1 x T, freeze-relative seconds
+    else
+        st = [];   % only the time-based steps need it, and they assert dt is set
+    end
+
     % ---- 1. sensory delay (fractional-frame time shift) ---------------------
     lag = getf(p, 'sensory_delay', 0);
     if any(lag ~= 0)
         assert(~isempty(dt), 'signal_to_drift: p.dt required for sensory_delay.');
         mode = getf(p, 'sensory_delay_mode', 'delayed_evidence');
-        S = apply_sensory_delay(S, lag, dt, mode);
+        S = apply_sensory_delay(S, lag, st, mode);
     end
 
     % ---- 2. causal first-order low-pass -------------------------------------
@@ -74,8 +117,9 @@ function drift = signal_to_drift(signal, p)
     slope = getf(p, 'time_kernel_slope', []);
     if ~isempty(mid) && ~isempty(slope)
         assert(~isempty(dt), 'signal_to_drift: p.dt required for time kernel.');
-        tgrid  = (0:T-1) * dt;                       % t=0 at freeze onset
-        kernel = 1 ./ (1 + exp(-(tgrid - mid) .* max(slope, 0)));
+        % st is freeze-relative, so the midpoint stays anchored to onset even
+        % when pre-onset samples are supplied.
+        kernel = 1 ./ (1 + exp(-(st - mid) .* max(slope, 0)));
         S = S .* kernel;                             % broadcasts over rows
     end
 
@@ -83,6 +127,13 @@ function drift = signal_to_drift(signal, p)
     gain = getf(p, 'gain', 1);
     bias = getf(p, 'bias', 0);
     D = bias + gain .* S;
+
+    if nargout > 1
+        full = struct('drift', D, 't', st, 'n_pre', n_pre);
+    end
+
+    % ---- trim the pre-onset margin: drift is always aligned to t = 0 --------
+    D = D(:, n_pre+1 : end);
 
     % ---- restore input orientation ------------------------------------------
     if isvector(signal)
@@ -94,15 +145,17 @@ function drift = signal_to_drift(signal, p)
 end
 
 % =========================================================================
-function S = apply_sensory_delay(S, lag, dt, mode)
+function S = apply_sensory_delay(S, lag, st, mode)
 % Fractional-frame shift via linear interpolation, per row.
 %   'delayed_evidence' (default) mirrors delay_tv_signals_with_zero_pad:
 %       sample at t-lag, left-edge -> 0, right-edge -> last value.
 %       positive lag delays the signal and zero-pads the pre-onset interval.
 %   'legacy' mirrors shift_tv_signals_by_sensory_lag:
 %       sample at t+lag, left-edge -> first value, right-edge -> last value.
-    n = size(S, 2);
-    st = (0:n-1) * dt;
+%
+%   st is the SIGNED freeze-relative time axis. When pre-onset samples are
+%   supplied (n_pre > 0) st starts negative, so queries at t-lag < 0 land on real
+%   data and the left-edge fill only kicks in beyond the supplied margin.
     lag = broadcast_rows(lag, size(S, 1));
     for r = 1:size(S, 1)
         s = S(r, :);

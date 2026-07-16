@@ -89,7 +89,7 @@ r_hi = simulate_freeze_ddm(sm, setfield(base,'relu_threshold',0.5), N);
 okA = cens(r_hi) > cens(r_lo);
 fprintf('  relu_threshold 0.0->0.5 : censoring %.3f -> %.3f\n', cens(r_lo), cens(r_hi));
 print_check('higher relu_threshold increases censoring', okA);
-[npass, nfail] = upd(npass, nfail, okA);https://spesaonline.esselunga.it/commerce/nav/supermercato/store/home
+[npass, nfail] = upd(npass, nfail, okA);
 
 % positive delayed_start shifts RTs later by ~dstart
 dstart = 0.3;
@@ -129,6 +129,116 @@ fprintf('  contaminant_prob=%.1f : frac(rt>1s) %.3f -> %.3f (expected ~%.3f)\n',
 print_check('contaminant lapses inject ~pcont uniform-RT mass', okE);
 [npass, nfail] = upd(npass, nfail, okE);
 
+fprintf('\n=== (4b) start point: initial_value_frac vs x0 ===\n');
+% the two conventions must agree when they denote the same start point
+frac = 0.4;
+p_frac = base; p_frac.initial_value_frac = frac;
+p_abs  = base; p_abs.x0 = frac * theta;
+r_frac = simulate_freeze_ddm(sm, p_frac, N);
+r_abs  = simulate_freeze_ddm(sm, p_abs,  N);
+okF = isequaln(r_frac, r_abs);   % same seed + same resolved x0 -> identical
+fprintf('  frac=%.2f (x0=%.3f): median frac=%.4f abs=%.4f\n', ...
+    frac, frac*theta, med(r_frac), med(r_abs));
+print_check('initial_value_frac and equivalent x0 give identical RTs', okF);
+[npass, nfail] = upd(npass, nfail, okF);
+
+% x0 alone resolves correctly
+[~, info_abs] = simulate_freeze_ddm(sm, p_abs, 1);
+okG = abs(info_abs.x0 - frac*theta) < 1e-12;
+print_check('p.x0 is used verbatim (absolute units)', okG);
+[npass, nfail] = upd(npass, nfail, okG);
+
+% giving both must error
+p_both = base; p_both.initial_value_frac = 0.4; p_both.x0 = 1.0;
+okH = false;
+try
+    simulate_freeze_ddm(sm, p_both, 10);
+catch ME
+    okH = strcmp(ME.identifier, 'simulate_freeze_ddm:AmbiguousStartPoint');
+    fprintf('  errored as expected: %s\n', ME.identifier);
+end
+print_check('specifying both initial_value_frac and x0 errors', okH);
+[npass, nfail] = upd(npass, nfail, okH);
+
+% neither -> x0 = 0
+[~, info_none] = simulate_freeze_ddm(sm, base, 1);
+okI = info_none.x0 == 0;
+print_check('neither given -> x0 = 0', okI);
+[npass, nfail] = upd(npass, nfail, okI);
+
+fprintf('\n=== (6) delay equivalence vs bayes_fpe + pre-onset stream ===\n');
+% (6a) THE reference check: our drift must equal bayes_fpe's solver input, i.e.
+% delay_tv_signals_with_zero_pad(raw, eff=sensory_delay-delayed_start) followed by
+% the delayed_start slice. Reimplemented here from tv_core.py:326 and :383-400.
+Tp = 200; n_pre = 48;                       % 48 frames = 0.8 s of pre-onset margin
+rng(3); full_raw = max(cumsum(randn(Tp+n_pre,1))*0.05 + 1, 0);
+post_raw = full_raw(n_pre+1:end);
+st_post  = (0:Tp-1)'*dt;
+ref_zero_pad = @(sig, lag, st) ref_delay(sig, lag, st);
+
+worst = 0;
+for Sd = [0 0.15 0.3 0.5]
+  for Dd = [0 0.15 0.3 0.5]
+    eff  = Sd - Dd;                          % effective_solver_sensory_delay
+    ref  = ref_zero_pad(post_raw, eff, st_post);
+    d    = signal_to_drift(post_raw, struct('dt',dt,'sensory_delay',Sd,'gain',1,'bias',0));
+    mine = d(round(Dd/dt)+1:end);            % delayed_start slice
+    worst = max(worst, max(abs(mine - ref(1:numel(mine)))));
+  end
+end
+ok6a = worst < 1e-9;
+fprintf('  worst |drift - bayes_fpe| over 4x4 (sensory_delay x delayed_start) = %.3e\n', worst);
+print_check('drift matches bayes_fpe delay pipeline (n_pre=0)', ok6a);
+[npass, nfail] = upd(npass, nfail, ok6a);
+
+% (6b) zero pre-onset must reduce EXACTLY to the zero-pad case
+L = 0.4;
+d_pad  = signal_to_drift(post_raw, struct('dt',dt,'sensory_delay',L,'gain',1,'bias',0));
+d_zero = signal_to_drift([zeros(n_pre,1); post_raw], ...
+             struct('dt',dt,'sensory_delay',L,'gain',1,'bias',0,'n_pre',n_pre));
+ok6b = isequal(size(d_pad), size(d_zero)) && max(abs(d_pad - d_zero)) < 1e-12;
+print_check('zero pre-onset reduces exactly to the zero-pad case', ok6b);
+[npass, nfail] = upd(npass, nfail, ok6b);
+
+% (6c) real pre-onset IS consumed: drift on [0,L) equals raw[tau-L], not zero
+d_real = signal_to_drift(full_raw, ...
+             struct('dt',dt,'sensory_delay',L,'gain',1,'bias',0,'n_pre',n_pre));
+nL     = round(L/dt);
+expect = full_raw(n_pre+1-nL : n_pre-nL+nL);
+ok6c   = max(abs(d_real(1:nL) - expect)) < 1e-9 && max(abs(d_pad(1:nL))) < 1e-12;
+fprintf('  on [0,L): real mean=%.4f vs zero-pad max=%.3e\n', ...
+    mean(d_real(1:nL)), max(abs(d_pad(1:nL))));
+print_check('real pre-onset stream is used on [0,sensory_delay)', ok6c);
+[npass, nfail] = upd(npass, nfail, ok6c);
+
+% (6d) beyond the supplied margin, fall back to zero-pad
+Lbig  = (n_pre+20)*dt;
+d_big = signal_to_drift(full_raw, ...
+             struct('dt',dt,'sensory_delay',Lbig,'gain',1,'bias',0,'n_pre',n_pre));
+ok6d  = all(abs(d_big(1:20)) < 1e-12) && any(abs(d_big(25:60)) > 0);
+print_check('falls back to zero-pad beyond the supplied margin', ok6d);
+[npass, nfail] = upd(npass, nfail, ok6d);
+
+% (6e) trimming contract: output always aligned to t=0 and the same length
+ok6e = numel(d_pad) == Tp && numel(d_real) == Tp;
+[~, fl] = signal_to_drift(full_raw, ...
+              struct('dt',dt,'sensory_delay',L,'gain',1,'bias',0,'n_pre',n_pre));
+ok6e = ok6e && abs(fl.t(n_pre+1)) < 1e-12 && numel(fl.t) == Tp + n_pre;
+print_check('n_pre trims to onset; full.t has t=0 at n_pre+1', ok6e);
+[npass, nfail] = upd(npass, nfail, ok6e);
+
+% (6f) scientific sanity: real pre-onset slows RTs LESS than zero-pad
+pz = base; pz.sensory_delay = L;
+pr = base; pr.sensory_delay = L; pr.n_pre = n_pre;
+sm_pre = [sm(1)*ones(n_pre,1); sm];          % plausible non-zero pre-onset stream
+rt_z = simulate_freeze_ddm(sm,     pz, N);
+rt_r = simulate_freeze_ddm(sm_pre, pr, N);
+ok6f = med(rt_r) < med(rt_z);
+fprintf('  sensory_delay=%.2f: median zero-pad=%.4f vs real pre-onset=%.4f\n', ...
+    L, med(rt_z), med(rt_r));
+print_check('real pre-onset slows RTs less than zero-pad', ok6f);
+[npass, nfail] = upd(npass, nfail, ok6f);
+
 fprintf('\n=== (5) backward compatibility of sim_leaky_accumulator ===\n');
 rng(3); k6 = sim_leaky_accumulator(sm*beta, theta, sigma, 0, dt);          % 5-arg
 rng(3); k7 = sim_leaky_accumulator(sm*beta, theta, sigma, 0, dt, [], 0);   % 7-arg x0=0
@@ -149,4 +259,13 @@ function [np, nf] = upd(np, nf, cond)
 end
 function out = ternary(c, a, b)
     if c, out = a; else, out = b; end
+end
+function out = ref_delay(sig, lag, st)
+% Reference reimplementation of bayes_fpe delay_tv_signals_with_zero_pad
+% (tv_core.py:326): sample at t-lag, left edge -> 0, right edge -> last value.
+    tq  = st - lag;
+    out = interp1(st, sig, tq, 'linear', NaN);
+    out(tq < st(1))   = 0;
+    out(tq > st(end)) = sig(end);
+    out = out(:);
 end
