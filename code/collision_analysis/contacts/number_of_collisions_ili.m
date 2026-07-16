@@ -17,7 +17,7 @@ loom_times = [data.loom_times, 36000 * ones(n_flies, 1)];
 nIntervals = data.n_looms;
 
 % Min-distance slices in a window after each loom onset
-window    = 800;
+window    = 660;
 md_slices = arrayfun(@(fly, k) ...
     md_mat(fly, loom_times(fly,k) : min(loom_times(fly,k)+window, size(md_mat,2))), ...
     repmat((1:n_flies)', 1, nIntervals), ...
@@ -34,6 +34,7 @@ plot(sum(contact, 2), 'Color', col.var.mindist, 'LineWidth', 2)
 apply_generic(gca, 'font_size', 20)
 xlabel('Fly index')
 ylabel('Contacts for each Loom')
+exporter(fh, paths, 'contacts_per_fly.pdf')
 
 % --- First-contact latency ---
 first_contact_frame          = NaN(size(md_slices));
@@ -71,7 +72,7 @@ latency_base_formed = latency_baseline_s;
 latency_base_formed(first_contact_baseline == 1) = NaN;
 
 edges = (0:10/60:10.5) - 1/120;
-fh = figure('Color', 'w', 'Position', [100 100 560 360]);
+fh = figure('Color', 'w', 'Position', [100 100 6300 360]);
 hold on
 histogram(latency_loom_formed(:), edges, 'Normalization', 'probability', ...
     'FaceColor', hex2rgb(col.period.loom), 'FaceAlpha', 0.6, 'EdgeColor', 'none')
@@ -91,6 +92,44 @@ exporter(fh, paths, 'contact_latency_loom_vs_baseline.pdf')
 fprintf('Baseline contact rate:     %.1f%%\n', 100*mean(~isnan(latency_baseline_s(:))))
 fprintf('Loom contact rate:         %.1f%%\n', 100*mean(~isnan(latency_seconds(:))))
 
+% --- Composition of pairs: already touching / contact forms / no contact ---
+% Puts the 'already at onset' fraction (previously only in the histogram title)
+% in proportion against the formed-contact and no-contact fractions. Loom and
+% baseline share the same N = n_flies * nIntervals, so the bars are comparable.
+%   first_contact_* : NaN  -> no contact in window
+%                     == 1  -> already below threshold at onset (excluded above)
+%                     >  1  -> contact forms during the window
+categorize = @(m) [mean(m(:) == 1), mean(m(:) > 1), mean(isnan(m(:)))];
+comp   = [categorize(first_contact_frame); categorize(first_contact_baseline)];
+counts = [sum(first_contact_frame(:)    == 1), sum(first_contact_frame(:)    > 1), sum(isnan(first_contact_frame(:))); ...
+          sum(first_contact_baseline(:) == 1), sum(first_contact_baseline(:) > 1), sum(isnan(first_contact_baseline(:)))];
+
+cat_col = [0.85 0.33 0.10;    % already touching at onset
+           0.20 0.55 0.75;    % contact forms in window
+           0.85 0.85 0.85];   % no contact
+
+fh = figure('Color', 'w', 'Position', [100 100 560 420]);
+b = bar(100*comp, 'stacked', 'EdgeColor', 'none');
+for s = 1:3
+    b(s).FaceColor = cat_col(s, :);
+end
+yctr = 100*cumsum(comp, 2) - 100*comp/2;          % centre of each stacked segment
+for g = 1:2
+    for s = 1:3
+        if comp(g, s) > 0.01
+            text(g, yctr(g, s), sprintf('%.0f%%\n(n=%d)', 100*comp(g, s), counts(g, s)), ...
+                'HorizontalAlignment', 'center', 'FontSize', 12)
+        end
+    end
+end
+apply_generic(gca, 'font_size', 20, 'xticks', [1 2])
+xticklabels({'Loom', 'Baseline'})
+ylabel('% of (fly, loom) pairs')
+ylim([0 100])
+legend({'Already touching at onset', 'Contact forms in window', 'No contact'}, ...
+    'box', 'off', 'FontSize', 12, 'Location', 'eastoutside')
+exporter(fh, paths, 'contact_composition_loom_vs_baseline.pdf')
+
 % --- Distance at and just before loom onset (diagnostics) ---
 distance_at_loom = arrayfun(@(fly, k) ...
     md_mat(fly, loom_times(fly,k)), ...
@@ -109,8 +148,8 @@ fprintf('Contacts with latency = 1 frame:     %d\n', n_latency0);
 % --- Loom-triggered pooled mean min-distance (overlaid on the per-condition plot below) ---
 % Pre-onset window is critical — if distance is already decreasing before t=0,
 % the dip is NOT caused by the loom (flies were already approaching).
-pre  = 180;   % 2 s before loom onset
-post = 630;   % 5 s after loom onset
+pre  = 180;   % 3 s before loom onset (60 fps)
+post = 630;   % 10.5 s after loom onset (60 fps)
 t_axis   = -pre:post;
 traj_all = NaN(n_flies * nIntervals, pre+post+1);
 pair = 0;
@@ -145,8 +184,8 @@ for c = 1:numel(conditions)
 end
 errorbar(conditions, group_means, group_sems, 'ko-', 'LineWidth', 1.5, 'MarkerFaceColor', 'k')
 apply_generic(gca, 'font_size', 20, 'xticks', conditions)
-xlabel('Number of moving conspecifics')
-ylabel('Contact rate')
+xlabel('Number of Moving Flies')
+ylabel({'Fraction of Looms', 'with Contact'})
 exporter(fh, paths, 'contact_rate_by_condition.pdf')
 
 % --- Loom-triggered average min-distance per condition ---

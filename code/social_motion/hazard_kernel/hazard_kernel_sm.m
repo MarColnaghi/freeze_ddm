@@ -49,7 +49,7 @@ bump_width  = 1.25;   % kernel bump half-width in units of center spacing (>1 �
 %             introduces an artificial discontinuity / edge artifact at the break point.
 % Both use nb_kernel+nb_acausal total bumps, so model complexity matches across modes.
 
-shuffle_mode = 'split';
+shuffle_mode = 'full';
 use_penalty = true;  % true → P-spline roughness penalty on the kernel (λ by 1-SE rule);
                      % false → plain unpenalised logistic kernel (original behaviour)
 anchor_zero = false;  % 'full' mode: force one bump center exactly on τ=0, so a causal
@@ -63,7 +63,9 @@ save_out    = true;  % save results .mat + figures to disk (overnight runs)
 % the per-bout mean as a separate covariate that absorbs/reports the BETWEEN-bout
 % level effect. Tests whether a causal kernel survives removing between-bout level
 % (high-motion bouts being short) — i.e. is the timing effect genuinely within-bout.
-center_per_bout = true;
+center_per_bout = false;
+mask_preonset   = false;  % true → zero out lags reaching before freeze onset (no pre-onset drive)
+grid_anchor     = 'entry'; % 'entry' = forward from onset | 'offset' = backward from the freeze break
 rng(1);
 
 % ── Load + filter (same pipeline as check_fd_distributions.m) ────────────
@@ -76,7 +78,7 @@ motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 thresholds = define_thresholds('le_window', struct('le_window_sl', [5 55], 'le_window_fl', [5 55]));
 bouts      = bouts_formatting(bouts, thresholds);
 
-trunc_point  = 18;
+trunc_point  = 30;
 bl = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', ...
         'nloom', 2:20, 'min_dur', trunc_point);
 
@@ -163,8 +165,19 @@ for b = 1:height(bl)
     % to end freezes fast, selectively drops high-sm events and distorts the
     % early kernel. So the bout contributes intervals only from entry_fr onward.
     if dur < entry_fr, continue; end
-    grid = (entry_fr:dt_frames:dur)';
-    if isempty(grid) || grid(end) < dur, grid = [grid; dur]; end %#ok<AGROW>
+    switch grid_anchor
+        case 'entry',  base = entry_fr;
+        case 'offset', base = dur;
+        otherwise, error('grid_anchor must be ''entry'' or ''offset''.');
+    end
+    kk   = ceil((1-base)/dt_frames) : floor((dur-base)/dt_frames);
+    allg = base + kk(:)*dt_frames;
+    grid = allg(allg >= entry_fr);
+    if strcmp(grid_anchor,'entry')
+        if isempty(grid) || grid(end) < dur,     grid = [grid; dur];      end %#ok<AGROW>
+    else
+        if isempty(grid) || grid(1)  > entry_fr, grid = [entry_fr; grid]; end %#ok<AGROW>
+    end
 
     % per-bout mean sm (z-scored), over the frozen frames — the between-bout level
     seg_idx = on : min(on + dur - 1, L);
@@ -181,6 +194,7 @@ for b = 1:height(bl)
         s = (sm(t_abs - lag_fr) - sm_mu) / sm_sd;   % z-scored history, length nLag
         if any(isnan(s)), continue; end
         if center_per_bout, s = s - mbar; end       % within-bout transform (Mundlak)
+        if mask_preonset, s(lag_fr > f-1) = 0; end   % drop pre-onset drive (0 = neutral, after centering)
 
         r = r + 1;
         Xk(r,:) = (s' * Bk);                 % project onto kernel basis
@@ -308,7 +322,8 @@ kterms = strjoin(arrayfun(@(j) sprintf('k%d',j), 1:nb_k,        'uni', 0), ' + '
 hterms = strjoin(arrayfun(@(j) sprintf('h%d',j), 1:nb_base_use, 'uni', 0), ' + ');
 f_full = sprintf('y ~ %s + %s + mov + slo', kterms, hterms);
 if center_per_bout, T.bmean = bmean; f_full = [f_full ' + bmean']; end
-mdl    = fitglm(T, f_full, 'Distribution','binomial', 'Link','logit');
+mdl    = fitglm(T, f_full, 'Distribution','binomial', 'Link','logit', ...
+                'Options', statset('MaxIter', 1000));   % default glmfit cap is 100; raise it so the (collinear) overlay converges
 cn = mdl.CoefficientNames;  kidx = zeros(nb_k,1);
 for j = 1:nb_k, kidx(j) = find(strcmp(cn, sprintf('k%d',j))); end
 kernel_unpen = Bk * mdl.Coefficients.Estimate(kidx);
@@ -573,7 +588,7 @@ specs = struct( ...
 fprintf('\n%-22s %12s %14s\n','model','AIC','CV logLik/obs');
 aic = nan(numel(specs),1); cvll = nan(numel(specs),1);
 for m = 1:numel(specs)
-    mm      = fitglm(T, ['y ~ ' specs(m).rhs], 'Distribution','binomial');
+    mm      = fitglm(T, ['y ~ ' specs(m).rhs], 'Distribution','binomial','Options',statset('MaxIter',1000));
     aic(m)  = mm.ModelCriterion.AIC;
     cvll(m) = grouped_cv_loglik(T, ['y ~ ' specs(m).rhs], rowfold, cv_folds);
     fprintf('%-22s %12.1f %14.4f\n', specs(m).name, aic(m), cvll(m));
@@ -663,8 +678,8 @@ plot(t_rel, sh_mu, 'Color', [0.4 0.4 0.4], 'LineWidth', 1)   % flat null center
 fill([t_rel; flipud(t_rel)], [kernel + 1.96*kernel_se; flipud(kernel - 1.96*kernel_se)], ...
     [0.2 0.5 0.8], 'FaceAlpha', 0.2, 'EdgeColor','none')
 plot(t_rel, kernel, 'Color', [0.2 0.5 0.8], 'LineWidth', 2)
-yline(0, 'k:'); xline(0, '--k', 'escape')
-xlabel('Time relative to un-freeze (s)   —   past < 0 < future')
+yline(0, 'k:'); xline(0, '--k', 'Break')
+xlabel('Time to Break (s)')
 ylabel('Kernel weight  \beta(\tau)')
 title('Real kernel vs time-shuffled null (mean \pm 1.96 SD)')
 legend({'shuffled null (95%)','null mean','real 95% CI','real kernel'}, 'Location','best', 'box','off')

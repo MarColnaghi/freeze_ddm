@@ -18,13 +18,13 @@ addpath(fullfile(this_dir, 'simulators'));
 
 dt    = 1/60;                          % s / frame (native social-motion rate)
 sigma = 1.0;                           % diffusion SD
-theta = 0.5;                           % bound -- keep SMALL: at the extrema end
+theta = 0.35;                           % bound -- keep SMALL: at the extrema end
                                        % (checks 4/5) a crossing must happen
                                        % within ONE frame, where the noise SD is
                                        % only sigma*sqrt(dt) ~ 0.13, so a large
                                        % theta would make the extrema detector
                                        % ~never fire (endpoint -> 100% censored).
-beta  = 4.2;                           % drift gain (rate per unit social motion)
+beta  = 3.12;                           % drift gain (rate per unit social motion)
 
 % ── Drive: a REAL per-frame social-motion signal (one bout), loaded with the
 %    same pipeline as the validation section at the bottom of this file.
@@ -32,7 +32,7 @@ beta  = 4.2;                           % drift gain (rate per unit social motion
 use_real = true;
 if use_real
     paths      = path_generator('folder', 'sims/sanity_checks');
-    idx_trial  = 2020;1918;% 1001;% 100 is great; 4548; 878; 917; 6666;3945;412;%7327;%3331;%2305;%2132; %3331 is fantastic;%3945;
+    idx_trial  = 950; 2021; 5222; 11;3394; 2020;1918;% 1001;% 100 is great; 4548; 878; 917; 6666;3945;412;%7327;%3331;%2305;%2132; %3331 is fantastic;%3945;
     bouts      = importdata(fullfile(paths.dataset, 'bouts.mat'));
     bouts_proc = data_parser_new(bouts, 'type','immobility', 'period','loom', ...
                                  'window','le', 'nloom', 2:20);
@@ -86,7 +86,7 @@ else
 end
 
 %% ── (2) DISTRIBUTION: leaky(lambda=0) vs sim_ddm_seeded ──────────────────
-N = 50000;
+N = 500000;
 
 lambda = 5;
 
@@ -190,7 +190,6 @@ end
 %   lambda = 0      -> decay=1 -> FLAT  kernel (perfect integrator == drift_diff_new)
 %   lambda = 1/dt   -> decay=0 -> DELTA kernel (extrema detector  == extrema_detection_clean)
 lam_list = [0 0.5 1 2 5 10 20 40 1/dt];   % 1/dt = 60 here
-decay_ax = 1 - lam_list*dt;               % 1 (perfect) ... 0 (extrema)
 Nsw      = 200000;
 
 % Shared FPT histogram grid: bin centres at 0, dt, ..., T_dd (one pdf per leak)
@@ -219,44 +218,54 @@ rd     = sim_ddm_seeded(drift, [dt, sigma^2, 0, theta, 0], N_ref, 7);  % integra
 med_dd = median(rd(~isnan(rd)));   % perfect-integrator reference (== drift_diff_new, check 1)
 med_ed = median(re(~isnan(re)));   % extrema reference
 
-figure('Color','w','Position',[10 10 980 640]);
+figure('Color','w','Position',[10 10 900 750]);
+tiledlayout(2,2,"TileSpacing", "compact", "Padding", "compact")
+color_lambda = cbrewer2('RdYlBu',length(lam_list));
 
-subplot(2,2,1); hold on            % (a) effective memory kernel vs leak
+nexttile
+hold on            % (a) effective memory kernel vs leak
 lags = 0:round(2/dt);              % up to 2 s of lag
 for li = 1:numel(lam_list)
-    plot(lags*dt, (1 - lam_list(li)*dt).^lags, 'DisplayName', sprintf('\\lambda=%.3g', lam_list(li)));
+    plot(lags*dt, (1 - lam_list(li)*dt).^lags, 'DisplayName', sprintf('\\lambda=%.3g', lam_list(li)), 'LineWidth', 2, 'Color', color_lambda(li,:));
 end
+legend('Location', 'northoutside', 'FontSize', 12, 'Box', 'off', 'NumColumns', 3)
 xlabel('lag (s)'); ylabel('weight on past drift'); ylim([-0.05 1.05]);
-title('(a) Effective memory kernel'); legend('box','off','Location','northeast');
+apply_generic(gca, 'xlim', [-0.1 2.1], 'font_size', 22)
 
-subplot(2,2,2);                    % (b) median FPT + censoring across the continuum
+nexttile
+hold on
 yyaxis left
-plot(decay_ax, med, 'o-','LineWidth',1.4); ylabel('median FPT (s)');
-yline(med_dd,'b:','perfect'); yline(med_ed,'r:','extrema');
+plot(lam_list, med, '-','LineWidth', 1.8); ylabel('median RT (s)');
+scatter(lam_list, med, 90, color_lambda, 'filled')
+ylim([0 5])
+yline(med_dd, 'Label','Perfect (\lambda=0)', 'LineStyle',' --', 'FontSize', 12, 'Color',  color_lambda(1,:)); yline(med_ed, 'Label', 'Extrema Detection', 'LineStyle',' --', 'FontSize', 12, 'Color',  color_lambda(end,:));
 yyaxis right
-plot(decay_ax, 100*cens, 's--','LineWidth',1.2); ylabel('censored (%)');
-set(gca,'XDir','reverse');         % decay 1->0 reads perfect->extrema left to right
-xlabel('decay = 1 - \lambda dt   (1 = integrator, 0 = extrema)');
-title('(b) Median FPT & censoring');
+ylim([-5 105])
+plot(lam_list, 100*cens, '-','LineWidth', 2); ylabel('Censored (%)');
+scatter(lam_list, 100*cens, 90, color_lambda, 'filled')
 
-subplot(2,2,3);                    % (c) full FPT distribution across the sweep
+xlabel('\lambda');
+apply_generic(gca, 'xlim', [-1.5 1/dt+1.5], 'font_size', 22)
+
+
+nexttile
 imagesc(ctrs_sw, 1:numel(lam_list), pdf_mat');
 clim([0 2])
-set(gca,'YTick',1:numel(lam_list),'YTickLabel',compose('%.2f',decay_ax(:)));
-xlim([0 min(T_dd)]); colorbar
-xlabel('first-passage time (s)'); ylabel('decay = 1-\lambda dt');
-title('(c) FPT pdf across the leak sweep');
+set(gca,'YTick',1:numel(lam_list),'YTickLabel',compose('%.3g',lam_list(:)));
+xlim([0 min(T_dd)]);
+colormap(cbrewer2('Reds', []))
+xlabel('first-passage time (s)'); ylabel('\lambda (1/s)');
+apply_generic(gca, 'xlim', [-0.5 10.5], 'font_size', 22)
 
-subplot(2,2,4); hold on            % (d) same morph, as overlaid pdf curves
-cmap = parula(numel(lam_list));
+nexttile
+hold on
 for li = 1:numel(lam_list)
-    plot(ctrs_sw, pdf_mat(:,li), 'Color', cmap(li,:), 'LineWidth', 1.2, ...
-        'DisplayName', sprintf('decay=%.2f', decay_ax(li)));
+    plot(ctrs_sw, pdf_mat(:,li), 'Color', [color_lambda(li,:) 0.7], 'LineWidth', 1.2, ...
+        'DisplayName', sprintf('\\lambda=%.3g', lam_list(li)));
 end
 xlim([0 min(T_dd)]); xlabel('first-passage time (s)'); ylabel('pdf');
-title('(d) FPT pdf vs leak'); legend('box','off','Location','northeast');
+apply_generic(gca, 'xlim', [-0.5 10.5],'ylim', [0 3], 'font_size', 22)
 
-sgtitle('Integrator \rightarrow extrema as the leak grows');
 
 fprintf('\n[5] Continuum endpoints (median FPT):\n');
 fprintf('    leaky(lambda=0)    = %.4f   vs  drift_diff_new          = %.4f\n', med(1),   med_dd);

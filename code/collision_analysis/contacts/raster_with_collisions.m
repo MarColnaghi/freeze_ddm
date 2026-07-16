@@ -7,13 +7,14 @@
 
 %% Load Data and Preprocess
 clear all; close all; clc;
+paths = path_generator('folder', 'collision_analysis/contacts');
 
 % Colors
 col       = cmapper([], 5);
 col_nloom = cmapper([], 30);
 
 % Shared data loading (see load_contact_timeseries)
-ls   = 50;                       % loom speed
+ls   = 25;                       % loom speed
 data = load_contact_timeseries(ls);
 
 sm_mat         = data.sm;
@@ -75,7 +76,7 @@ hold on
 fre_imgsc = imagesc(ax, ts.contact, [0, 1]);
 colormap(ax, ('gray'));
 apply_generic(ax, 'xticks', [0, 18000, size(fr_mat, 2)], 'no_yticks', true, 'ylim', [- 10 size(fr_mat, 1) + 10], 'xlim', xl, 'font_size', 32)
-xticklabels({});
+xticklabels([0 5 10]);
 
 ylabel('Focal Flies')
 set(ax ,'Layer', 'Top')
@@ -91,4 +92,6 @@ for idx_moving = 0:4
         col.n_mov_flies(idx_moving + 1,:), 'EdgeColor','none', 'Clipping', 'off');
 end
 
+xlabel('Time (min)')
 linkaxes([ax_top, ax], 'x');
+exporter(fh, paths, 'raster_collisions.pdf')

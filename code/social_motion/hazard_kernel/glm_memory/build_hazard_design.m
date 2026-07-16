@@ -27,6 +27,7 @@ function D = build_hazard_design(bl, motion_cache, opts)
     nb_baseline = geto(opts, 'nb_baseline', 6);
     cv_folds    = geto(opts, 'cv_folds', 5);
     trunc_point = geto(opts, 'trunc_point', 30);
+    grid_anchor = geto(opts, 'grid_anchor', 'entry');  % 'entry' from onset | 'offset' from break
     rng_seed    = geto(opts, 'rng_seed', 7);
     rng(rng_seed);
     entry_fr = trunc_point;
@@ -49,8 +50,19 @@ function D = build_hazard_design(bl, motion_cache, opts)
     for b = 1:height(bl)
         on = bl.onsets(b); dur = bl.dur_frames(b);
         if dur < entry_fr, continue; end
-        grid = (entry_fr:dt_frames:dur)';
-        if isempty(grid) || grid(end) < dur, grid = [grid; dur]; end %#ok<AGROW>
+        switch grid_anchor
+            case 'entry',  base = entry_fr;
+            case 'offset', base = dur;
+            otherwise, error('grid_anchor must be ''entry'' or ''offset''.');
+        end
+        kk   = ceil((1-base)/dt_frames) : floor((dur-base)/dt_frames);
+        allg = base + kk(:)*dt_frames;
+        grid = allg(allg >= entry_fr);
+        if strcmp(grid_anchor,'entry')
+            if isempty(grid) || grid(end) < dur,     grid = [grid; dur];      end %#ok<AGROW>
+        else
+            if isempty(grid) || grid(1)  > entry_fr, grid = [entry_fr; grid]; end %#ok<AGROW>
+        end
         for gi = 1:numel(grid)
             f = grid(gi); r = r + 1;
             tabs(r) = on + f - 1;       % absolute frame of this interval

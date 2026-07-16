@@ -38,13 +38,13 @@ addpath(fullfile(code_dir, 'social_motion', 'hazard_kernel'));    % run_hazard_k
 fps           = 60;
 P.dt          = 1/fps;
 P.mu0         = 0;
-P.beta        = 8;       % social gain (fixed across conditions)
+P.beta        = 3;       % social gain (fixed across conditions)
 P.sigma       = 1.0;
 P.seed        = 222;
 P.maxT_fr     = 630;
 P.trunc_point = 0;
 P.n_aug       = 1;
-P.theta       = 8.5;
+P.theta       = 3;
 tau_gen       = Inf;     % generative leak (Inf = perfect accumulator); fixed
 P.lambda      = 0; if ~isinf(tau_gen), P.lambda = 1/tau_gen; end
 

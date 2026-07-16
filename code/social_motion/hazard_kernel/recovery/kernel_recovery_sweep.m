@@ -30,30 +30,37 @@ addpath(fullfile(code_dir, 'social_motion', 'hazard_kernel'));    % run_hazard_k
 % ── generative regime (drive = mu0 + beta*sm) ──────────────────────────────
 fps           = 60;
 P.dt          = 1/fps;
-P.mu0         = 3;      % baseline drive  -> sets the ~real-median duration
-P.beta        = 1;      % social gain (used as the FIXED gain when sweeping tau)
+P.mu0         = 0;      % baseline drive  -> sets the ~real-median duration
+P.beta        = 5;      % social gain (used as the FIXED gain when sweeping tau)
 P.sigma       = 1.0;    % diffusion SD
-P.seed        = 1000;
+P.seed        = 12000;
 P.maxT_fr     = 630;    % 10.5 s integration cap (no-crossing => censored here)
 P.trunc_point = 15;     % min duration (mirror real left-truncation)
-P.n_aug       = 2;      % synthetic trajectories per real bout (augmentation)
-P.theta       = 10;      % bound (fixed unless calibrate = true)
+P.n_aug       = 1;      % synthetic trajectories per real bout (augmentation)
+P.theta       = 2;      % bound (fixed unless calibrate = true)
 
 % ── what to sweep ───────────────────────────────────────────────────────────
 sweep_var  = 'beta';            % 'beta' (social gain) or 'tau' (leak time-const)
-sweep_list = [5 3 1 0];         % swept values: beta (gain) or tau (seconds)
+sweep_list = [10 5 2 0];         % swept values: beta (gain) or tau (seconds)
 tau_fixed  = Inf;               % leak used when sweeping beta (Inf = perfect accumulator)
 
 calibrate  = false;   % per-value bisection of theta -> real median duration
 save_out   = true;
 
+% per-value circular-shift null (sm_circshift_null): rotates every fly's sm trace
+% to break sm<->escape alignment while preserving autocorrelation. Reports the
+% p-value that the recovered kernel exceeds the autocorrelation-only null.
+% Opt-in: adds n_circ full refits PER swept value, so it is slow.
+do_circshift_null = true;
+n_circ            = 100;
+
 % ── hazard-analysis options (match hazard_kernel_sm.m methodology) ──────────
 % n_shuffle>0 and do_stage2=true add the temporal-order control and the
 % integration-vs-extrema model comparison, but are slow — off by default.
-opts = struct('fps',fps, 'kernel_past_s', 3, 'kernel_future_s', 2, 'dt_frames', 6, ...
-    'nb_kernel', 9, 'nb_acausal', 6, 'bump_width', 2, 'nb_baseline',6, ...
+opts = struct('fps',fps, 'kernel_past_s', 3, 'kernel_future_s', 1, 'dt_frames', 6, ...
+    'nb_kernel', 9, 'nb_acausal', 3, 'bump_width', 1.2, 'nb_baseline',6, ...
     'cv_folds', 5, 'n_shuffle', 0, 'shuffle_mode', 'full', 'trunc_point', P.trunc_point, ...
-    'do_plot',true, 'do_stage2', false, 'use_penalty', true, 'anchor_zero',true);
+    'do_plot',true, 'do_stage2', false, 'use_penalty', true, 'anchor_zero',false);
 
 % ── load real bouts + motion cache (same pipeline as hazard_kernel_sm.m) ────
 threshold_imm = 2; threshold_mob = 2; threshold_pc = 4;
@@ -95,7 +102,7 @@ sm_sd = std(cell2mat(cellfun(@(v) v(:), sm_in, 'UniformOutput', false)), 'omitna
 fprintf('sm drive: SD = %.3f (raw /10 units, NOT normalized)\n', sm_sd);
 
 % ── sweep: (calibrate theta) -> generate -> analyse ─────────────────────────
-R = struct('val',{},'beta',{},'tau',{},'lambda',{},'theta',{},'info',{},'res',{},'ks',{},'bl',{});
+R = struct('val',{},'beta',{},'tau',{},'lambda',{},'theta',{},'info',{},'res',{},'ks',{},'bl',{},'null',{});
 fprintf('\nSweeping %s; generating + analysing each value ...\n', sweep_var);
 for m = 1:numel(sweep_list)
     v  = sweep_list(m);
@@ -119,18 +126,33 @@ for m = 1:numel(sweep_list)
     opts.fig_title = sweep_title(sweep_var, v, tau);
     res = run_hazard_kernel(bl, motion_cache, opts);
 
+    nr = [];
+    if do_circshift_null
+        opts_n = opts; opts_n.do_plot = false;          % store the band, don't pop a figure per value
+        nr = sm_circshift_null(bl, motion_cache, opts_n, n_circ);
+    end
+
     R(m).val=v; R(m).beta=Pm.beta; R(m).tau=tau; R(m).lambda=Pm.lambda; R(m).theta=Pm.theta;
-    R(m).info=info; R(m).res=res; R(m).ks=ks; R(m).bl=bl;
+    R(m).info=info; R(m).res=res; R(m).ks=ks; R(m).bl=bl; R(m).null=nr;
 
     fprintf(['%s=%6.3g | theta=%5.2f | med=%4.0f cens=%4.1f%% filt=%4.1f%% KS=%.3f | ' ...
              'tau_com=%.2f tau_exp=%.2f R2=%.2f | events=%d\n'], ...
         sweep_var, v, Pm.theta, info.median_fr, 100*info.cens_frac, 100*info.filt_frac, ks, ...
         res.tau_com, res.tau_hat, res.R2_exp, res.n_events);
+    if ~isempty(nr)
+        fprintf('        circshift null: peak p=%.3f | sum p=%.3f | seam-blanked %.1f%%\n', ...
+            nr.p_peak, nr.p_sum, 100*nr.seam_frac);
+    end
 end
 
 xval = [R.val];
 cmap = parula(numel(R));
 lab  = arrayfun(@(k) sweep_label(sweep_var, R(k).val), 1:numel(R), 'UniformOutput', false);
+if do_circshift_null            % annotate each kernel with its circshift-null p-value
+    for k = 1:numel(R)
+        if ~isempty(R(k).null), lab{k} = sprintf('%s  (p=%.3f)', lab{k}, R(k).null.p_peak); end
+    end
+end
 
 % per-value kernel amplitude (peak and net causal weight)
 kpk  = arrayfun(@(k) max(R(k).res.kernel(R(k).res.caus_mask)), 1:numel(R));
@@ -140,11 +162,18 @@ ksum = arrayfun(@(k) sum(R(k).res.kernel(R(k).res.caus_mask)), 1:numel(R));
 figure('Color','w','Position',[80 80 820 480]); hold on
 hh = gobjects(1,numel(R));
 for m = 1:numel(R)
-    rr = R(m).res; cm = rr.caus_mask;
-    hh(m) = plot(rr.t_rel(cm), rr.kernel(cm), 'Color',cmap(m,:), 'LineWidth',1.8);
+    rr = R(m).res;                 % full kernel: causal (\tau\leq0) AND acausal (\tau>0)
+    hh(m) = plot(rr.t_rel, rr.kernel, 'Color',cmap(m,:), 'LineWidth',1.8);
 end
+% shade the acausal (future) segment: a reverse-causation control that should sit
+% at ~0 in the synthetic recovery, since the sm drive is exogenous (a non-zero
+% acausal lobe here would flag autocorrelation/leakage, not directed causality).
+yl = ylim; tac = max(R(1).res.t_rel);
+hp = patch([0 tac tac 0], [yl(1) yl(1) yl(2) yl(2)], [.92 .92 .92], ...
+           'EdgeColor','none', 'HandleVisibility','off');
+uistack(hp,'bottom'); ylim(yl);
 yline(0,'k:'); xline(0,'--k','escape');
-xlabel('Time relative to un-freeze (s)   (causal: \tau \leq 0)')
+xlabel('Time relative to un-freeze (s)   (causal \tau\leq0  |  acausal \tau>0, shaded)')
 ylabel('Recovered kernel \beta(\tau)  (per SD of sm)')
 title(sprintf('Recovered hazard kernels across the %s sweep', sweep_var))
 legend(hh, lab, 'Location','northwest', 'box','off')
@@ -189,6 +218,34 @@ end
 xlabel('Freeze duration (s)'); ylabel('CDF'); xlim([0 P.maxT_fr/fps])
 title('Truncated duration distributions: real (black) vs each value')
 legend('Location','southeast', 'box','off')
+
+% ── Figure 4: recovered kernel vs circular-shift null, per swept value ──────
+% Each panel overlays the real kernel on the autocorrelation-preserving null band
+% (sm rotated to break sm<->escape alignment). Real kernel outside the grey band
+% => structure beyond autocorrelation; inside => indistinguishable from the null.
+have_null = do_circshift_null && any(arrayfun(@(k) ~isempty(R(k).null), 1:numel(R)));
+if have_null
+    nP = numel(R); nc = ceil(sqrt(nP)); nr_ = ceil(nP/nc);
+    figure('Color','w','Position',[60 60 320*nc 260*nr_]);
+    for m = 1:nP
+        nrr = R(m).null; if isempty(nrr), continue; end
+        subplot(nr_, nc, m); hold on
+        t = nrr.t_rel;
+        fill([t;flipud(t)], [nrr.null_hi;flipud(nrr.null_lo)], [.6 .6 .6], ...
+            'FaceAlpha',.3, 'EdgeColor','none');
+        plot(t, nrr.null_med,    'Color',[.4 .4 .4], 'LineWidth',1);
+        plot(t, nrr.kernel_real, 'Color',cmap(m,:),  'LineWidth',1.8);
+        yl = ylim; tac = max(t);
+        hp = patch([0 tac tac 0],[yl(1) yl(1) yl(2) yl(2)],[.92 .92 .92], ...
+            'EdgeColor','none'); uistack(hp,'bottom'); ylim(yl);
+        yline(0,'k:'); xline(0,'--k');
+        title(sprintf('%s   (peak p=%.3f, \\Sigma p=%.3f)', ...
+            sweep_label(sweep_var, R(m).val), nrr.p_peak, nrr.p_sum), 'FontWeight','normal')
+        if m > (nr_-1)*nc, xlabel('time to un-freeze (s)'); end
+        if mod(m-1,nc)==0,  ylabel('\beta(\tau)'); end
+    end
+    sgtitle('Figure 4: hazard kernel vs circular-shift null (grey = null 95%, shaded = acausal)')
+end
 
 % ── save sweep (synthetic datasets + recovery results + params) ─────────────
 if save_out

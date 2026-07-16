@@ -1,12 +1,16 @@
-function [rt_frames, traj, t] = sim_leaky_accumulator(drift, theta, sigma, lambda, dt, seed)
+function [rt_frames, traj, t] = sim_leaky_accumulator(drift, theta, sigma, lambda, dt, seed, x0)
 % SIM_LEAKY_ACCUMULATOR  First-passage time of a leaky (or perfect) accumulator.
 %
-%   [rt_frames, traj, t] = sim_leaky_accumulator(drift, theta, sigma, lambda, dt, seed)
+%   [rt_frames, traj, t] = sim_leaky_accumulator(drift, theta, sigma, lambda, dt, seed, x0)
 %
 %   Euler–Maruyama integration of
 %       x(k+1) = x(k)*(1 - lambda*dt) + drift(k)*dt + sigma*sqrt(dt)*randn
-%   starting from x = 0, returning the 1-based frame index of the first time
-%   x >= theta, or NaN if it never crosses within numel(drift) steps.
+%   starting from x = x0 (default 0), returning the 1-based frame index of the
+%   first time x >= theta, or NaN if it never crosses within numel(drift) steps.
+%
+%   x0 : initial accumulator position (optional, default 0). ABSOLUTE units,
+%        same scale as theta (matches params[2] of the sim_ddm_seeded mex). Pass
+%        e.g. initial_value_frac*theta for a bayes_fpe-style start point.
 %
 %   This matches the C++ mex (sim_ddm_seeded / sim_ddm_ultra) exactly:
 %     lambda = 0      -> PERFECT accumulator (DDM; equal weighting of past drift)
@@ -31,12 +35,14 @@ function [rt_frames, traj, t] = sim_leaky_accumulator(drift, theta, sigma, lambd
 %   common seed (both draw one randn per frame, in frame order).
 
     if nargin >= 6 && ~isempty(seed), rng(seed); end
+    if nargin < 7 || isempty(x0), x0 = 0; end
     n      = numel(drift);
     decay  = 1 - lambda*dt;
-    nscale = sigma*sqrt(dt);
+    nscale = sigma*sqrt(dt);   % seam: a per-frame sigma vector (signal-dependent
+                               % noise) would make this an n-vector indexed by k.
     t      = (1:n)' * dt;
     traj   = nan(n, 1);
-    x      = 0;
+    x      = x0;
     rt_frames = NaN;
     for k = 1:n
         x = x*decay + drift(k)*dt + nscale*randn;

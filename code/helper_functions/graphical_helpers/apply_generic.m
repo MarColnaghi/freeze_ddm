@@ -38,44 +38,46 @@ box = opt.Results.box;
 ypos = opt.Results.ypos;
 xpos = opt.Results.xpos;
 
+% ax.YAxis is a 1x2 ruler array when yyaxis is active; set() handles both
 ax.XAxis.FontSize = fontsize;
 ax.ZAxis.FontSize = fontsize;
-ax.YAxis.FontSize = fontsize;
+set(ax.YAxis, 'FontSize', fontsize);
 set(ax,'linewidth', line_width, 'TickDir','out');
 set(ax,'box', box)
 set(ax,'TickLength',[tick_length, tick_length])
 set(ax,'Color', 'none')
 
 if ~isempty(xlims)
-    xlim(xlims)
+    xlim(ax, xlims)
 end
 
+% with yyaxis active, ylims/yticks target the currently active side only
 if ~isempty(ylims)
-    ylim(ylims)
+    ylim(ax, ylims)
 end
 
 if ~isempty(xthicks)
-    xticks(xthicks)
+    xticks(ax, xthicks)
 end
 
 if ~isempty(ythicks)
-    yticks(ythicks)
+    yticks(ax, ythicks)
 end
 
 if no_xticks
-    xticks([]);
+    xticks(ax, []);
 end
 
 if no_yticks
-    yticks([]);
+    set(ax.YAxis, 'TickValues', []);
 end
 
 if no_xlabels
-    xticklabels({});
+    xticklabels(ax, {});
 end
 
 if no_ylabels
-    yticklabels({});
+    set(ax.YAxis, 'TickLabels', {});
 end
 
 if no_xaxis
@@ -83,13 +85,14 @@ if no_xaxis
 end
 
 if no_yaxis
-    ax.YAxis.Visible = 'off';
+    set(ax.YAxis, 'Visible', 'off');
 end
 
-if ~isempty(ypos)
-    set(gca, 'YAxisLocation', ypos)
+if ~isempty(ypos) && numel(ax.YAxis) == 1
+    % YAxisLocation cannot be changed while yyaxis is active
+    set(ax, 'YAxisLocation', ypos)
 end
 
 if ~isempty(xpos)
-    set(gca, 'XAxisLocation', xpos)
+    set(ax, 'XAxisLocation', xpos)
 end
