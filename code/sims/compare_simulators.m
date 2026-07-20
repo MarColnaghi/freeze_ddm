@@ -271,6 +271,47 @@ fprintf('\n[5] Continuum endpoints (median FPT):\n');
 fprintf('    leaky(lambda=0)    = %.4f   vs  drift_diff_new          = %.4f\n', med(1),   med_dd);
 fprintf('    leaky(lambda=1/dt) = %.4f   vs  extrema_detection_clean = %.4f\n', med(end), med_ed);
 
+%% ── (5b) SIMULATOR vs EXACT PDE across the leak continuum ────────────────
+% Three curves per lambda on the SAME axes:
+%   Euler simulator (sim_ddm_seeded, per-step decay 1-lambda*dt)  -- current scheme
+%   exact-OU sim    (decay e^{-lambda*dt} + OU noise, Smith eq 28) -- correct discretisation
+%   exact PDE       (fpe_cn, the readable leaky_pde_robust twin)
+% At lambda=0 all three coincide. As lambda grows the Euler histogram peels away
+% from the blue PDE while the orange exact-OU line stays on it -- the
+% (1-lambda*dt) vs e^{-lambda*dt} discretisation gap, made visible. The PDE
+% carries the BGK discrete-monitoring bound correction and a one-frame drift
+% shift (end-of-step convention), exactly as in sims/test_sim_vs_fpe.m.
+lam_show  = [0 5 20 40];
+theta_dmo = 0.2;                     % lower bound so leaky processes still cross
+figure('Color','w','Position',[10 10 1150 760]);
+tiledlayout(2,2,"TileSpacing","compact","Padding","compact")
+for jj = 1:numel(lam_show)
+    lam = lam_show(jj);
+    rE = sim_ddm_seeded(drift, [dt, sigma^2, 0, theta_dmo, lam], Nsw, 100);
+    rO = sim_ou_exact(drift, theta_dmo, sigma, lam, dt, 0, Nsw, 100);
+    hO = histcounts(rO(~isnan(rO)), edges_sw, 'Normalization','pdf')';
+    prm = struct('dt',dt,'dx',0.005,'sigma_sq',sigma^2,'x0',0,'x_min',-7, ...
+                 'bound',theta_dmo + 0.5826*sigma*sqrt(dt),'lambda',lam);
+    [pdf_pde,~,t_pde] = fpe_cn([drift(1); drift(1:end-1)], prm);
+
+    ax = nexttile; hold(ax,'on')
+    histogram(ax, rE(~isnan(rE)), edges_sw, 'Normalization','pdf', ...
+        'FaceColor',[0.7 0.7 0.7], 'EdgeColor','none', 'FaceAlpha',0.55, ...
+        'DisplayName','Euler sim  (1-\lambda dt)');
+    plot(ax, ctrs_sw, hO, '-', 'Color',[0.90 0.45 0.13], 'LineWidth',1.8, ...
+        'DisplayName','exact-OU sim  (e^{-\lambda dt})');
+    plot(ax, t_pde, pdf_pde, '-', 'Color',[0.15 0.35 0.75], 'LineWidth',2.4, ...
+        'DisplayName','exact PDE  (fpe\_cn)');
+    title(ax, sprintf('\\lambda = %g      decay:  Euler %.3f  vs  exact %.3f', ...
+        lam, 1-lam*dt, exp(-lam*dt)), 'FontWeight','normal');
+    subtitle(ax, sprintf('median RT:  Euler %.3f  |  exact-OU %.3f s   (cens %.0f%% / %.0f%%)', ...
+        median(rE(~isnan(rE))), median(rO(~isnan(rO))), 100*mean(isnan(rE)), 100*mean(isnan(rO))), ...
+        'FontAngle','italic','Color',[0.35 0.35 0.35],'FontSize',10);
+    xlabel(ax,'first-passage time (s)'); if mod(jj,2)==1, ylabel(ax,'pdf'); end
+    if jj==1, legend(ax,'Location','northeast','Box','off','FontSize',12); end
+    apply_generic(ax,'xlim',[0 1.1],'font_size',15,'line_width',1.4);
+end
+
 %% ─── Original validation: drift_diff_new vs C++ mex on real bout data ────
 paths = path_generator('folder', 'sims/sanity_checks');
 
@@ -339,6 +380,15 @@ params = param_res(true_bound, 'points', points, 'dt', dt);
 plot(pde_results.t, pde_results.pdf, 'k--', 'LineWidth', 1);
 stem(pde_results.t(end) + fps, pde_results.survival, 'k')
 
+% fpe_cn (readable MATLAB twin of leaky_pde_robust) at the SAME grid: overlays
+% the mex curve and confirms numerically they are the SAME solver.
+prm_cn = struct('dt',dt,'dx',params.dx,'sigma_sq',params.sigma_sq,'x0',params.x0, ...
+                'x_min',params.x_min,'bound',true_bound,'lambda',0);
+[pdf_cn, ~, t_cn] = fpe_cn(mu_tv, prm_cn);
+plot(t_cn + true_ndt, pdf_cn, '-', 'Color',[0.85 0.30 0.10], 'LineWidth',1.0);
+fprintf('[val, time-varying] max|fpe_cn - mex| (decision pdf) = %.2e\n', ...
+    max(abs(pdf_cn(:) - pde_results.pdf_raw(:))));
+
 plot(time_vector_us(1:end-1), mu_tv, 'k--')
 apply_generic(gca, 'no_y', true)
 
@@ -374,6 +424,15 @@ params = param_res(true_bound, 'points', points, 'dt', dt);
 
 plot(pde_results.t, pde_results.pdf, 'k--', 'LineWidth', 1)
 stem(pde_results.t(end) + fps, pde_results.survival, 'k')
+
+% fpe_cn overlay + same-solver numeric check (stationary drive)
+prm_cn = struct('dt',dt,'dx',params.dx,'sigma_sq',params.sigma_sq,'x0',params.x0, ...
+                'x_min',params.x_min,'bound',true_bound,'lambda',0);
+[pdf_cn, ~, t_cn] = fpe_cn(mu_st, prm_cn);
+plot(t_cn + true_ndt, pdf_cn, '-', 'Color',[0.85 0.30 0.10], 'LineWidth',1.0);
+fprintf('[val, stationary]    max|fpe_cn - mex| (decision pdf) = %.2e\n', ...
+    max(abs(pdf_cn(:) - pde_results.pdf_raw(:))));
+
 trapz(pde_results.t(pde_results.t >= points.truncation & pde_results.t <= points.censoring), pde_results.pdf(pde_results.t >= points.truncation & pde_results.t <= points.censoring)) +  pde_results.survival
 pde_mass = sum(pde_results.pdf(pde_results.idx_trunc:end)) * dt + pde_results.survival
 
@@ -392,3 +451,33 @@ f_theory_interp = interp1(fd, f, pde_results.t(pde_results.idx_trunc:end));
 % Calculate difference
 error_norm = sum((f_pde - f_theory_interp).^2);
 fprintf('Difference between methods: %e\n', error_norm);
+
+
+% =========================================================================
+% Local helper: EXACT-OU simulator (used only by section 5b).
+% Kept local on purpose -- sim_leaky_accumulator stays Euler-only.
+% =========================================================================
+function rt = sim_ou_exact(drift, theta, sigma, lambda, dt, x0, N, seed)
+% Exact discretisation of the leaky (OU) accumulator with piecewise-constant
+% drift (Smith 2000, eq 28): unlike Euler's (1-lambda*dt) decay + sigma*sqrt(dt)
+% noise, this uses the EXACT one-step transition, so it matches the continuous
+% OU that the FPE solves. Reduces to Euler (= exact Wiener) at lambda=0.
+    if ~isempty(seed), rng(seed); end
+    T = numel(drift);
+    if lambda > 0
+        dec   = exp(-lambda*dt);
+        d_fac = (1 - dec)/lambda;                       % -> dt   as lambda->0
+        nsd   = sigma*sqrt((1 - exp(-2*lambda*dt))/(2*lambda));  % -> sigma*sqrt(dt)
+    else
+        dec = 1; d_fac = dt; nsd = sigma*sqrt(dt);
+    end
+    x     = x0*ones(N,1);
+    rt    = nan(N,1);
+    alive = true(N,1);
+    for k = 1:T
+        x = x*dec + drift(k)*d_fac + nsd*randn(N,1);
+        crossed = alive & (x >= theta);
+        rt(crossed) = k*dt;
+        alive = alive & ~crossed;
+    end
+end
