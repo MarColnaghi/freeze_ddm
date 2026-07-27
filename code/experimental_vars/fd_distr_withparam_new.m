@@ -132,7 +132,7 @@ for idx_param = params
         for idx_sloom = sloom_vals
             bouts_sloom = bouts_proc(bouts_proc.ls==idx_sloom,:);
             qmask = quantiles(bouts_proc.ls==idx_sloom);
-            censored = bouts_sloom.contacts;
+            censored = bouts_sloom.censored_contacts;
             nexttile([7 tile_width]); hold on
             plot_duration_distribution( ...
                 bouts_sloom.durations_s, qmask, ...

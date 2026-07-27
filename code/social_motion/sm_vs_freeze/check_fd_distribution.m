@@ -24,9 +24,9 @@ threshold = 70;
 [bouts_proc, contact_mask] = impose_contact_threshold(bouts_proc, 'threshold', threshold);
 
 %%
-bouts_proc.ends = bouts_proc.onsets + bouts_proc.censoring_time;
-bouts_proc.durations_s = bouts_proc.censoring_time ./ 60;
-bouts_proc.durations = bouts_proc.censoring_time;
+bouts_proc.ends = bouts_proc.onsets + bouts_proc.ending_time;
+bouts_proc.durations_s = bouts_proc.ending_time ./ 60;
+bouts_proc.durations = bouts_proc.ending_time;
 
 sm_freeze_full = extract_sm_from_bouts(bouts_proc, 'type', 'onlyfreeze', 'output_type', 'mat','norm_factor', 10, 'cache', 'motion_cache');
 window_dur = 60;
@@ -49,7 +49,7 @@ t = tiledlayout(3, 1, 'TileSpacing', 'compact', 'Padding', 'loose');
 nexttile(1)
 quant_list = [0 1/4 1/2 3/4 1];
 
-cens = bouts_proc.contacts ~= 0;          % MATLAB: 1 = CENSORED
+cens = bouts_proc.censored_contacts ~= 0;          % MATLAB: 1 = CENSORED
 edges  = quantile(bouts_proc.sm, quant_list);
 sm_bin = discretize(bouts_proc.sm, edges);
 
@@ -91,13 +91,13 @@ t = tiledlayout(3, 5, 'TileSpacing', 'compact', 'Padding', 'loose');
 
 quant_list = [0 1/3 2/3 1];
 % Do NOT drop collision bouts — keep them and mark them censored below.
-% (removed: bouts_proc = bouts_proc(bouts_proc.contacts == 0, :);)
+% (removed: bouts_proc = bouts_proc(bouts_proc.censored_contacts == 0, :);)
 
 for idx_mov_flies = 0:4
     bouts_mov = bouts_proc(bouts_proc.moving_flies == idx_mov_flies, :);
 
     % a collision truncates the bout -> true duration is LONGER -> right-censored
-    cens = bouts_mov.contacts ~= 0;          % MATLAB: 1 = CENSORED
+    cens = bouts_mov.censored_contacts ~= 0;          % MATLAB: 1 = CENSORED
 
     edges  = quantile(bouts_mov.sm, quant_list);
     sm_bin = discretize(bouts_mov.sm, edges);

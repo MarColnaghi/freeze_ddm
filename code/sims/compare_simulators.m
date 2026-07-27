@@ -281,25 +281,37 @@ fprintf('    leaky(lambda=1/dt) = %.4f   vs  extrema_detection_clean = %.4f\n', 
 % (1-lambda*dt) vs e^{-lambda*dt} discretisation gap, made visible. The PDE
 % carries the BGK discrete-monitoring bound correction and a one-frame drift
 % shift (end-of-step convention), exactly as in sims/test_sim_vs_fpe.m.
-lam_show  = [0 5 20 40];
-theta_dmo = 0.2;                     % lower bound so leaky processes still cross
+lam_show  = [0 5 15 30];
+theta_dmo = 0.54;                     % lower bound so leaky processes still cross
 figure('Color','w','Position',[10 10 1150 760]);
 tiledlayout(2,2,"TileSpacing","compact","Padding","compact")
+dt = 1/60;
 for jj = 1:numel(lam_show)
     lam = lam_show(jj);
+    du = interp1(t_nat, drift, tf, 'previous');            % SAME signal, finer grid
+
     rE = sim_ddm_seeded(drift, [dt, sigma^2, 0, theta_dmo, lam], Nsw, 100);
     rO = sim_ou_exact(drift, theta_dmo, sigma, lam, dt, 0, Nsw, 100);
-    hO = histcounts(rO(~isnan(rO)), edges_sw, 'Normalization','pdf')';
+    % UNCONDITIONAL densities: area = P(cross) = 1 - censoring, so the histograms
+    % are on the SAME footing as the PDE (which is NOT renormalised for censoring).
+    % 'Normalization','pdf' would renormalise the crossings to area 1 -- a
+    % CONDITIONAL density that sits ~1/P(cross) too tall whenever censoring bites
+    % (fine at lambda~0, badly misleading at high lambda where most trials censor).
+    hE = histcounts(rE(~isnan(rE)), edges_sw)' / Nsw / dt;
+    hO = histcounts(rO(~isnan(rO)), edges_sw)' / Nsw / dt;
     prm = struct('dt',dt,'dx',0.005,'sigma_sq',sigma^2,'x0',0,'x_min',-7, ...
                  'bound',theta_dmo + 0.5826*sigma*sqrt(dt),'lambda',lam);
     [pdf_pde,~,t_pde] = fpe_cn([drift(1); drift(1:end-1)], prm);
 
     ax = nexttile; hold(ax,'on')
-    histogram(ax, rE(~isnan(rE)), edges_sw, 'Normalization','pdf', ...
-        'FaceColor',[0.7 0.7 0.7], 'EdgeColor','none', 'FaceAlpha',0.55, ...
-        'DisplayName','Euler sim  (1-\lambda dt)');
-    plot(ax, ctrs_sw, hO, '-', 'Color',[0.90 0.45 0.13], 'LineWidth',1.8, ...
-        'DisplayName','exact-OU sim  (e^{-\lambda dt})');
+    %bar(ax, ctrs_sw, hE, 1, 'FaceColor',[0.7 0.7 0.7], 'EdgeColor','none', ...
+    %    'FaceAlpha',0.55, 'DisplayName','Euler sim  (1-\lambda dt)');
+
+    histogram(rE, -1/120:1/60:3000, 'Normalization', 'pdf')
+    histogram(rO, -1/120:1/60:3000, 'Normalization', 'pdf')
+
+   % plot(ax, ctrs_sw, hO, '-', 'Color',[0.90 0.45 0.13], 'LineWidth',1.8, ...
+   %     'DisplayName','exact-OU sim  (e^{-\lambda dt})');
     plot(ax, t_pde, pdf_pde, '-', 'Color',[0.15 0.35 0.75], 'LineWidth',2.4, ...
         'DisplayName','exact PDE  (fpe\_cn)');
     title(ax, sprintf('\\lambda = %g      decay:  Euler %.3f  vs  exact %.3f', ...
@@ -311,6 +323,66 @@ for jj = 1:numel(lam_show)
     if jj==1, legend(ax,'Location','northeast','Box','off','FontSize',12); end
     apply_generic(ax,'xlim',[0 1.1],'font_size',15,'line_width',1.4);
 end
+
+%% ── (5c) dt-CONVERGENCE: Euler collapses onto the exact process as dt->0 ──
+% The (1-lambda*dt) decay error is O(dt), so refining dt must drive the Euler
+% simulator onto the exact-OU sim and the PDE. CRUCIAL: you refine dt by holding
+% the CONTINUOUS signal fixed and UPSAMPLING it onto a finer grid -- NOT by
+% shrinking the dt scalar alone (that keeps the same n samples and squashes the
+% trial into n*dt seconds, a different model).
+lam_cv   = 30;
+theta_cv = 0.3;
+Nsw_cv   = 100000;
+dt_cv    = [1/60 1/120 1/240 1/480 1/900 1/6000];
+t_nat    = (0:n-1)' * dt;                 % native time axis of `drift` (0..T_dd)
+tq       = (0:0.01:T_dd)';                % common grid for the CDFs
+ucdf     = @(r) sum(r(~isnan(r)) <= tq.', 1).' / Nsw_cv;   % UNCONDITIONAL CDF
+KS_E = nan(size(dt_cv));  KS_O = nan(size(dt_cv));
+cdfE_coarse = []; cdfE_fine = []; cdfP_fine = [];
+for ii = 1:numel(dt_cv)
+    d  = dt_cv(ii);
+    tf = (0:d:T_dd)';
+    du = interp1(t_nat, drift, tf, 'previous');            % SAME signal, finer grid
+    rE = sim_ddm_seeded(du, [d, sigma^2, 0, theta_cv, lam_cv], Nsw_cv, 100);
+    rO = sim_ou_exact(du, theta_cv, sigma, lam_cv, d, 0, Nsw_cv, 100);
+    prm = struct('dt',d,'dx',0.005,'sigma_sq',sigma^2,'x0',0,'x_min',-7, ...
+                 'bound',theta_cv + 0.5826*sigma*sqrt(d),'lambda',lam_cv);
+    [pdf,~,tp] = fpe_cn([du(1); du(1:end-1)], prm);
+    cdfP = interp1(tp, cumsum(pdf)*d, tq, 'linear','extrap');
+    KS_E(ii) = max(abs(ucdf(rE) - cdfP));
+    KS_O(ii) = max(abs(ucdf(rO) - cdfP));
+    if ii == 1,               cdfE_coarse = ucdf(rE); end
+    if ii == numel(dt_cv),    cdfE_fine   = ucdf(rE); cdfP_fine = cdfP; end
+end
+fprintf('\n[5c] dt-convergence (lambda=%g, theta=%g), KS vs exact PDE:\n', lam_cv, theta_cv);
+fprintf('     %8s %10s %12s\n','dt','KS Euler','KS exact-OU');
+for ii = 1:numel(dt_cv)
+    fprintf('     %8s %10.4f %12.4f\n', sprintf('1/%d',round(1/dt_cv(ii))), KS_E(ii), KS_O(ii));
+end
+
+figure('Color','w','Position',[10 10 1080 430]);
+tiledlayout(1,2,"TileSpacing","compact","Padding","compact")
+
+ax = nexttile; hold(ax,'on')
+plot(ax, dt_cv, KS_E, 'o-', 'Color',[0.2 0.2 0.2], 'MarkerFaceColor',[0.2 0.2 0.2], ...
+     'LineWidth',2, 'DisplayName','Euler  (1-\lambda dt)');
+plot(ax, dt_cv, KS_O, 'o-', 'Color',[0.90 0.45 0.13], 'MarkerFaceColor',[0.90 0.45 0.13], ...
+     'LineWidth',2, 'DisplayName','exact-OU  (e^{-\lambda dt})');
+set(ax,'XScale','log','YScale','log');
+xlabel(ax,'dt (s)'); ylabel(ax,'KS vs exact PDE');
+title(ax, sprintf('Euler \\rightarrow exact as dt\\rightarrow0   (\\lambda=%g)', lam_cv), 'FontWeight','normal');
+legend(ax,'Location','southeast','Box','off','FontSize',12);
+apply_generic(ax,'font_size',15,'line_width',1.4);
+
+ax = nexttile; hold(ax,'on')
+plot(ax, tq, cdfP_fine,   '-',  'Color',[0.15 0.35 0.75], 'LineWidth',2.8, 'DisplayName','exact PDE');
+plot(ax, tq, cdfE_coarse, '--', 'Color',[0.55 0.55 0.55], 'LineWidth',1.8, 'DisplayName','Euler @ dt=1/60 (coarse)');
+plot(ax, tq, cdfE_fine,   '-',  'Color',[0.10 0.10 0.10], 'LineWidth',1.4, ...
+     'DisplayName', sprintf('Euler @ dt=1/%d (fine)', round(1/dt_cv(end))));
+xlabel(ax,'first-passage time (s)'); ylabel(ax,'CDF (unconditional)');
+title(ax,'coarse Euler peels off; fine Euler lands on the PDE','FontWeight','normal');
+legend(ax,'Location','southeast','Box','off','FontSize',11);
+apply_generic(ax,'xlim',[0 min(4,T_dd)],'font_size',15,'line_width',1.4);
 
 %% ─── Original validation: drift_diff_new vs C++ mex on real bout data ────
 paths = path_generator('folder', 'sims/sanity_checks');

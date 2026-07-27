@@ -24,14 +24,12 @@ is_below_threshold = distance_freeze_cropped < threshold;
 contact_mask = any(is_below_threshold, 2);
 [~, first_idx] = max(is_below_threshold, [], 2);
 
-admin_censor_mask = bouts_proc.durations > fine;   % bout exceeded observation window
-ending_points     = min(bouts_proc.durations, fine);
+admin_censor_mask = bouts_proc.durations > fine;
+ending_points     = min(bouts_proc.durations, fine); 
 ending_points(contact_mask) = first_idx(contact_mask);
 
 % Collision censoring takes priority: if both apply, the collision came first
 bouts_proc.is_censored        = contact_mask | admin_censor_mask;
-bouts_proc.contacts           = contact_mask;        % alias kept for compatibility
-bouts_proc.censored_collision = contact_mask;
-bouts_proc.censored_admin     = admin_censor_mask & ~contact_mask;
+bouts_proc.censored_contacts  = contact_mask;     
+bouts_proc.censored_loom      = admin_censor_mask & ~contact_mask;
 bouts_proc.ending_time        = ending_points;
-bouts_proc.censoring_time     = ending_points;       % alias kept for compatibility

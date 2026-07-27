@@ -4,8 +4,12 @@ id_code = 'imm2_mob2_pc4';
 col = cmapper();
 paths_out = path_generator('folder', 'spontaneous_process', 'bouts_id', id_code, 'imfirst', false);
 bouts = importdata(fullfile(paths_out.dataset, 'bouts.mat'));
-bouts_spontaneous = data_parser_new(bouts, 'period', 'bsl', 'window', 'le', 'type', 'immobility', 'nloom', 10:20);
+bouts_spontaneous = data_parser_new(bouts, 'period', 'bsl', 'window', 'all', 'type', 'immobility', 'nloom', 2:20);
 bouts_le = data_parser_new(bouts, 'period', 'loom', 'window', 'le', 'type', 'immobility', 'nloom', 2:20);
+
+contact_threshold = 80;
+bouts_spontaneous = impose_contact_threshold(bouts_spontaneous, 'threshold', contact_threshold);
+bouts_le = impose_contact_threshold(bouts_le, 'threshold', contact_threshold);
 
 fh = figure('color', 'w', 'Position', [100, 100, 800, 400]);
 hold on
@@ -24,8 +28,8 @@ axes(fh, 'Position', inset_pos)
 hold on
 apply_generic(gca, 'xlim', xlims, 'ylim', [-0.05 1.05])
 ylabel('ecdf')
-[f, x] = ecdf(bouts_spontaneous.durations); plot(x, f, 'Color', col.processes.contam, 'LineWidth', 3);
-[f, x] = ecdf(bouts_le.durations); plot(x, f, 'Color', col.period.loom, 'LineWidth', 3);
+[f, x] = ecdf(bouts_spontaneous.ending_time, 'Censoring', bouts_spontaneous.is_censored); plot(x, f, 'Color', col.processes.contam, 'LineWidth', 3);
+[f, x] = ecdf(bouts_le.ending_time, 'Censoring', bouts_le.is_censored); plot(x, f, 'Color', col.period.loom, 'LineWidth', 3);
 
 inset_pos(1) = inset_pos(1) + 0.3;
 axes(fh, 'Position', inset_pos)

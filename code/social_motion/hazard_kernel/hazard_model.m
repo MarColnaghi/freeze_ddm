@@ -17,7 +17,7 @@ buf = cell(height(bouts_proc),1);
 for i = 1:height(bouts_proc)
     m  = ds(motion_ts{i}(:));                               % motion at dt resolution
     ni = min(numel(m), round(bouts_proc.durations_s(i)/dt));
-    ev = double(bouts_proc.contacts(i) == 0);               % 1 = resumption, 0 = collision
+    ev = double(bouts_proc.censored_contacts(i) == 0);               % 1 = resumption, 0 = collision
     last = ni - (1 - ev);                                   % censored: survives to ni-1
     if last < k0, continue; end                             % must reach the detectable floor
     k = (k0:last).';                                        % delayed entry: rows from 0.5 s on
@@ -54,7 +54,7 @@ buf = cell(height(bouts_proc),1);
 for i = 1:height(bouts_proc)
     m  = ds(motion_ts{i}(:));
     ni = min(numel(m), round(bouts_proc.durations_s(i)/dt));
-    ev = double(bouts_proc.contacts(i) == 0);
+    ev = double(bouts_proc.censored_contacts(i) == 0);
     last = ni - (1 - ev); if last < 1, continue; end
     k = (1:last)'; L = zeros(last, K+1);
     for j = 0:K

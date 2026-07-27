@@ -16,7 +16,7 @@ bouts_spontaneous = data_parser_new(bouts, 'period', 'bsl', 'type', 'immobility'
 % indexing stays aligned even when fly ids are non-contiguous.
 counts_x_fly = accumarray(fly_idx, 1)';
 
-select_method = 'sum';
+select_method = 'median';
 
 % Median duration per fly
 dur_per_fly.median = accumarray( ...

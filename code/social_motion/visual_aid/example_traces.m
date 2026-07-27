@@ -17,7 +17,7 @@ bouts = bouts_formatting(bouts, thresholds);
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', 'nloom', 2:20, 'min_dur', 30);
 bouts_proc = sortrows(bouts_proc, 'sm');
 threshold = 0;
-[bouts_proc, contact_mask] = impose_contact_threshold(bouts_proc, 'threshold', threshold);
+[bouts_proc, ~] = impose_contact_threshold(bouts_proc, 'threshold', threshold);
 
 inizio = 0;
 fine = 630;
@@ -27,12 +27,8 @@ align = 'offset';
 sm_freeze = extract_sm_from_bouts(bouts_proc, 'type', 'onlyfreeze', 'output_type', 'mat', 'norm_factor', 10, 'cache', 'motion_cache');
 sm_ili = extract_sm_from_bouts(bouts_proc, 'type', 'onsets', 'output_type', 'mat', 'window', [inizio fine], 'norm_factor', 10, 'cache', 'motion_cache');
 
-%%
-
-n_trials = 120;
+n_trials = 50;
 trials = sort(randi(height(bouts_proc), n_trials, 1));
-
-t = inizio:fine;
 
 fh = figure('color','w','Position', [100, 100, 500, 900]);
 tiledlayout(1, 1, 'TileSpacing', 'compact', 'Padding', 'compact')
@@ -80,7 +76,7 @@ sm_freeze = extract_sm_from_bouts(bouts_proc, 'type', 'onlyfreeze', 'output_type
 
 %%
 
-n_trials = 250;
+n_trials = 50;
 trials = sort(randi(height(bouts_proc), n_trials, 1));
 
 t = inizio:fine;
