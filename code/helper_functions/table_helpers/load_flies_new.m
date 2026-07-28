@@ -5,7 +5,6 @@ opt = inputParser;
 addParameter(opt, 'save', 'both');
 addParameter(opt, 'paths', '');
 addParameter(opt, 'imfirst', false);
-addParameter(opt, 'edit_filename', false);
 
 parse(opt, varargin{:});
 
@@ -16,46 +15,66 @@ parse(opt, varargin{:});
 % the loom is on - should have 20 x 30 frames, which is the loom duration), 3. Velocity (actually the speed of the focal fly), 4. Walk_bout (0 or 1), 5. Freeze_bout (0 or 1),
 % 5. Low_vel (low velocity behaviours 0 or 1), 6. Sum_motion (the summed motion cue the other surrounding, controlled, flies produce.
 
-%% Initialize big table
-
-bouts = table();
-
-bouts.fly = zeros(0); % fly ID
-bouts.genotype = zeros(0); % genotype of the fly
-bouts.moving_flies = zeros(0); % number of moving flies around focal fly
-
-bouts.sloom = zeros(0); % loom speed in cm/s
-bouts.nloom = zeros(0); % loom number
-bouts.nloom_loomwin = zeros(0); % loom number aligned to loom presentation
-bouts.period = zeros(0); % baseline or loom
-
-bouts.loom_start = zeros(0); % frame of loom start
-bouts.loom_dur = zeros(0); % duration of each loom in frames
-
-bouts.onsets = zeros(0); % bout onset in frames
-bouts.onsets_loomaligned = zeros(0); % bout onset in frames aligned to previous loom presentation
-bouts.onsets_loomwin = zeros(0); % bout onset in frames aligned to next loom presentation
-bouts.le = zeros(0);
-
-bouts.durations = zeros(0); % bout duration in frames
-bouts.ends = zeros(0); % bout offset in frames
-
-bouts.type = zeros(0); % bout type (1 immobility, 0 mobility)
-bouts.bout_with_loom = zeros(0); % bout had a loom presentation inside
-bouts.frozen_start = zeros(0); % bout had a loom presentation inside
-
-bouts.avg_sm = zeros(0); % average focal fly velocity between loom start and freeze start
-bouts.avg_ss = zeros(0); % average focal fly velocity between loom start and freeze start
-bouts.avg_fs = zeros(0); % average focal fly velocity between one second before loom until loom
-bouts.avg_fs_1s = zeros(0); % average focal fly velocity between one second before loom until loom
-bouts.avg_pc = zeros(0); % average focal fly velocity between one second before freeze until freeze
-bouts.jumping_flies = zeros(0);
-bouts.filename = zeros(0);
+%% Output columns
+%
+% One row per behavioural bout, per fly. Each file's bouts are built up as `z`
+% in the loop below and concatenated, so the order here is assignment order.
+%
+%   fly                 fly ID, parsed from the .flyN.csv suffix
+%   type                1 immobility, 0 mobility
+%   le                  placeholder, filled in by bouts_formatting
+%   period              0 baseline, 1 loom block
+%   onsets_loomaligned  bout onset relative to the previous loom
+%   durations           bout duration in frames
+%   nloom               index of the previous loom, 1-20 within its block
+%   sloom               loom speed, 25 or 50 cm
+%   bout_with_loom      number of looms starting inside the bout
+%   frozen_start        per-loom flag, broadcast to every bout sharing that
+%                       nloom: true when a loom started an immobility bout of
+%                       at least 30 frames
+%   avg_sm              mean sum_motion over the bout, capped at 630 frames
+%   avg_ss              mean sum_speed over the bout, capped at 630 frames
+%   avg_sa              mean sum_angle over the bout, capped at 630 frames
+%   avg_fs_1s           mean focal velocity over the second before bout onset,
+%                       NaN when the bout starts before frame 61
+%   avg_fs_loom         mean focal velocity over the second before the previous
+%                       loom, NaN when that loom lands before frame 61
+%   avg_fs              mean focal velocity over the whole bout, uncapped
+%   avg_pc              mean pixelchange over the whole bout, uncapped
+%   genotype            1 CS. 2 LC11TNT and 3 EmptyTNT come from the dataset 2
+%                       branch, which is unreachable under `for dataset = 0`
+%   moving_flies        number of moving flies around the focal fly, 0-4
+%   onsets              bout onset in frames
+%   ends                one past the bout's last frame, so a bout spans
+%                       onsets : ends - 1
+%   onsets_loomwin      bout onset relative to the next loom, rewritten by
+%                       bouts_formatting
+%   nloom_loomwin       loom index aligned to the next loom, likewise
+%   loom_ts             frame of the previous loom
+%   loom_ts_n           frame of the next loom
+%   loom_durs           span of the previous loom counted in frame gaps rather
+%                       than frames, so one short. Nothing reads it
+%   jump_flies          number of surrounding flies jumping at bout onset
+%
+% bouts_formatting then adds `id` and overwrites `le`, `onsets_loomwin` and
+% `nloom_loomwin`.
+%
+% The 630-frame cap on avg_sm / avg_ss / avg_sa is deliberate, not an
+% oversight. Those three are the social variables, describing what the
+% surrounding flies did, and 630 frames is about one loom cycle at 60 fps: a
+% ~570 frame ITI plus the 30 frame loom. It is the same window as `fine` in
+% impose_contact_threshold. avg_fs and avg_pc describe the focal fly's own
+% behaviour during the bout and so run the full length. The consequence worth
+% remembering is that for any bout longer than 630 frames the two groups are
+% averaged over different supports, so they are not directly comparable.
 
 soc_mot = table();
 soc_mot.ts_sm = zeros(0);
 
-warning('off', 'MATLAB:table:ModifiedAndSavedVarnames'); %turn off readtable warning
+% Restored on the way out, including on error, so a failed run does not leave
+% the warning suppressed for the rest of the session
+prev_warn = warning('off', 'MATLAB:table:ModifiedAndSavedVarnames'); % readtable warning
+restore_warn = onCleanup(@() warning(prev_warn)); %#ok<NASGU>
 
 %% Enter the directory and extract properties from
 
@@ -74,8 +93,9 @@ fly_id = 0;
 
 for dataset = 0
 
+    % Every dir and readtable call below prefixes `directory`, so there is no
+    % need to cd in here and leave the session somewhere else on the way out
     directory = sprintf('/Users/marcocolnaghi/experimental_data/004--social_ddm/dataset_%d/', dataset);
-    cd(directory)
     n_moving = 0:4;
 
     if dataset == 0 
@@ -121,12 +141,27 @@ for dataset = 0
                 end
 
                 loom_frames = Fly1.frame(Fly1.looming_bout==1);
-                loom_starts = loom_frames([true; diff(loom_frames)>2])+1;
+                loom_starts = loom_frames([true; diff(loom_frames)>1])+1;
                 loom_ends = loom_frames([diff(loom_frames)>1;true])+1;
+
+                % The two masks used to disagree, >2 against >1, so a single
+                % dropped frame mid-loom surfaced as a dimension mismatch on
+                % the subtraction below. Check the structure directly instead
+                assert(numel(loom_starts) == 20 && numel(loom_ends) == 20, ...
+                    'load_flies_new:loomCount', ...
+                    'Expected 20 looms in %s, found %d starts and %d ends.', ...
+                    listing(kf).name, numel(loom_starts), numel(loom_ends));
+
                 loom_durs = repmat(loom_ends - loom_starts, 2, 1);
 
                 event_indices = repmat(loom_starts, 2, 1);
                 event_indices(1:20,:) = event_indices(1:20,:) - 18001;
+
+                % interp1 needs a monotonic grid. The -18001 shift on the first
+                % block only keeps it monotonic while the baseline is longer
+                % than the span of the loom block
+                assert(all(diff(event_indices) > 0), 'load_flies_new:eventOrder', ...
+                    'Loom event grid is not strictly increasing in %s.', listing(kf).name);
 
                 imm_frames = Fly1.pixelchange < thresholds.pc;
 
@@ -155,9 +190,19 @@ for dataset = 0
                 z.le = zeros(length(run_lengths), 1);
 
                 onsets = run_ends - run_lengths;
+
                 loom_ts_previous = interp1(event_indices, event_indices, onsets, 'previous', 'extrap');
                 loom_ts_next = interp1(event_indices, event_indices, onsets, 'next', 'extrap');
                 [~, nloom] = ismember(loom_ts_previous, event_indices);
+
+                % A bout with no previous loom lands here as nloom == 0. That
+                % is then dropped by the histcounts edges further down and only
+                % surfaces as a height mismatch on the loom_durs assignment, a
+                % long way from the cause
+                assert(all(nloom > 0), 'load_flies_new:onsetBeforeGrid', ...
+                    '%d bouts in %s have no preceding loom event (earliest onset %d, first event %d).', ...
+                    sum(nloom == 0), listing(kf).name, min(onsets), event_indices(1));
+
                 z.period = nloom > 20;
 
                 z.onsets_loomaligned =  onsets - loom_ts_previous;
@@ -166,7 +211,11 @@ for dataset = 0
                 z.nloom = nloom;
                 z.sloom = loom_speed .* ones(length(run_lengths), 1);
 
-                z.bout_with_loom = sum((event_indices > onsets') & (event_indices < run_ends'), 1)';
+                % Bounds match the bout's actual span, onsets : run_ends - 1.
+                % The old form paired a strict > against onsets with a strict <
+                % against run_ends, so a loom landing on the bout's first frame
+                % was dropped while one on its last frame was kept
+                z.bout_with_loom = sum((event_indices >= onsets') & (event_indices <= (run_ends - 1)'), 1)';
 
                 if any(z.bout_with_loom > 0 & z.type == 1 & z.durations >= 30)
                     frozen_starts = unique(z.nloom(z.bout_with_loom > 0 & z.type == 1 & z.durations >= 30) + z.bout_with_loom(z.bout_with_loom > 0 & z.type == 1 & z.durations >= 30));
@@ -189,8 +238,13 @@ for dataset = 0
                 z.avg_fs_1s = nan(length(run_lengths), 1);
                 z.avg_fs_1s(onsets >= 61, :) = compute_means(Fly1.velocity(1:end), onsets(onsets >= 61, :) - 60, onsets(onsets >= 61, :) - 1);
 
+                % Needs a full second of history before the loom, so the guard
+                % is >= 61 to match avg_fs_1s above. The old > 0 admitted looms
+                % at frames 1-60, where the window start goes non-positive and
+                % the indexing throws
                 z.avg_fs_loom = nan(length(run_lengths), 1);
-                z.avg_fs_loom(loom_ts_previous > 0) = compute_means(Fly1.velocity(1:end), loom_ts_previous(loom_ts_previous > 0) - 60, loom_ts_previous(loom_ts_previous > 0) - 1);
+                has_pre_loom = loom_ts_previous >= 61;
+                z.avg_fs_loom(has_pre_loom) = compute_means(Fly1.velocity(1:end), loom_ts_previous(has_pre_loom) - 60, loom_ts_previous(has_pre_loom) - 1);
 
                 z.avg_fs = compute_means(Fly1.velocity(1:end), run_ends - run_lengths, run_ends - 1);
                 z.avg_pc = compute_means(Fly1.pixelchange(1:end), run_ends - run_lengths, run_ends - 1);
@@ -231,15 +285,21 @@ bouts.nloom_loomwin(bouts.nloom_loomwin > 20) = bouts.nloom_loomwin(bouts.nloom_
 
 [bouts, soc_mot] = bouts_formatting(bouts, thresholds, soc_mot);
 
-if nargin > 1
-    cd(opt.Results.paths.dataset)
-    if strcmp(opt.Results.save, 'both')
-        save('bouts.mat','bouts', '-v7.3')
-        save('soc_mot.mat','soc_mot', '-v7.3')
-    elseif strcmp(opt.Results.save, 'soc_mot')
-        save('soc_mot.mat','bouts', '-v7.3')
-    elseif strcmp(opt.Results.save, 'bouts')
-        save('bouts.mat','bouts', '-v7.3')
-    else
+% Guarding on nargin was wrong: with varargin it counts every name-value
+% element, so passing any option at all sent this block into a field reference
+% on the default '' and threw. Test for the thing actually needed instead.
+% Saving by full path also removes the second cd
+if ~isempty(opt.Results.paths)
+    bouts_file   = fullfile(opt.Results.paths.dataset, 'bouts.mat');
+    soc_mot_file = fullfile(opt.Results.paths.dataset, 'soc_mot.mat');
+
+    switch opt.Results.save
+        case 'both'
+            save(bouts_file, 'bouts', '-v7.3')
+            save(soc_mot_file, 'soc_mot', '-v7.3')
+        case 'soc_mot'
+            save(soc_mot_file, 'soc_mot', '-v7.3')   % used to save `bouts` here
+        case 'bouts'
+            save(bouts_file, 'bouts', '-v7.3')
     end
 end

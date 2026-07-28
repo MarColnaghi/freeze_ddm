@@ -20,7 +20,7 @@ for threshold_imm = 4:-1:1
             disp('already have this dataset')
         else
 
-            [bouts] = load_flies_new(thresholds, 'paths', paths, 'save', 'bouts', 'edit_filename', false, 'imfirst', imfirst);
+            [bouts] = load_flies_new(thresholds, 'paths', paths, 'save', 'bouts', 'imfirst', imfirst);
         end
     end
     %  end
