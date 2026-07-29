@@ -288,7 +288,7 @@ tiledlayout(2,2,"TileSpacing","compact","Padding","compact")
 dt = 1/60;
 for jj = 1:numel(lam_show)
     lam = lam_show(jj);
-    du = interp1(t_nat, drift, tf, 'previous');            % SAME signal, finer grid
+ %   du = interp1(t_nat, drift, tf, 'previous');            % SAME signal, finer grid
 
     rE = sim_ddm_seeded(drift, [dt, sigma^2, 0, theta_dmo, lam], Nsw, 100);
     rO = sim_ou_exact(drift, theta_dmo, sigma, lam, dt, 0, Nsw, 100);

@@ -60,7 +60,7 @@ sigma    = sqrt(sigma_sq);
 dx       = 0.005;          % converged (see header)
 N        = 500000;
 Ttot     = 6.0;
-dt_list  = [1/60 1/120 1/240 1/1000];
+dt_list  = [1/60 1/120 1/240 1/1000 1/10000];
 mc_noise = 1/sqrt(N);
 
 % time-varying drive as a FUNCTION of t, so it can be resampled at each dt
@@ -70,7 +70,7 @@ cases = struct( ...
   'name',    {'A constant drift',  'B time-varying',    'C leaky (lambda=5)', 'D near floor (x_min=-0.6)'}, ...
   'driftfun',{@(t) 2.0+0*t,        @(t) 4.2*drive(t),   @(t) 4.2*drive(t),    @(t) 0.35*drive(t)}, ...
   'bound',   {2.7,                 2.7,                 0.6,                  1.0}, ...
-  'lambda',  {0,                   0,                   7,                    0}, ...
+  'lambda',  {0,                   0,                   5,                    0}, ...
   'x_min',   {-7,                  -7,                  -7,                   -0.6}, ...
   'discret', {true,                true,                true,                 false});
 %   discret = true  -> difference is discretisation only, KS must vanish as dt->0
@@ -128,12 +128,13 @@ nP = numel(cases);
 figure('Color','w','Position',[30 30 1750 780]);
 tiledlayout(2, nP, 'TileSpacing','compact', 'Padding','compact');
 for ci = 1:nP
-    [~, R] = run_pair(cases(ci), dt_list(1), dx, sigma_sq, sigma, Ttot, N, true);
+    [~, R] = run_pair(cases(ci), dt_list(end - 1), dx, sigma_sq, sigma, Ttot, N, true);
     ax = nexttile(ci); hold(ax,'on')
     plot(ax, R.t, R.pmf_fpe, '-',  'LineWidth', 2.4, 'Color', [0.20 0.45 0.75], ...
          'DisplayName','FPE density');
     plot(ax, R.t, R.pmf_mc,  '--', 'LineWidth', 1.3, 'Color', [0.90 0.35 0.13], ...
          'DisplayName','Monte-Carlo');
+    histogram()
     xlabel(ax,'first-passage time (s)'); if ci==1, ylabel(ax,'P(cross in frame)'); end
     title(ax, cases(ci).name, 'FontWeight','normal');
     if ci==1, legend(ax,'Location','northeast','Box','off','FontSize',11); end
