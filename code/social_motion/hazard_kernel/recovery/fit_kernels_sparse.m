@@ -12,12 +12,30 @@ function out = fit_kernels_sparse(S, yev, tinf, mov, slo, gid, lag_fr, fps, opts
 %   lag_fr : (nLag × 1) lag grid in frames (τ = lag/fps; ≥0 causal, <0 acausal)
 %   fps    : frames/s
 %   opts   : struct (all optional): nb_kernel, nb_acausal, bump_width, nb_baseline,
-%            n_exp, cv_folds, kernel_past_s, sel_rule ('argmax'|'1se'), verbose
+%            n_exp, cv_folds, kernel_past_s, sel_rule ('argmax'|'1se'), verbose,
+%            use_nuisance (default true; false -> intercept + kernel only, i.e. no
+%            baseline hazard b0(time-in-freeze) and no mov/slo dummies)
+%            tau_lo (default 0.05 s; shortest time-constant in the exponential
+%            bank. The bank is log-spaced over [tau_lo, kernel_past_s], so this
+%            sets how fast a decay B can resolve -- a true kernel decaying faster
+%            than tau_lo cannot be represented, only approximated by the fastest
+%            atom. Lowering it toward 1/fps also IMPROVES conditioning: fast atoms
+%            are far more distinguishable from each other on a frame grid than
+%            slow ones, which all look alike over a short window.)
+%            nonneg_l1 (default false; true -> constrain the L1 kernel coefficients
+%            of models B and C to be >= 0. All basis functions are non-negative, so
+%            this makes the kernel itself non-negative. It exists to stop pairs of
+%            near-duplicate atoms taking large opposite signs and cancelling -- the
+%            usual failure mode of L1 on a collinear bank. NOTE this is a genuine
+%            constraint, not a prior: under it a negative kernel is unrepresentable
+%            rather than merely unlikely, so a non-negative result is no longer
+%            evidence that the kernel is positive.)
 %
 % Returns struct OUT with: t_rel, caus_mask, lag_fr, fps, tau_grid, is_exp, sel_tau,
-%   kernel_A/B/C (+_se), per-model dev/df/aic/cv_dev/lambda, and the nuisance-only
-%   baseline (suffix N). Models: (0) nuisance-only, (A) L2 smoothness on raised
-%   cosines, (B) L1 sparse on an exponential bank, (C) L1 sparse on flexible bumps.
+%   kernel_U/A/B/C (+_se), per-model dev/df/aic/cv_dev/lambda, and the nuisance-only
+%   baseline (suffix N). Models: (0) nuisance-only, (U) UNREGULARIZED raised
+%   cosines, (A) L2 smoothness on raised cosines, (B) L1 sparse on an exponential
+%   bank, (C) L1 sparse on flexible bumps.
 
     o = default_opts(opts);
     r = size(S,1);
@@ -29,12 +47,16 @@ function out = fit_kernels_sparse(S, yev, tinf, mov, slo, gid, lag_fr, fps, opts
     Bb = raised_cosine_basis(ut, o.nb_baseline);  Bb = Bb(:, 2:end);
     [~,~,im]  = unique(mov);  Dmov = dummyvar(im);  Dmov = Dmov(:,2:end);
     [~,~,iss] = unique(slo);  Dslo = dummyvar(iss); Dslo = Dslo(:,2:end);
-    Nuis = [Bb, Dmov, Dslo];
+    if o.use_nuisance
+        Nuis = [Bb, Dmov, Dslo];
+    else
+        Nuis = zeros(r, 0);   % intercept + kernel only. Duration dependence has
+    end                       % nowhere to go but the kernel -- read it with that in mind.
 
     fold = mod(randperm(max(gid)), o.cv_folds) + 1;  rowfold = fold(gid);
 
     % ── the three kernel bases ────────────────────────────────────────────────
-    tau_grid_s = logspace(log10(0.05), log10(o.kernel_past_s), o.n_exp);
+    tau_grid_s = logspace(log10(o.tau_lo), log10(o.kernel_past_s), o.n_exp);
     [Bexp, tau_grid, is_exp] = exp_basis(lag_fr, tau_grid_s, fps, o.nb_acausal, o.bump_width);
     Bflex = raised_cosine_basis(lag_fr, o.nb_kernel + o.nb_acausal, o.bump_width);
     Bflex = Bflex ./ max(vecnorm(Bflex), eps);
@@ -46,8 +68,20 @@ function out = fit_kernels_sparse(S, yev, tinf, mov, slo, gid, lag_fr, fps, opts
     [devN, dfN, aicN] = model_metrics_l2(Xnull, yev, bN, VN);
     cv_devN = -2 * pen_grouped_cv(Xnull, yev, PtinyN, rowfold, o.cv_folds);
 
-    % ── (A) L2 smoothness ─────────────────────────────────────────────────────
+    % ── (U) UNREGULARIZED raised cosines — the no-penalty reference ───────────
+    % Same design as (A); the 1e-6 ridge is numerical conditioning only, not
+    % regularisation. Ringy/high-variance when events are scarce — that contrast
+    % against (A)/(B)/(C) is the point of including it.
     XA   = [ones(r,1), S*Bsm, Nuis];
+    kerU = 1 + (1:size(Bsm,2));
+    PtinyU = 1e-6 * eye(size(XA,2));
+    [bU, VU] = penalized_logit(XA, yev, PtinyU);
+    kernel_U    = Bsm * bU(kerU);
+    kernel_U_se = sqrt(sum((Bsm * VU(kerU,kerU)) .* Bsm, 2));
+    [devU, dfU, aicU] = model_metrics_l2(XA, yev, bU, VU);
+    cv_devU = -2 * pen_grouped_cv(XA, yev, PtinyU, rowfold, o.cv_folds);
+
+    % ── (A) L2 smoothness ─────────────────────────────────────────────────────
     kerA = 1 + (1:size(Bsm,2));  Dk = diffmat(size(Bsm,2), 2);
     PkA  = zeros(size(XA,2));  PkA(kerA,kerA) = Dk'*Dk;
     lam_L2 = logspace(-1, 6, 12);
@@ -58,18 +92,23 @@ function out = fit_kernels_sparse(S, yev, tinf, mov, slo, gid, lag_fr, fps, opts
     [devA, dfA, aicA] = model_metrics_l2(XA, yev, bA, VA);
 
     % ── (B) L1 exponential ; (C) L1 flexible ──────────────────────────────────
+    % nonneg_l1 is applied to BOTH L1 models on purpose: the B-vs-C contrast is
+    % meant to isolate the BASIS (exponential vs raised cosine), and constraining
+    % only one of them would confound that with the sign constraint.
     [~, kernel_B, kernel_B_se, sel_tau, lambda_B, cvllB, devB, dfB, aicB] = ...
-        fit_l1(S, Bexp, Nuis, yev, rowfold, o.cv_folds, is_exp, tau_grid, o.sel_rule, 'B: L1 exp', o.verbose);
+        fit_l1(S, Bexp, Nuis, yev, rowfold, o.cv_folds, is_exp, tau_grid, o.sel_rule, 'B: L1 exp', o.verbose, o.nonneg_l1);
     [~, kernel_C, kernel_C_se, ~, lambda_C, cvllC, devC, dfC, aicC] = ...
-        fit_l1(S, Bflex, Nuis, yev, rowfold, o.cv_folds, false(1,size(Bflex,2)), [], o.sel_rule, 'C: L1 flex', o.verbose);
+        fit_l1(S, Bflex, Nuis, yev, rowfold, o.cv_folds, false(1,size(Bflex,2)), [], o.sel_rule, 'C: L1 flex', o.verbose, o.nonneg_l1);
 
     out = struct( ...
         't_rel',t_rel, 'caus_mask',caus_mask, 'lag_fr',lag_fr, 'fps',fps, ...
         'tau_grid',tau_grid, 'is_exp',is_exp, 'sel_tau',sel_tau, ...
+        'kernel_U',kernel_U, 'kernel_U_se',kernel_U_se, ...
         'kernel_A',kernel_A, 'kernel_A_se',kernel_A_se, ...
         'kernel_B',kernel_B, 'kernel_B_se',kernel_B_se, ...
         'kernel_C',kernel_C, 'kernel_C_se',kernel_C_se, ...
         'devN',devN, 'dfN',dfN, 'aicN',aicN, 'cv_devN',cv_devN, ...
+        'devU',devU, 'dfU',dfU, 'aicU',aicU, 'cv_devU',cv_devU, ...
         'devA',devA, 'dfA',dfA, 'aicA',aicA, 'cv_devA',-2*cvllA, 'lambda_A',lambda_A, ...
         'devB',devB, 'dfB',dfB, 'aicB',aicB, 'cv_devB',-2*cvllB, 'lambda_B',lambda_B, ...
         'devC',devC, 'dfC',dfC, 'aicC',aicC, 'cv_devC',-2*cvllC, 'lambda_C',lambda_C, ...
@@ -77,9 +116,13 @@ function out = fit_kernels_sparse(S, yev, tinf, mov, slo, gid, lag_fr, fps, opts
 
     % baseline hazard b0(time-in-freeze), sm-independent (from model A): the
     % "probability of breaking at time t" separated from the sm kernel.
-    base_cols = 1 + size(Bsm,2) + (1:size(Bb,2));
-    out.base_logit = bA(1) + Bb * bA(base_cols);
-    out.tinf       = tinf;
+    if o.use_nuisance
+        base_cols = 1 + size(Bsm,2) + (1:size(Bb,2));
+        out.base_logit = bA(1) + Bb * bA(base_cols);
+    else
+        out.base_logit = repmat(bA(1), numel(tinf), 1);   % flat: no b0(t) in the design
+    end
+    out.tinf = tinf;
 end
 
 % ════════════════════════════════════════════════════════════════════════
@@ -87,7 +130,8 @@ end
 % ════════════════════════════════════════════════════════════════════════
 function o = default_opts(opts)
     o = struct('nb_kernel',12, 'nb_acausal',4, 'bump_width',1.25, 'nb_baseline',6, ...
-               'n_exp',10, 'cv_folds',5, 'kernel_past_s',5, 'sel_rule','argmax', 'verbose',false);
+               'n_exp',10, 'cv_folds',5, 'kernel_past_s',5, 'sel_rule','argmax', ...
+               'use_nuisance',true, 'tau_lo',0.05, 'nonneg_l1',false, 'verbose',true);
     if nargin >= 1 && ~isempty(opts)
         f = fieldnames(opts);
         for i = 1:numel(f), o.(f{i}) = opts.(f{i}); end
@@ -115,10 +159,11 @@ function [B, tau_grid, is_exp] = exp_basis(lag_fr, tau_grid_s, fps, nb_acausal, 
 end
 
 function [b, kernel, kernel_se, sel_tau, lambda, cvll, dev, df, aic, ker_cols] = ...
-        fit_l1(S, Bk, Nuis, y, rowfold, K, is_exp_cols, tau_grid, sel_rule, name, verbose)
+        fit_l1(S, Bk, Nuis, y, rowfold, K, is_exp_cols, tau_grid, sel_rule, name, verbose, nonneg)
     if nargin < 9  || isempty(sel_rule), sel_rule = 'argmax'; end
     if nargin < 10, name = 'L1'; end
     if nargin < 11, verbose = false; end
+    if nargin < 12, nonneg = false; end
     r        = size(S,1);
     X        = [ones(r,1), S*Bk, Nuis];
     nb_k     = size(Bk,2);
@@ -127,7 +172,12 @@ function [b, kernel, kernel_se, sel_tau, lambda, cvll, dev, df, aic, ker_cols] =
 
     b_nuis   = penalized_logit(X(:, ~penmask), y, 0);
     mu0      = 1 ./ (1 + exp(-min(max(X(:,~penmask)*b_nuis,-30),30)));
-    lam_max  = max(abs(X(:,penmask)' * (y - mu0)));
+    g0       = X(:,penmask)' * (y - mu0);
+    if nonneg          % a column whose gradient is negative can never enter, so
+        lam_max = max(max(g0), eps);   % anchoring on |g| would waste the top of
+    else                               % the grid on the empty model
+        lam_max = max(abs(g0));
+    end
     lam_grid = lam_max * logspace(0, -3, 12);
 
     llf = nan(K, numel(lam_grid));
@@ -136,7 +186,7 @@ function [b, kernel, kernel_se, sel_tau, lambda, cvll, dev, df, aic, ker_cols] =
         if ~any(te) || ~any(tr), continue; end
         bw = [];
         for il = 1:numel(lam_grid)
-            bw = penalized_logit_l1(X(tr,:), y(tr), lam_grid(il), penmask, bw);
+            bw = penalized_logit_l1(X(tr,:), y(tr), lam_grid(il), penmask, bw, nonneg);
             eta = min(max(X(te,:)*bw, -30), 30);
             mu  = min(max(1 ./ (1 + exp(-eta)), 1e-9), 1-1e-9);
             yy  = y(te);
@@ -148,7 +198,7 @@ function [b, kernel, kernel_se, sel_tau, lambda, cvll, dev, df, aic, ker_cols] =
 
     natom = nan(1,numel(lam_grid));  Bfull = cell(1,numel(lam_grid));  bw = [];
     for il = 1:numel(lam_grid)
-        bw = penalized_logit_l1(X, y, lam_grid(il), penmask, bw);
+        bw = penalized_logit_l1(X, y, lam_grid(il), penmask, bw, nonneg);
         Bfull{il} = bw;
         natom(il) = sum(abs(bw(ker_cols)) > 1e-8);
     end
@@ -179,6 +229,10 @@ function [b, kernel, kernel_se, sel_tau, lambda, cvll, dev, df, aic, ker_cols] =
     if isempty(active)
         kernel_se = zeros(size(kernel));  sel_tau = [];
     else
+        % Debiasing refit on the selected support (relaxed lasso) -- it is
+        % UNCONSTRAINED even when nonneg is on, so an active atom can come back
+        % slightly negative here. The kernel and sel_tau above are the constrained
+        % fit; only the SEs come from this refit.
         Xdb = [ones(r,1), S*Bk(:,active), Nuis];
         [~, Vdb] = penalized_logit(Xdb, y, 1e-6*eye(size(Xdb,2)));
         kcol  = 1 + (1:numel(active));
@@ -254,9 +308,10 @@ function [b, V] = penalized_logit(X, y, P)
     V = inv(H);
 end
 
-function [b, support] = penalized_logit_l1(X, y, lambda, penmask, b0)
+function [b, support] = penalized_logit_l1(X, y, lambda, penmask, b0, nonneg)
     [~, p] = size(X);
     if nargin < 5 || isempty(b0), b = zeros(p,1); else, b = b0(:); end
+    if nargin < 6, nonneg = false; end
     penmask = logical(penmask(:));
     for outer = 1:50 %#ok<NASGU>
         eta = min(max(X*b, -30), 30);
@@ -271,7 +326,11 @@ function [b, support] = penalized_logit_l1(X, y, lambda, penmask, b0)
             for j = 1:p
                 rho = wxx(j)*b(j) + sum(w .* X(:,j) .* rres);
                 if penmask(j)
-                    bj = sign(rho) * max(abs(rho) - lambda, 0) / max(wxx(j), eps);
+                    if nonneg   % one-sided soft threshold: b_j >= 0
+                        bj = max(rho - lambda, 0) / max(wxx(j), eps);
+                    else
+                        bj = sign(rho) * max(abs(rho) - lambda, 0) / max(wxx(j), eps);
+                    end
                 else
                     bj = rho / max(wxx(j), eps);
                 end

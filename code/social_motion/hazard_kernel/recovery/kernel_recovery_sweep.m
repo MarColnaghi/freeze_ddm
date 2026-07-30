@@ -30,8 +30,8 @@ addpath(fullfile(code_dir, 'social_motion', 'hazard_kernel'));    % run_hazard_k
 % ── generative regime (drive = mu0 + beta*sm) ──────────────────────────────
 fps           = 60;
 P.dt          = 1/fps;
-P.mu0         = 0;      % baseline drive  -> sets the ~real-median duration
-P.beta        = 5;      % social gain (used as the FIXED gain when sweeping tau)
+P.mu0         = 5;      % baseline drive  -> sets the ~real-median duration
+P.beta        = 0;      % social gain (used as the FIXED gain when sweeping tau)
 P.sigma       = 1.0;    % diffusion SD
 P.seed        = 12000;
 P.maxT_fr     = 630;    % 10.5 s integration cap (no-crossing => censored here)
