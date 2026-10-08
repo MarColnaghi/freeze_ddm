@@ -70,27 +70,36 @@ function fh = plot_kernel_components(src, opts, lag_fr, fps, beta_list)
     % ── pass 2: draw ───────────────────────────────────────────────────────
     fh = figure('Color','w','Position',[60 60 430*nBeta 500]);
     tiledlayout(2, nBeta, 'TileSpacing','compact','Padding','compact');
+    [d,ccc] = max(Bsm);
 
     % Every call is given its axes handle explicitly: with a 2-row tiledlayout,
     % relying on gca puts the annotations in whichever tile was touched last.
-    for m = 1:nBeta                                   % ── row 1: model A ──
+    for m = 1:nBeta   
+        % ── row 1: model A ──
         ax = nexttile(m); hold(ax,'on');
+        hold on
         yline(ax, 0, 'k-', 'LineWidth',1.5);
         for j = 1:KA
+            bar(t_ax(ccc(end - j + 1)), bA{m}(j), 'FaceColor', cmapA(j,:), 'EdgeColor', 'none', 'BarWidth', 0.075, 'FaceAlpha', 0.5)
             plot(ax, t_ax, compA{m}(ord,j), '-', 'Color', cmapA(j,:), 'LineWidth', 1.2);
+
         end
         plot(ax, t_ax, kerA(ord,m), 'k-', 'LineWidth', 2.6);
         xlim(ax, [min(t_ax) max(t_ax)]);  ylim(ax, ylA);
-        title(ax, sprintf('\\beta_{gen}=%.3g', beta_list(m)));
+        title(ax, sprintf('\\beta_{gen}=%.3g', beta_list(m)), 'FontSize', 20);
         if m == 1, ylabel(ax, 'A-L2'); end
-        apply_generic(ax, 'ylim', [0 0.2]);
-        inset_bars(fh, ax, bA{m}, cmapA, 'bump  (past \rightarrow 0)');
+        apply_generic(ax, 'ylim', [-0.025 0.2]);
+      %  inset_bars(fh, ax, bA{m}, cmapA, 'bump  (past \rightarrow 0)');
     end
+
+    d = linspace(-2, 0, length(bB{m}));
 
     for m = 1:nBeta                                   % ── row 2: model B ──
         ax = nexttile(nBeta + m); hold(ax,'on');
         yline(ax, 0, 'k-', 'LineWidth',1.5);
+        
         for j = find(abs(bB{m}) > 0).'
+            bar(d(end - j + 1), bB{m}(j), 'FaceColor', cmapB(j,:), 'EdgeColor', 'none', 'BarWidth', 0.075, 'FaceAlpha', 0.5)
             plot(ax, t_ax, compB{m}(ord,j), '-', 'Color', cmapB(j,:), 'LineWidth', 1.6);
         end
         plot(ax, t_ax, kerB(ord,m), 'k-', 'LineWidth', 2.6);
@@ -107,8 +116,9 @@ function fh = plot_kernel_components(src, opts, lag_fr, fps, beta_list)
             'HorizontalAlignment','right', 'VerticalAlignment','top', 'FontSize', 14);
         xlabel(ax, 'Time to unfreeze (s)');
         if m == 1, ylabel(ax, 'B-L1'); end
-        apply_generic(ax, 'ylim', [0 0.2]);
-        inset_bars(fh, ax, bB{m}, cmapB, '\tau  (fast \rightarrow slow)');
+        apply_generic(ax, 'ylim', [-0.025 0.2]);
+        
+      %  inset_bars(fh, ax, bB{m}, cmapB, '\tau  (fast \rightarrow slow)');
     end
 end
 

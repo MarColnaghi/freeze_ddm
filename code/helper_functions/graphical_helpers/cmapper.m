@@ -112,6 +112,7 @@ col.vars.avg_fs_1s_norm = pal.green;
 
 col.vars.moving_flies   = pal.grey;
 col.vars.n_mov_flies1  = pal.grey;
+col.vars.moving_flies = colorcet('I2','N', 5);
 
 col.vars.intercept   = [1 1 1];
 

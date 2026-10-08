@@ -76,7 +76,7 @@ if strcmp(opt.Results.period, 'bsl')
 
 elseif strcmp(opt.Results.period, 'loom')
     temp = temp(temp.period == 1, :);
-   temp = temp(temp.frozen_start == 0, :);
+    temp = temp(temp.frozen_start == 0, :);
 end
 
 % Select Window: le or not?

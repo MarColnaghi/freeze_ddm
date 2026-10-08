@@ -55,6 +55,10 @@ parse(opt, varargin{:});
 %   loom_durs           span of the previous loom counted in frame gaps rather
 %                       than frames, so one short. Nothing reads it
 %   jump_flies          number of surrounding flies jumping at bout onset
+%   jump                true when the focal fly jumps within the bout. Fast
+%                       frames are never immobile, so only mobility bouts can
+%                       have it
+%   x_onset, y_onset    focal fly position at bout onset, in mm
 %
 % bouts_formatting then adds `id` and overwrites `le`, `onsets_loomwin` and
 % `nloom_loomwin`.
@@ -95,15 +99,17 @@ for dataset = 0
 
     % Every dir and readtable call below prefixes `directory`, so there is no
     % need to cd in here and leave the session somewhere else on the way out
-    directory = sprintf('/Users/marcocolnaghi/experimental_data/004--social_ddm/dataset_%d/', dataset);
     n_moving = 0:4;
 
-    if dataset == 0 
+    if dataset == 0
+        % dataset_0 rebuilt from the raw files, see generate_dataset_resolved
+        directory = '/Users/marcocolnaghi/experimental_data/004--social_ddm/dataset_resolved/';
         token = '1CS%dNorpA%dLC6ChR_5F-%dcm*';
         speeds = [25,50];
         genotype = 1;
 
     elseif dataset == 2
+        directory = sprintf('/Users/marcocolnaghi/experimental_data/004--social_ddm/dataset_%d/', dataset);
         token = '*%dTrh_%dNorpA-%dcm*';
         speeds = 50;
 
@@ -165,15 +171,21 @@ for dataset = 0
 
                 imm_frames = Fly1.pixelchange < thresholds.pc;
 
+                % pixelchange often drops to 0 while the fly is mid-jump, so
+                % fast frames count as moving whatever pixelchange says. They
+                % are removed after the moving gaps are filled, so a fill never
+                % bridges them, as for freeze and freeze_bout in dataset_resolved
+                fast = Fly1.velocity >= thresholds.still_vel;
+
                 % Filling in is done here - might make sense potentially to
                 % switch around the filling in process. used to be small
                 % imm first
 
                 if opt.Results.imfirst
-                    imm_frames = bwareaopen(imm_frames, thresholds.fill_in_imm); % Remove small immobile bouts
-                    imm_frames = ~bwareaopen(~imm_frames, thresholds.fill_in_mob); % Remove small moving bouts
+                    imm_frames = bwareaopen(imm_frames & ~fast, thresholds.fill_in_imm); % Remove small immobile bouts
+                    imm_frames = ~bwareaopen(~imm_frames, thresholds.fill_in_mob) & ~fast; % Remove small moving bouts
                 else
-                    imm_frames = ~bwareaopen(~imm_frames, thresholds.fill_in_mob); % Remove small moving bouts
+                    imm_frames = ~bwareaopen(~imm_frames, thresholds.fill_in_mob) & ~fast; % Remove small moving bouts
                     imm_frames = bwareaopen(imm_frames, thresholds.fill_in_imm); % Remove small immobile bouts
                 end
 
@@ -269,6 +281,14 @@ for dataset = 0
                 end
 
                 z.jump_flies = interp1(1:height(Fly1), sum(jumps), onsets);
+
+                % Focal fly jumps at least once within the bout (upstream label,
+                % a velocity >= 75 mm/s event)
+                z.jump = compute_means(Fly1.jumps(1:end), onsets, run_ends - 1) > 0;
+
+                % Focal fly position at bout onset, in mm
+                z.x_onset = Fly1.fly_x_mm(onsets);
+                z.y_onset = Fly1.fly_y_mm(onsets);
 
                 soc_mot = [soc_mot; l];
                 bouts = [bouts; z];

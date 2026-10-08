@@ -1,4 +1,4 @@
-function [rt_frames, traj, t] = sim_leaky_accumulator(drift, theta, sigma, lambda, dt, seed, x0)
+function [rt_frames, traj, t] = sim_leaky_accumulator(drift, theta, sigma, lambda, dt, seed, x0, ndt)
 % SIM_LEAKY_ACCUMULATOR  First-passage time of a leaky (or perfect) accumulator.
 %
 %   [rt_frames, traj, t] = sim_leaky_accumulator(drift, theta, sigma, lambda, dt, seed, x0)
@@ -36,6 +36,8 @@ function [rt_frames, traj, t] = sim_leaky_accumulator(drift, theta, sigma, lambd
 
     if nargin >= 6 && ~isempty(seed), rng(seed); end
     if nargin < 7 || isempty(x0), x0 = 0; end
+    if nargin < 8 || isempty(ndt), ndt = 0; end
+
     n      = numel(drift);
     decay  = 1 - lambda*dt;
     nscale = sigma*sqrt(dt);   % seam: a per-frame sigma vector (signal-dependent
@@ -48,7 +50,7 @@ function [rt_frames, traj, t] = sim_leaky_accumulator(drift, theta, sigma, lambd
         x = x*decay + drift(k)*dt + nscale*randn;
         traj(k) = x;
         if x >= theta
-            rt_frames = k;
+            rt_frames = k + ndt;
             return
         end
     end

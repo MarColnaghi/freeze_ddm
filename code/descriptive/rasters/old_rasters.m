@@ -75,61 +75,10 @@ ts.sm = sm_mat;
 ts.fly = selected_flies;
 ts = sortrows(ts, {'moving_flies', 'freeze_time'}, 'ascend', 'ComparisonMethod','abs');
 
-% Create figure
-fh = figure('color', 'w', 'Position', [100 200 750 800]);
-tl = tiledlayout(3, 1, 'TileSpacing', 'compact', 'Padding', 'loose');
+% Create figure (any single-column cache: freeze, motion, speed, jumps, pixel)
+fh = plot_raster('freeze', 'loom_speed', ls, 'paths', paths);
 
-col.n_mov_flies = colorcet('I2','N', 5);
-
-% plot
-nexttile
-hold on
- 
-summed_freezes = zeros(length(unique(ts.moving_flies)), length(ts.freeze));
-
-for idx_moving = unique(n_moving_flies)'
-    
-    summed_freezes(idx_moving + 1, :) = 1 - sum(ts.freeze(ts.moving_flies == idx_moving,:), 1) ./ length(find(ts.moving_flies == idx_moving));
-    plot(1:length(ts.freeze), summed_freezes(idx_moving + 1, :), 'Color', col.n_mov_flies(idx_moving + 1,:), 'LineWidth', 2)
-
-end
-
-ax(1) = gca;
-ax(1).Color = 'none';
-apply_generic(ax(1), 'no_x', false, 'xticks', [0, 18000, size(fr_mat, 2)], 'ytick', [0 1], 'ylim', [-0.1 1.1], 'xlim', [16200, size(fr_mat, 2)], 'font_size', 32, 'xpos', 'top')
-ylabel({'Total Fraction', 'Freezing'}, 'FontSize', 28)
-xlabel('Time (min)')
-xticklabels({0 5 10})
-
-for i = 1:length(median_loom_ts)
-    line([median_loom_ts(i), median_loom_ts(i)], [0, 1], 'Color', col_nloom.vars.nloom(10 + i, :), 'LineWidth', 1.2, 'LineStyle', '-', 'clipping', 'on');
-end
-
-nexttile(2,[2,1])
-hold on
-ax(2) = gca;
-
-fre_imgsc = imagesc(ax(2), ts.freeze, [0, 1]);
-colormap(ax(2), ('gray'));
-apply_generic(ax(2), 'xticks', [0, 18000, size(fr_mat, 2)], 'no_yticks', true, 'ylim', [- 10 size(fr_mat, 1) + 10], 'xlim', [16200, size(fr_mat, 2)], 'font_size', 32)
-xticklabels({});
-
-ylabel('Focal Flies')
-set(ax(2) ,'Layer', 'Top')
-ax(1).XLabel.Position(2) = 1.25;
-ax(2).YLabel.Position(1) = ax(2).YLabel.Position(1) - 1000;
-
-% Add lines for median_loom_ts array
-for i = 1:length(median_loom_ts)
-    line([median_loom_ts(i), median_loom_ts(i)], [-30, size(fr_mat, 1) + 300], 'Color', col_nloom.vars.nloom(10 + i, :), 'LineWidth', 1.2, 'LineStyle', '-', 'clipping','off');
-end
-
-for idx_moving = 0:4
-    fill([ax(2).XLim(1)-200,ax(2).XLim(1)-200,ax(2).XLim(1)-1000,ax(2).XLim(1)-1000], [length(find(ts.moving_flies <= idx_moving)) length(find(ts.moving_flies <= idx_moving - 1)) length(find(ts.moving_flies <= idx_moving - 1))   length(find(ts.moving_flies <= idx_moving))], ...
-        col.n_mov_flies(idx_moving + 1,:), 'EdgeColor','none', 'Clipping', 'off');
-end
-
-linkaxes([ax(1), ax(2)], 'x');
+col.n_mov_flies = colorcet('I2','N', 5);   % used by the sections below
 
 exporter(fh, paths, 'raster_grouped_moving_flies_reoriented.pdf');
 
@@ -279,7 +228,7 @@ fill(ax(2), [ax(2).XLim(2)+200, ax(2).XLim(2)+1000, ax(2).XLim(2)+1000, ax(2).XL
 
 % 5. Link and Export
 linkaxes(ax, 'xy'); % Ensure zooming/panning stays in sync
-exporter(fh, paths, 'raster_sm_dual_axis.pdf')
+% exporter(fh, paths, 'raster_sm_dual_axis.pdf')
 
 %%
 
@@ -339,3 +288,116 @@ exporter(fh, paths, 'reordered_bouts_sm_cosyne.pdf')
 
 %%
 % Would be nice to add a BW version of the dual axes!
+
+
+%% Load Data and Preprocess
+clear all; close all; clc;
+
+% Load Colors
+col = cmapper;
+
+% Load Paths
+paths = path_generator('folder', 'descriptive/rasters');
+
+% Different version
+
+clearvars
+
+% Load Colors
+num_quantiles = 5;
+extra.quantiles = num_quantiles;
+col = cmapper([], extra.quantiles);
+col_nloom = cmapper([], 30);
+
+% Load Paths
+paths = path_generator('folder', fullfile('descriptive','rasters'));
+
+% Load timeseries file
+sm_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
+pc_cache = importdata(fullfile(paths.cache_path, 'pixel_cache.mat'));
+fr_cache = importdata(fullfile(paths.cache_path, 'freeze_cache.mat'));
+fs_cache = importdata(fullfile(paths.cache_path, 'speed_cache.mat'));
+
+loom_cache = importdata(fullfile(paths.cache_path, 'loom_cache.mat'));
+
+% Load the bouts file to extract 
+threshold_imm = 2; threshold_mob = 2; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
+thresholds = define_thresholds;
+bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
+bouts = bouts_formatting(bouts, thresholds);
+
+%  Select loom speed
+ls = 50;
+selected_flies = unique(bouts.fly(bouts.sloom == ls, :));
+n_moving_flies = accumarray(bouts.fly, bouts.moving_flies, [], @unique);
+n_moving_flies = n_moving_flies(selected_flies);
+
+sm_mat = cache2mat(sm_cache, 'selected_flies', selected_flies');
+fs_mat = cache2mat(fs_cache, 'selected_flies', selected_flies');
+fr_mat = cache2mat(fr_cache, 'selected_flies', selected_flies');
+pc_mat = cache2mat(pc_cache, 'selected_flies', selected_flies');
+loom_mat = cache2mat(loom_cache, 'selected_flies', selected_flies');
+
+% Loom Times
+loom_ts = diff(loom_mat, [], 2) == 1;
+[r, c] = find(loom_ts);
+n_flies = size(loom_mat, 1);
+
+loom_times = nan(n_flies, 20);
+
+for f = 1:n_flies
+    loom_times(f, :) = find(loom_ts(f, :));
+end
+
+median_loom_ts = median(loom_times, 1);
+
+% Construct table
+ts = table();
+ts.freeze_time = sum(fr_mat(:, 18000:end), 2);
+ts.moving_flies = n_moving_flies;
+ts.freeze = ~fr_mat;
+ts.sm = sm_mat;
+ts.fly = selected_flies;
+ts = sortrows(ts, {'moving_flies', 'freeze_time'}, 'ascend', 'ComparisonMethod','abs');
+
+% Create figure
+fh = figure('color', 'w', 'Position', [100 200 750 500]);
+tl = tiledlayout(1, 1, 'TileSpacing', 'compact', 'Padding', 'loose');
+
+col.n_mov_flies = colorcet('I2','N', 5);
+
+nexttile
+hold on
+ax(2) = gca;
+
+fre_imgsc = imagesc(ax(2), ts.freeze, [0, 1]);
+colormap(ax(2), ('gray'));
+apply_generic(ax(2), 'xticks', [0, 18000, size(fr_mat, 2)], 'no_yticks', true, 'ylim', [- 10 size(fr_mat, 1) + 10], 'xlim', [16200, size(fr_mat, 2)], 'font_size', 32)
+xticklabels({});
+
+set(ax(2) ,'Layer', 'Top')
+ax(2).YLabel.Position(1) = ax(2).YLabel.Position(1) - 1000;
+
+% Add lines for median_loom_ts array
+for i = 1:length(median_loom_ts)
+    line([median_loom_ts(i), median_loom_ts(i)], [-30, size(fr_mat, 1) + 30], 'Color', col_nloom.vars.nloom(10 + i, :), 'LineWidth', 1.2, 'LineStyle', '-', 'clipping','off');
+end
+
+for idx_moving = 0:4
+    fill([ax(2).XLim(1)-200,ax(2).XLim(1)-200,ax(2).XLim(1)-3000,ax(2).XLim(1)-3000], [length(find(ts.moving_flies <= idx_moving)) length(find(ts.moving_flies <= idx_moving - 1)) length(find(ts.moving_flies <= idx_moving - 1))   length(find(ts.moving_flies <= idx_moving))], ...
+        col.n_mov_flies(idx_moving + 1,:), 'EdgeColor','none', 'Clipping', 'off');
+end
+
+%exporter(fh, paths, 'raster_grouped_moving_flies_for_CIBBR.pdf');
+
+fre_imgsc.CData(ts.moving_flies < 1.5 | ts.moving_flies > 2.5, :) = 1;
+%exporter(fh, paths, 'raster_grouped_moving_flies_for_CIBBR_blanked.pdf');
+
+ts.nan_sm            = nan(size(ts.sm));
+ts.nan_sm(~ts.freeze) = ts.sm(~(ts.freeze));
+
+fre_imgsc.CData      = ts.nan_sm;
+fre_imgsc.AlphaData  = ~ts.freeze;   % non-freeze bins fully transparent
+colormap(cbrewer2('Reds', []));
+clim([0 6])
+exporter(fh, paths, 'raster_grouped_moving_flies_for_CIBBR_sm.pdf');

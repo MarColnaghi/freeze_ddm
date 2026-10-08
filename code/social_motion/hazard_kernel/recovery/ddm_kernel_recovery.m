@@ -63,6 +63,7 @@ P.seed        = 2305;
 P.maxT_fr     = 1000;      % 10.5 s integration cap (no crossing -> censored)
 P.trunc_point = trunc_point;
 P.n_aug       = 2;        % DDM trajectories per real bout (more events)
+P.ndt = 0.55 * fps;
 
 beta_list = [4 2 0];   % PARAMETRIC social gain to sweep (0 = null)
 tau_gen   = Inf;          % generative leak (s); Inf = perfect accumulator
@@ -85,8 +86,8 @@ tau_gen   = Inf;          % generative leak (s); Inf = perfect accumulator
 % caveat in the fit_kernels_sparse header: under this constraint a non-negative
 % kernel is NOT evidence that the kernel is positive.
 opts = struct('nb_kernel',12, 'nb_acausal',0, 'bump_width',1.25, 'nb_baseline',6, ...
-    'n_exp', 8, 'tau_lo', 1/fps, 'cv_folds', 5, 'kernel_past_s', kernel_past_s, ...
-    'sel_rule', 'argmax', 'nonneg_l1', true, 'use_nuisance', false, 'verbose',true);
+    'n_exp', 30, 'tau_lo', 1/(fps * 4), 'cv_folds', 5, 'kernel_past_s', kernel_past_s, ...
+    'sel_rule', 'argmax', 'nonneg_l1', false, 'use_nuisance', true, 'verbose',true);
 
 % ── load real bouts as TEMPLATE + motion cache ──────────────────────────────
 % Only .fly/.onsets are used generatively (durations are re-simulated); the real
@@ -136,7 +137,7 @@ gt = zeros(numel(lag_fr),1);
 if isinf(tau_gen), gt(caus) = 1; else, gt(caus) = exp(-lag_s(caus)/tau_gen); end
 
 cfg = struct('fps',fps, 'dt_frames',dt_frames, 'entry_fr',trunc_point, ...
-    'lag_fr',lag_fr, 'sm_mu',sm_mu, 'sm_sd',sm_sd, 'grid_anchor','entry', 'mask_preonset', false);
+    'lag_fr',lag_fr, 'sm_mu',sm_mu, 'sm_sd',sm_sd, 'grid_anchor','entry', 'mask_preonset', true);
 
 % ── sweep beta: simulate -> design -> fit ───────────────────────────────────
 R = struct('beta',{}, 'res',{}, 'info',{});
@@ -210,6 +211,15 @@ end
 % and the panels vary with beta alone.
 [fh_dur, fh_sm] = plot_generator_diagnostics(bl_all, bl_t, motion_cache, beta_list, cfg, P);
 
+% ── figure: fitted duration dependence b0(t) vs the DDM's own hazard ────────
+% Drawn only when the design actually HAS a baseline block. With use_nuisance =
+% false, base_logit is the intercept repeated, and plotting it would show a flat
+% line that reads as "no duration dependence" rather than "not modelled".
+fh_base = [];
+if do_fit && opts.use_nuisance
+    fh_base = plot_baseline_hazard(R, bl_all, beta_list, cfg);
+end
+
 if save_out
     stamp  = datestr(now,'yyyymmdd_HHMMSS'); %#ok<TNOW1,DATST>
     outdir = fullfile(here,'results');
@@ -221,6 +231,9 @@ if save_out
             'R','P','beta_list','tau_gen','opts','cfg','lag_fr','gt','bl_all','-v7.3');
         exportgraphics(fh, fullfile(outdir, ['ddm_kernel_recovery_' stamp '.png']), 'Resolution',200);
         exportgraphics(fh_cmp, fullfile(outdir, ['ddm_recovery_components_' stamp '.png']), 'Resolution',200);
+        if ~isempty(fh_base)
+            exportgraphics(fh_base, fullfile(outdir, ['ddm_recovery_baseline_' stamp '.png']), 'Resolution',200);
+        end
     end
     fprintf('\nSaved to %s (stamp %s)\n', outdir, stamp);
 end

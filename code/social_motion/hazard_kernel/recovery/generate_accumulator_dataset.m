@@ -57,7 +57,7 @@ function [bl, info] = generate_accumulator_dataset(bl_t, sm_in, P)
         for b = 1:nB
             drive = P.mu0 + P.beta * sm_in{b}(:);          % per-frame drift RATE
             seed  = P.seed + (rep-1)*1000003 + b;           % unique per (bout,rep)
-            k = sim_leaky_accumulator(drive, P.theta, P.sigma, P.lambda, P.dt, seed);
+            k = sim_leaky_accumulator(drive, P.theta, P.sigma, P.lambda, P.dt, seed, [], P.ndt);
             row = row + 1;
             if isnan(k)
                 DUR(row)  = cap_b(b);        % never crossed -> right-censored at cap

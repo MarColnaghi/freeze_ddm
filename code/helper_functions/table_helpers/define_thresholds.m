@@ -7,6 +7,7 @@ parse(opt, varargin{:});
 le_window = opt.Results.le_window;
 
 thresholds.pc = 4; thresholds.fill_in_mob = 3; thresholds.fill_in_imm = 3;
+thresholds.still_vel = 20; % mm/s, faster frames are moving whatever pixelchange says, as in dataset_resolved
 
 thresholds.le_window_sl = le_window.le_window_sl;
 thresholds.le_window_fl = le_window.le_window_fl;

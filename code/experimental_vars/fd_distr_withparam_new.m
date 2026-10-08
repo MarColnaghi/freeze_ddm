@@ -54,7 +54,7 @@ n_sloom = numel(sloom_vals);
 %% ===================== Loop over parameters =====================
 for idx_param = params
     param = idx_param{1};
-    is_sloom_param = strcmp(param,'sloom');
+    is_sloom_param = strcmp(param, 'ls');
 
     [num_quantiles, thresholds] = param_settings(param, bouts_proc);
     quantiles = discretize(bouts_proc.(param), thresholds);
@@ -75,28 +75,28 @@ for idx_param = params
 
     %% ===================== Control distribution =====================
     nexttile(1,[3 2]); hold on
-    plot_control_distribution( ...
-        bouts_proc.(param), quantiles, thresholds, cmap, param)
+   % plot_control_distribution( ...
+   %     bouts_proc.(param), quantiles, thresholds, cmap, param)
 
     ax = gca;
     pad_ylim(ax,0.075)
     apply_generic(ax,'no_y',true,'no_x',false,'font_size',20)
-
-    mid_q = ceil(num_quantiles/2) + 1;
-
-    if strcmp(param,'avg_sm_freeze_norm')
-        xlabel('Avg. Social Motion','Interpreter','none','Color',cmap(mid_q,:))
-    elseif strcmp(param,'avg_fs_1s_norm')
-        xlabel('Focal Speed before Loom','Interpreter','none','Color',cmap(mid_q,:))
-    elseif strcmp(param, 'sloom')
-        xlabel('Loom Speed','Interpreter','none','Color',cmap(mid_q,:))
-    end
-
-    colormap(cmap(2:end,:));
-    clim([0 num_quantiles])
-    add_quantile_colorbar(ax,param,num_quantiles)
-
-    ax.XAxis.Exponent = 0;
+% 
+%     mid_q = ceil(num_quantiles/2) + 1;
+% 
+%     if strcmp(param,'avg_sm_freeze_norm')
+%         xlabel('Avg. Social Motion','Interpreter','none','Color',cmap(mid_q,:))
+%     elseif strcmp(param,'avg_fs_1s_norm')
+%         xlabel('Focal Speed before Loom','Interpreter','none','Color',cmap(mid_q,:))
+%     elseif strcmp(param, 'ls')
+%         xlabel('Loom Speed','Interpreter','none','Color',cmap(mid_q,:))
+%     end
+% 
+%     colormap(cmap(2:end,:));
+%     clim([0 num_quantiles])
+%     add_quantile_colorbar(ax,param,num_quantiles)
+% 
+%     ax.XAxis.Exponent = 0;
 
     %% ===================== Duration distributions =====================
     ax_bottom = [];
@@ -108,10 +108,11 @@ for idx_param = params
         for idx_sloom = sloom_vals
             bouts_sloom = bouts_proc(bouts_proc.ls==idx_sloom,:);
             qmask = quantiles(bouts_proc.ls==idx_sloom);
+            censored = bouts_sloom.censored_contacts;
 
             plot_duration_distribution( ...
                 bouts_sloom.durations_s, qmask, ...
-                cmap, num_quantiles, type, period);
+                cmap, num_quantiles, type, period, censored);
         end
 
         xlabel('Freeze Duration (s)');
@@ -181,8 +182,8 @@ function [nq, thresholds] = param_settings(param,T)
 switch param
     case 'nloom'
         nq = 4; thresholds = 0:5:21;
-    case 'sloom'
-        nq = 2; thresholds = 12.5:25:75;
+    case 'ls'
+        nq = 2; thresholds = -0.5:1:1.5;
     case 'moving_flies'
         nq = 5; thresholds = -0.5:1:5.5;
     otherwise
@@ -238,6 +239,7 @@ switch type
             c = censored(qmask==q);
             if isempty(d), continue, end
             sum(c)
+            length(c)
             [f,x] = ecdf(d, 'Censoring', c);
             plot(x, f,'LineWidth', 4 ,'Color',cmap(1+q,:) )
         end
@@ -245,7 +247,7 @@ switch type
         pad_ylim(gca,0.025)
 
     case 'kde'
-        edges = min(durations):5/60:max(durations);
+        edges = min(durations):20/60:max(durations);
         for q = 1:nq
             d = durations(qmask==q);
             if isempty(d), continue, end
@@ -273,7 +275,7 @@ switch type
 end
 
 switch period
-    case 'loom', xlim([0 10.5])
+    case 'loom', xlim([0 10])
     case 'bsl',  xlim([-0.05 1.05])
 end
 end

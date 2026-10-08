@@ -119,6 +119,13 @@ function out = fit_kernels_sparse(S, yev, tinf, mov, slo, gid, lag_fr, fps, opts
     if o.use_nuisance
         base_cols = 1 + size(Bsm,2) + (1:size(Bb,2));
         out.base_logit = bA(1) + Bb * bA(base_cols);
+        out.base_beta  = bA(base_cols);   % <- the 5 baseline betas
+        out.base_basis = Bb;              % <- and the basis they weight
+        % SE of the assembled curve. The intercept column is included: base_logit
+        % contains bA(1), so a band from the Bb block alone would describe the
+        % SHAPE while being drawn around an absolute level it does not cover.
+        Zb = [ones(r,1), Bb];  zc = [1, base_cols];
+        out.base_se = sqrt(sum((Zb * VA(zc,zc)) .* Zb, 2));
     else
         out.base_logit = repmat(bA(1), numel(tinf), 1);   % flat: no b0(t) in the design
     end
