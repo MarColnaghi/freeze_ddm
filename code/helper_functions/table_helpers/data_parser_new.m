@@ -110,7 +110,7 @@ speed_max = 2; % outliers
 
 % Threshold the Dataset
 
-temp = temp(temp.sm <= motion_max & temp.fs <= speed_max, :);
+%temp = temp(temp.sm <= motion_max & temp.fs <= speed_max, :);
 
 % Get smp in the table.
 sm_pre = extract_sm_from_bouts(temp, 'type', 'onsets', 'output_type', 'mat', 'window', [-25 5]);

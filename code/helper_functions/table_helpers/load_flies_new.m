@@ -59,6 +59,9 @@ parse(opt, varargin{:});
 %                       frames are never immobile, so only mobility bouts can
 %                       have it
 %   x_onset, y_onset    focal fly position at bout onset, in mm
+%   jump_start          true for an immobility bout whose preceding bout has
+%                       `jump`. Per-bout, unlike frozen_start, so it is not
+%                       broadcast to the other bouts sharing its nloom
 %
 % bouts_formatting then adds `id` and overwrites `le`, `onsets_loomwin` and
 % `nloom_loomwin`.
@@ -289,6 +292,11 @@ for dataset = 0
                 % Focal fly position at bout onset, in mm
                 z.x_onset = Fly1.fly_x_mm(onsets);
                 z.y_onset = Fly1.fly_y_mm(onsets);
+
+                % Immobility bout directly after a bout with a focal jump. z is
+                % one fly in time order, so the previous row is the previous
+                % bout, and the first bout of a fly has no predecessor
+                z.jump_start = [false; z.jump(1:end-1)] & z.type == 1;
 
                 soc_mot = [soc_mot; l];
                 bouts = [bouts; z];

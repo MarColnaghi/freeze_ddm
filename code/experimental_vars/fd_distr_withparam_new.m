@@ -75,28 +75,28 @@ for idx_param = params
 
     %% ===================== Control distribution =====================
     nexttile(1,[3 2]); hold on
-   % plot_control_distribution( ...
-   %     bouts_proc.(param), quantiles, thresholds, cmap, param)
+   plot_control_distribution( ...
+       bouts_proc.(param), quantiles, thresholds, cmap, param)
 
     ax = gca;
     pad_ylim(ax,0.075)
     apply_generic(ax,'no_y',true,'no_x',false,'font_size',20)
-% 
-%     mid_q = ceil(num_quantiles/2) + 1;
-% 
-%     if strcmp(param,'avg_sm_freeze_norm')
-%         xlabel('Avg. Social Motion','Interpreter','none','Color',cmap(mid_q,:))
-%     elseif strcmp(param,'avg_fs_1s_norm')
-%         xlabel('Focal Speed before Loom','Interpreter','none','Color',cmap(mid_q,:))
-%     elseif strcmp(param, 'ls')
-%         xlabel('Loom Speed','Interpreter','none','Color',cmap(mid_q,:))
-%     end
-% 
-%     colormap(cmap(2:end,:));
-%     clim([0 num_quantiles])
-%     add_quantile_colorbar(ax,param,num_quantiles)
-% 
-%     ax.XAxis.Exponent = 0;
+
+    mid_q = ceil(num_quantiles/2) + 1;
+
+    if strcmp(param,'avg_sm_freeze_norm')
+        xlabel('Avg. Social Motion','Interpreter','none','Color',cmap(mid_q,:))
+    elseif strcmp(param,'avg_fs_1s_norm')
+        xlabel('Focal Speed before Loom','Interpreter','none','Color',cmap(mid_q,:))
+    elseif strcmp(param, 'ls')
+        xlabel('Loom Speed','Interpreter','none','Color',cmap(mid_q,:))
+    end
+
+    colormap(cmap(2:end,:));
+    clim([0 num_quantiles])
+    add_quantile_colorbar(ax,param,num_quantiles)
+
+    ax.XAxis.Exponent = 0;
 
     %% ===================== Duration distributions =====================
     ax_bottom = [];
@@ -182,7 +182,9 @@ function [nq, thresholds] = param_settings(param,T)
 switch param
     case 'nloom'
         nq = 4; thresholds = 0:5:21;
-    case 'ls'
+    case {'ls','jump_start'}
+        % binary: quantile() edges collapse to [0 0 0 0 1] and discretize
+        % puts every bout in the top bin
         nq = 2; thresholds = -0.5:1:1.5;
     case 'moving_flies'
         nq = 5; thresholds = -0.5:1:5.5;
@@ -196,7 +198,7 @@ end
 
 function plot_control_distribution(data,quantiles,thresholds,cmap,param)
 
-if ismember(param,{'nloom','sloom','moving_flies'})
+if ismember(param,{'ln','ls','moving_flies', 'jump_start'})
     bh = bar(1:max(quantiles),histcounts(quantiles), ...
         'FaceColor','flat','EdgeColor','none');
     bh.CData = cmap(2:end,:);

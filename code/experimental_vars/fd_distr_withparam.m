@@ -28,16 +28,17 @@ window_dur = 180;
 sm_freeze_ili = extract_sm_from_bouts(bouts_proc, 'type', 'onsets', 'output_type', 'mat','norm_factor', 10, 'cache', 'motion_cache', 'window', [0 window_dur]);
 
 bouts_proc.sm = mean(sm_freeze_full, 2, 'omitnan');
-bouts_proc.sm = mean(sm_freeze_full(:,1:60), 2, 'omitnan');
-%bouts_proc.sm = mean(sm_freeze_full, 2, 'omitnan');
+bouts_proc.sm_1s = mean(sm_freeze_ili(:,1:60), 2, 'omitnan');
+bouts_proc.sm_2s = mean(sm_freeze_ili(:,1:120), 2, 'omitnan');
 
 bouts_proc = bouts_proc(bouts_proc.durations > trunc_point, :);
 bouts_proc = bouts_proc(bouts_proc.sm < 1.5,:);
+bouts_proc = bouts_proc(bouts_proc.sm_1s < 1.5,:);
 type = 'cumulative';
-param = {'nloom'};
+param = {'sm_2s'};
 ls = 'fast';
-bouts_proc.ls = 0* ones(height(bouts_proc), 1);
-bouts_proc.sloom = 25 * ones(height(bouts_proc), 1);
+% bouts_proc.ls = 0* ones(height(bouts_proc), 1);
+% bouts_proc.sloom = 25 * ones(height(bouts_proc), 1);
 fh = fd_distr_withparam_new('bouts', bouts_proc, 'type', type, 'param', param, 'check_quantiles', true,  'export', false, 'paths', paths_out);%;, 'sloom_to_plot', 'fast'); %, 'avg_ss', 'cum_freeze_time', 'avg_fs_1s_norm', 'n_generated_freezes'})
 
 %% save
