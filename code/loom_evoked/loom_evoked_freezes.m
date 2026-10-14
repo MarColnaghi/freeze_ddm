@@ -14,8 +14,11 @@ function freezes = loom_evoked_freezes(bouts, varargin)
 % recording, which is what ecdf takes together with them. The duration the freeze
 % really had is duration_raw.
 %
-% The window has some background in it, about one onset in ten would be there
-% without the loom, see loom_evoked/split_half_check.
+% The window has some background in it. Counting onsets from 12 frames, about one in
+% ten would be there without the loom (loom_evoked/split_half_check). Among the
+% freezes of at least 30 frames it is about 4%, 2-6% by group, and those are short
+% ones: the same selection on the baseline mock looms gives 186 freezes against 4,677
+% in the loom period, and only 4-7% of them last more than 3 s.
 %
 % bouts is the table with bouts_formatting applied, as loom_evoked_data returns it.
 %
