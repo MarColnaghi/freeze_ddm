@@ -23,8 +23,8 @@ bouts_proc.ends = bouts_proc.onsets + bouts_proc.ending_time;
 bouts_proc.durations_s = bouts_proc.ending_time ./ 60;
 bouts_proc.durations = bouts_proc.ending_time;
 
+window_dur = 630;
 sm_freeze_full = extract_sm_from_bouts(bouts_proc, 'type', 'onlyfreeze', 'output_type', 'mat','norm_factor', 10, 'cache', 'motion_cache');
-window_dur = 180;
 sm_freeze_ili = extract_sm_from_bouts(bouts_proc, 'type', 'onsets', 'output_type', 'mat','norm_factor', 10, 'cache', 'motion_cache', 'window', [0 window_dur]);
 
 bouts_proc.sm = mean(sm_freeze_full, 2, 'omitnan');
@@ -32,10 +32,12 @@ bouts_proc.sm_1s = mean(sm_freeze_ili(:,1:60), 2, 'omitnan');
 bouts_proc.sm_2s = mean(sm_freeze_ili(:,1:120), 2, 'omitnan');
 
 bouts_proc = bouts_proc(bouts_proc.durations > trunc_point, :);
-bouts_proc = bouts_proc(bouts_proc.sm < 1.5,:);
-bouts_proc = bouts_proc(bouts_proc.sm_1s < 1.5,:);
+
+% bouts_proc = bouts_proc(bouts_proc.sm < 1.5,:);
+% bouts_proc = bouts_proc(bouts_proc.sm_1s < 1.5,:);
+%bouts_proc = bouts_proc(bouts_proc.jump_start == 0, :);
 type = 'cumulative';
-param = {'sm_2s'};
+param = {'sm_1s'};
 ls = 'fast';
 % bouts_proc.ls = 0* ones(height(bouts_proc), 1);
 % bouts_proc.sloom = 25 * ones(height(bouts_proc), 1);

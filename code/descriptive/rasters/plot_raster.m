@@ -35,6 +35,8 @@ addParameter(opt, 'clim', []);
 addParameter(opt, 'ylabel', []);
 addParameter(opt, 'ylim', []);
 addParameter(opt, 'yticks', []);
+addParameter(opt, 'looms', true);
+
 parse(opt, cache_name, varargin{:});
 
 p = opt.Results;
@@ -130,8 +132,10 @@ xticklabels([0, 18000, n_t] / (60 * fps))
 
 % loom lines span the y ticks
 yt = ax(1).YTick;
-for i = 1:length(median_loom_ts)
-    line([median_loom_ts(i), median_loom_ts(i)], [yt(1), yt(end)], 'Color', col_nloom.vars.nloom(10 + i, :), 'LineWidth', 1.2, 'LineStyle', '-', 'clipping', 'on');
+if p.looms
+    for i = 1:length(median_loom_ts)
+        line([median_loom_ts(i), median_loom_ts(i)], [yt(1), yt(end)], 'Color', col_nloom.vars.nloom(10 + i, :), 'LineWidth', 1.2, 'LineStyle', '-', 'clipping', 'on');
+    end
 end
 
 nexttile(2,[2,1])
@@ -156,14 +160,17 @@ ax(1).XLabel.Position(2) = ax(1).YLim(2) + 0.125 * diff(ax(1).YLim);
 ax(2).YLabel.Position(1) = ax(2).YLabel.Position(1) - 1000;
 
 % Add lines for median_loom_ts array
-for i = 1:length(median_loom_ts)
-    line([median_loom_ts(i), median_loom_ts(i)], [-30, n_flies + 300], 'Color', col_nloom.vars.nloom(10 + i, :), 'LineWidth', 1.2, 'LineStyle', '-', 'clipping','off');
+if p.looms
+    for i = 1:length(median_loom_ts)
+        line([median_loom_ts(i), median_loom_ts(i)], [-30, n_flies + 300], 'Color', col_nloom.vars.nloom(10 + i, :), 'LineWidth', 1.2, 'LineStyle', '-', 'clipping','off');
+    end
 end
 
 for idx_moving = groups
     fill([ax(2).XLim(1)-200,ax(2).XLim(1)-200,ax(2).XLim(1)-1000,ax(2).XLim(1)-1000], [length(find(ts.moving_flies <= idx_moving)) length(find(ts.moving_flies <= idx_moving - 1)) length(find(ts.moving_flies <= idx_moving - 1))   length(find(ts.moving_flies <= idx_moving))], ...
         col_mov(idx_moving + 1,:), 'EdgeColor','none', 'Clipping', 'off');
 end
+
 
 linkaxes([ax(1), ax(2)], 'x');
 
@@ -191,16 +198,18 @@ switch cache_name
         d.clim = [0 10];
         d.ylabel = {'Social', 'Motion'};
     case 'speed'        % focal speed
+        d.cmap = cbrewer2('Greens', []);
         d.clim = [0 25];
         d.ylabel = {'Focal', 'Speed'};
     case 'pixel'        % pixel change
         d.clim = [0 300];
         d.ylabel = {'Pixel', 'Change'};
     case 'jumps'        % rare single-frame events, drawn dark on white
-        d.cmap = cbrewer2('Greys', []);
+        d.cmap = cbrewer2('Purples', []);
         d.clim = [0 1];
         d.ylabel = {'Fraction', 'Jumping'};
         d.smooth = 120;
         d.dilate = 60;
+        
 end
 end

@@ -15,16 +15,15 @@ if nargin == 0
     genotype = 1;
 
     % Load Paths & Files
-    paths = path_generator('validation_scoring/durs_onsets');
+    paths = path_generator('folder','scoring/durs_onsets');
     load(fullfile(paths.dataset, 'bouts.mat'));
     bouts = bouts(bouts.genotype == genotype, :);
 
     % Load Colors
-    extra.quantiles = 61;
-    col = cmapper([], extra);
+    quantiles = 61;
+    col = cmapper([], quantiles);
 
     zoom = true;
-
 
     % Define thresholds
     thresholds = define_thresholds;
@@ -37,14 +36,16 @@ else
     time_window = thresholds;
 end
 
-% Plot Histogram 2D of Freeze Onset and Freeze Duration
+bouts_proc = data_parser_new(bouts, 'min_dur', 12, 'nloom', 2:20, 'period', 'bsl');
+bouts_proc = impose_contact_threshold(bouts_proc);
+bouts_proc = data_parser_new(bouts_proc, 'min_dur', 12, 'nloom', 2:20, 'period', 'bsl');
+thresholds = define_thresholds;
+
 str = 'immobility';
-type = 'loom';
 
 % Condition Flags
 clamp = false;
 bouts_with_loom = 'all';
-zoom =  false;
 
 % Number of onsets
 n_onsets = 240;
@@ -53,7 +54,7 @@ fh = figure('color','w','Position',[100, 100, 1200, 600]);
 tl = tiledlayout(1,2, "TileSpacing","compact","Padding","compact");
 
 i = 0;
-for idx_slooms = [unique(bouts.sloom)]'
+for idx_slooms = [unique(bouts_proc.sloom)]'
     i = i + 1;
     
     nexttile
@@ -63,7 +64,7 @@ for idx_slooms = [unique(bouts.sloom)]'
         str = 'le_window_fl';
     end
 
-    bouts_temp = bouts(bouts.sloom == idx_slooms, :);
+    bouts_temp = bouts_proc(bouts_proc.sloom == idx_slooms, :);
 
     if clamp == true
         bouts_temp.durations(bouts_temp.durations + bouts_temp.onsets_loomwin >= time_window(2)) = time_window(2) - bouts_temp.onsets_loomwin(bouts_temp.durations + bouts_temp.onsets_loomwin >= time_window(2));
@@ -85,19 +86,19 @@ for idx_slooms = [unique(bouts.sloom)]'
     cmap = colorcet('C06', 'N', n_onsets + abs(start_position) + 1);
 
     for idx_onsets = start_position:1:n_onsets
-        [f, x] = ecdf(bouts_temp.durations(bouts_temp.onsets_loomwin == idx_onsets)); %, 'censoring', bouts_temp.bout_with_loom(bouts_temp.onsets_loomwin == idx_onsets));
+        [f, x] = ecdf(bouts_temp.durations(bouts_temp.onsets_loomwin == idx_onsets), 'Censoring', bouts_temp.is_censored(bouts_temp.onsets_loomwin == idx_onsets));
 
-        if idx_onsets >= thresholds.(str)(1) && idx_onsets <= thresholds.(str)(2)
+       % if idx_onsets >= thresholds.(str)(1) && idx_onsets <= thresholds.(str)(2)
             plot(x, f, 'Color', cmap(idx_onsets + abs(start_position) + 1, :) , 'LineWidth', 1)
-        else
-            plot(x, f, 'Color', 'k' , 'LineWidth', 1)
+        %else
+           % plot(x, f, 'Color', 'k' , 'LineWidth', 1)
         end
 
     end
     ax(i) = gca;
     ylim([0 1])
-    xlim([0 1200])
-    apply_generic(gca)
+    xlim([0 600])
+    apply_generic(ax(i))
     xlabel('Immobility Duration (frames)')
     ylabel('ecdf')
 

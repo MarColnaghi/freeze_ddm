@@ -33,8 +33,9 @@ function bouts_proc = build_freeze_survival(bouts_proc, varargin)
 %   guard              0      frames before the contact (or bout end) also
 %                             dropped from windows, to keep the neighbour's
 %                             approach out of the covariate
-%   sm_max             Inf    drop bouts with sm_<sm_var> above this. This is
-%                             selection on the exposure, so report it
+%   sm_max             Inf    drop bouts with sm_<sm_var> above this, and the
+%                             ones where it is NaN. This is selection on the
+%                             exposure, so report it
 %   sm_var             'early'
 %   norm_factor        10     divides the raw social motion
 %   verbose            true
@@ -60,6 +61,14 @@ function bouts_proc = build_freeze_survival(bouts_proc, varargin)
 % With the window ending at the landmark, the covariate is fixed before the
 % first frame at risk, so it is a clean baseline covariate for Kaplan-Meier
 % strata and Cox models, and contact clipping can never touch it.
+%
+% Caveat on the censoring. Kaplan-Meier on t_obs/event estimates the
+% contact-free duration only if contact is independent of the freeze's exit
+% hazard. Social motion raises both (neighbours that move arrive, and move the
+% freeze to its end), so within a stratum of sm the independence is only
+% approximate. Stratifying on the exposure absorbs most of it. For a bound
+% that needs no assumption use Peterson's: P(t_obs <= t, event) <= F(t) <=
+% P(t_obs <= t) within each stratum.
 
 opt = inputParser;
 addParameter(opt, 'contact_threshold', 70);

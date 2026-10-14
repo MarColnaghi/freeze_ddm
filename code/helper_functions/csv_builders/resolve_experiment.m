@@ -43,7 +43,13 @@ dist = params.dist_scale ./ tan(angle_sur / 2);
 fast = focal.velocity >= params.still_vel;
 
 freeze = ~bwareaopen(~(focal.pixelchange == 0), params.freeze_gap + 1) & ~fast; % fill short moving gaps
-freeze_bout = freeze_bout_mask(focal.pixelchange, fast, params);
+
+% freeze_bout is the freeze runs of at least bout_min frames, which is the
+% immobility definition of the bouts table at fill-in freeze_gap + 1 (imm3 for
+% freeze_gap = 3), bouts of 30 frames or more. pixelchange == 0 stands in for
+% the table's pixelchange < thresholds.pc, the same thing while pixelchange is
+% only ever 0 or >= 7. If the table's fill-in changes, so must freeze_gap
+freeze_bout = bwareaopen(freeze, params.bout_min);
 
 % Upstream the two labels never overlap. Without this the flies repaired by
 % the new freeze_bout would be freezing and low-velocity at the same time
@@ -54,29 +60,6 @@ M = [focal.Unnamed_0, focal.looming_bout, focal.velocity, focal.pixelchange, foc
     freeze_bout, focal.jumps, low_vel_bout, focal.fly_x_mm, focal.fly_y_mm, sur_block, ...
     sum(speed_sur, 2, 'omitnan'), sum(angle_sur, 2, 'omitnan'), sum(sur_block(:, 3:3:12), 2, 'omitnan'), ...
     freeze, dist, min(dist, [], 2)];
-
-end
-
-
-function freeze_bout = freeze_bout_mask(pixelchange, fast, params)
-% Upstream freeze_bout without its start/end pairing bug, which emptied it
-% whenever the fly was still on both the first and the last frame. Frames
-% with pixelchange == 0 and interior gaps of up to bout_gap frames filled,
-% minus the fast ones, keeping only runs of at least bout_min frames
-
-still = pixelchange == 0;
-
-freeze_bout = false(size(still));
-if ~any(still)
-    return
-end
-
-% Gaps are filled only between two still stretches, never before the first
-% still frame or after the last one
-gaps = ~bwareaopen(~still, params.bout_gap + 1) & ~still;
-gaps([1:find(still, 1) - 1, find(still, 1, 'last') + 1:end]) = false;
-
-freeze_bout = bwareaopen((still | gaps) & ~fast, params.bout_min);
 
 end
 

@@ -4,6 +4,9 @@
 % freeze_bout is recomputed for every fly, which fixes the upstream bug that
 % left it empty whenever the fly was still on both the first and last frame.
 % freeze and freeze_bout end at the first change in pixelchange or velocity.
+% freeze_bout is the freeze runs of at least bout_min frames, so it matches the
+% immobility bouts of 30 frames or more of the bouts table (imm3), not the
+% dataset_0 freeze_bout, which filled gaps of only 2 frames.
 % Distances all come from the raw positions, in the dataset_0 units, and the
 % columns derived from the positions are written with 7 significant digits.
 % Each experiment is rebuilt in resolve_experiment.
@@ -24,9 +27,8 @@ params.speed_cap = 75;      % surrounding fly speed is clipped here
 params.fly_radius = 1.5;    % mm, each fly counts as a 3 mm object in angle_sur_fly
 params.dist_scale = 25;     % dist = 25 / tan(angle / 2), the dataset_0 units (mm x 50/3)
 params.still_vel = 20;      % mm/s, a frame this fast is moving even with pixelchange == 0
-params.freeze_gap = 3;      % freeze fills pixelchange gaps of up to 3 frames
-params.bout_gap = 2;        % freeze_bout fills interior pixelchange gaps of up to 2 frames
-params.bout_min = 30;       % freeze_bout keeps runs of at least 30 frames
+params.freeze_gap = 3;      % freeze fills pixelchange gaps of up to 3 frames, as the bouts table does at imm3
+params.bout_min = 30;       % freeze_bout keeps the freeze runs of at least 30 frames
 
 %% Experiment list, numbered as in dataset_0
 
@@ -108,7 +110,10 @@ fprintf('freeze_bout is no longer empty in %d out of %d previously bugged flies.
 % A few flies in full: every shared column should match dataset_0 to within the
 % 7 digit rounding (relative diff <= 5e-7), except the recomputed labels, which
 % only differ on the fast frames (and for freeze_bout in the bugged flies), and
-% the distances. dataset_0 took those from the aligned pixel coordinates for 370
+% the distances. freeze_bout also differs from dataset_0 wherever a 3 frame gap
+% is bridged, since dataset_0 filled gaps of only 2 frames, so its agreement
+% here is expected to be lower than that of freeze.
+% dataset_0 took the distances from the aligned pixel coordinates for 370
 % flies, which agree with the raw positions to < 0.1 mm, except flies 149, 451
 % and 944 where the aligned coordinates are off by several mm
 label_cols = {'freeze', 'freeze_bout', 'low_vel_bout'};

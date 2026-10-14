@@ -62,6 +62,13 @@ parse(opt, varargin{:});
 %   jump_start          true for an immobility bout whose preceding bout has
 %                       `jump`. Per-bout, unlike frozen_start, so it is not
 %                       broadcast to the other bouts sharing its nloom
+%   censored_end        true for the last bout of each fly, which runs into the
+%                       end of the recording. Its true end is unknown, so it is
+%                       right-censored and `durations` / `ends` are only lower
+%                       bounds on it. Those two are also one frame short for
+%                       this bout, from how the last run is closed below. It is
+%                       left uncorrected on purpose, a censored length is not
+%                       an exact one
 %
 % bouts_formatting then adds `id` and overwrites `le`, `onsets_loomwin` and
 % `nloom_loomwin`.
@@ -297,6 +304,11 @@ for dataset = 0
                 % one fly in time order, so the previous row is the previous
                 % bout, and the first bout of a fly has no predecessor
                 z.jump_start = [false; z.jump(1:end-1)] & z.type == 1;
+
+                % The last bout of the fly runs to the last frame, so when it
+                % ended is not known: right-censored, whatever its type
+                z.censored_end = false(height(z), 1);
+                z.censored_end(end) = true;
 
                 soc_mot = [soc_mot; l];
                 bouts = [bouts; z];

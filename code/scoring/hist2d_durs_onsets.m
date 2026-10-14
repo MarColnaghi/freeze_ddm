@@ -143,7 +143,7 @@ end
 
 switch plot_style
     case 'bar3'
-        bin_size = 1;
+        bin_size = 2;
     case 'tile'
         bin_size = 2;
 end
@@ -265,8 +265,8 @@ for r = 1:n_hist_rows
 
         h2h = histogram2(durs_all(mask), bouts.onsets_loomwin(mask), x_edges, y_edges, 'DisplayStyle', plot_style, 'FaceColor', 'flat', 'EdgeColor', 'none');
         % If you want marginals
-        % h2h = histogram2(durs, 604 * ones(length(durs), 1), -0.5:1:601.5, 603:605, 'DisplayStyle', 'bar3', 'FaceColor', 'k', 'Normalization', 'pdf', 'EdgeColor','none');
-        % h2h = histogram2(-1 * ones(length(onsets), 1), onsets, -2:0,  -0.5:1:601.5, 'DisplayStyle', 'bar3', 'FaceColor', 'k', 'Normalization', 'pdf', 'EdgeColor','none');
+      %  h2h = histogram2(durs, 604 * ones(length(durs), 1), -0.5:1:601.5, 603:605, 'DisplayStyle', 'bar3', 'FaceColor', 'k', 'Normalization', 'pdf', 'EdgeColor','none');
+      %  h2h = histogram2(-1 * ones(length(onsets), 1), onsets, -2:0,  -0.5:1:601.5, 'DisplayStyle', 'bar3', 'FaceColor', 'k', 'Normalization', 'pdf', 'EdgeColor','none');
 
         % Set Axis Labels
         if strcmp(dur_var, 'durations')

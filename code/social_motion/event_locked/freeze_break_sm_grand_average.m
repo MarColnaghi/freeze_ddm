@@ -24,14 +24,14 @@ clearvars
 %% ---- Parameters ---------------------------------------------------------
 camera_fps      = 60;
 delay_after     = 90;     % frames of signal to keep AFTER the break (1.5 s)
-contact_thresh  = 80;     % px; conservative collision threshold (censoring)
+contact_thresh  = 0;     % px; conservative collision threshold (censoring)
 max_dur         = 630;    % frames; drop freezes longer than the obs. window
 min_n           = 30;     % only plot lags with at least this many freezes
 xlims_s         = [-6 delay_after/camera_fps];   % seconds, relative to break
 sm_cache        = 'motion_cache';                % social-motion timeseries
 
 %% ---- Load & parse bouts -------------------------------------------------
-threshold_imm = 2; threshold_mob = 2; threshold_pc = 4;
+threshold_imm = 3; threshold_mob = 3; threshold_pc = 4;
 id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
 paths = path_generator('folder', 'social_motion', 'bouts_id', id_code, 'imfirst', false);
 
@@ -39,7 +39,7 @@ bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
 
 % Loom-evoked window (mirrors signals_aligned_2_offset.m)
 thresholds = define_thresholds('le_window', ...
-    struct('le_window_sl', [5 55], 'le_window_fl', [5 55]));
+    struct('le_window_sl', [15 50], 'le_window_fl', [5 40]));
 bouts = bouts_formatting(bouts, thresholds);
 
 % Loom-evoked freezes, exclude loom 1, min duration 0.5 s
@@ -54,8 +54,8 @@ sm_freeze = extract_sm_from_bouts(bouts_proc, 'type', 'onlyfreeze', ...
     'cache', sm_cache);
 
 %% ---- Censor collision-contaminated freezes ------------------------------
-[~, contact_mask] = impose_contact_threshold(bouts_proc, 'threshold', contact_thresh);
-keep_mask = ~contact_mask & (bouts_proc.durations <= max_dur);
+[bouts_proc, contact_mask] = impose_contact_threshold(bouts_proc, 'threshold', contact_thresh);
+keep_mask = ~bouts_proc.is_censored;
 sm_keep   = sm_freeze(keep_mask, :);
 
 %% ---- Grand average ------------------------------------------------------
@@ -106,7 +106,7 @@ labels(ticks == 0) = {'Break'};
 xticklabels(ax, labels)
 
 %% ---- Export -------------------------------------------------------------
-exporter(fh, paths, 'freeze_break_sm_grand_average.pdf')
+%exporter(fh, paths, 'freeze_break_sm_grand_average.pdf')
 % PNG for slides (raster — exportgraphics directly, exporter forces vector)
-exportgraphics(fh, fullfile(paths.fig, 'freeze_break_sm_grand_average.png'), ...
-    'BackgroundColor', 'white', 'Resolution', 300);
+%exportgraphics(fh, fullfile(paths.fig, 'freeze_break_sm_grand_average.png'), ...
+ %   'BackgroundColor', 'white', 'Resolution', 300);
