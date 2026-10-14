@@ -2,7 +2,7 @@
 paths_analysis = path_generator('folder', 'extrema_detection/alternative_test');
 
 % --- 1. Configuration & Paths ---
-threshold_imm = 2; threshold_mob = 2; threshold_pc = 4;
+threshold_imm = 3; threshold_mob = 3; threshold_pc = 4;
 id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
 col = cmapper('', 2);
 

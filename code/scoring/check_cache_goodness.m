@@ -40,7 +40,7 @@ if include_old
 
 end
 
-id_code = 'imm2_mob2_pc4';
+id_code = 'imm3_mob3_pc4';
 types = {'fill_in_combinations_imfirst', 'fill_in_combinations_mobfirst'};
 
 

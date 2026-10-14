@@ -59,7 +59,7 @@ P.seed    = 1;
 P.lambda  = 0; if ~isinf(tau_gen), P.lambda = 1/tau_gen; end
 
 % ── load real bouts + motion cache (template for the generator) ──────────────
-threshold_imm = 2; threshold_mob = 2; threshold_pc = 4;
+threshold_imm = 3; threshold_mob = 3; threshold_pc = 4;
 id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
 paths        = path_generator('folder','social_motion/hazard_kernel/visual_aid','bouts_id',id_code,'imfirst',false);
 bouts        = importdata(fullfile(paths.dataset,  'bouts.mat'));

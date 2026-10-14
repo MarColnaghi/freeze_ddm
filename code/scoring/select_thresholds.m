@@ -1,6 +1,6 @@
 
 param = {'avg_fs_1s'};
-id_code = 'imm2_mob2_pc4';
+id_code = 'imm3_mob3_pc4';
 paths = path_generator('bouts_id', id_code, 'imfirst', false, 'folder', 'descriptive/fd_distr');
 
 thresholds = define_thresholds;

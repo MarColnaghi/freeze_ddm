@@ -63,7 +63,7 @@ opts = struct('fps',fps, 'kernel_past_s', 3, 'kernel_future_s', 2, 'dt_frames', 
     'do_plot', true, 'do_stage2', false, 'do_unpen', true, 'use_penalty', true, 'anchor_zero', false);
 
 % ── load real bouts + motion cache (same pipeline as hazard_kernel_sm.m) ────
-threshold_imm = 2; threshold_mob = 2; threshold_pc = 4;
+threshold_imm = 3; threshold_mob = 3; threshold_pc = 4;
 id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
 paths = path_generator('folder','social_motion/hazard_kernel','bouts_id',id_code,'imfirst',false);
 bouts = importdata(fullfile(paths.dataset,  'bouts.mat'));

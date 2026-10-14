@@ -30,7 +30,7 @@ save_out    = true;
 rng(7);
 
 % ── load real bouts + motion cache (same pipeline as hazard_kernel_sparse.m) ──
-threshold_imm = 2; threshold_mob = 2; threshold_pc = 4;
+threshold_imm = 3; threshold_mob = 3; threshold_pc = 4;
 id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
 paths        = path_generator('folder','social_motion/hazard_kernel','bouts_id',id_code,'imfirst',false);
 bouts        = importdata(fullfile(paths.dataset,  'bouts.mat'));

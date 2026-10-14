@@ -30,7 +30,7 @@ fixed.T_max = 10.5 - 1/60;
 
 % Load the table first. We will take advantage of an already existing
 % dataset.
-threshold_imm = 2; threshold_mob = 2; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
+threshold_imm = 3; threshold_mob = 3; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
 model_str = 'dddm2';
 model_func = str2func(strcat('model_',model_str));
 model_struct = model_func();

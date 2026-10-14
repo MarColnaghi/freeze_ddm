@@ -92,7 +92,7 @@ opts = struct('nb_kernel',12, 'nb_acausal',0, 'bump_width',1.25, 'nb_baseline',6
 % ── load real bouts as TEMPLATE + motion cache ──────────────────────────────
 % Only .fly/.onsets are used generatively (durations are re-simulated); the real
 % sm supplies the drive, so regressor autocorrelation matches the real analysis.
-threshold_imm = 2; threshold_mob = 2; threshold_pc = 4;
+threshold_imm = 3; threshold_mob = 3; threshold_pc = 4;
 id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
 paths        = path_generator('folder','social_motion/hazard_kernel','bouts_id',id_code,'imfirst',false);
 bouts        = importdata(fullfile(paths.dataset,  'bouts.mat'));

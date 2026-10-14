@@ -3,7 +3,7 @@ xbin = (0:dx:dx*(ceil(10/dx)+10))';
 xxi     = 0:dx:1200;
 h       = .15;
 
-threshold_imm = 2; threshold_mob = 2; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
+threshold_imm = 3; threshold_mob = 3; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
 paths = path_generator('folder', fullfile('fitting_freezes','le'), 'bouts_id', id_code, 'imfirst', false);
 bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
 

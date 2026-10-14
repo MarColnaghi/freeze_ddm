@@ -4,7 +4,7 @@ clearvars
 
 % Load the table first. We will take advantage of an already existing
 % dataset.
-threshold_imm = 2; threshold_mob = 2; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
+threshold_imm = 3; threshold_mob = 3; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
 model_str = 'dddm2';
 col.Set3 = cbrewer2('Set3', 7);
 

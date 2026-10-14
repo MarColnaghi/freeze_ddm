@@ -2,7 +2,7 @@
 
 % Importing the data
 col = cmapper();
-threshold_imm = 2; threshold_mob = 2; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
+threshold_imm = 3; threshold_mob = 3; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
 paths = path_generator('folder', 'fitting_freezes/le/quantiles', 'bouts_id', id_code);
 bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
 motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));

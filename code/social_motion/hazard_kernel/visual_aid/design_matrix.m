@@ -5,7 +5,7 @@ clearvars; clc;
 % Show the person-period hazard-GLM design matrix for a FEW real freeze bouts
 % (one that un-freezes, one censored by collision), built with the EXACT same
 % pipeline / parameters as the real analysis (hazard_kernel_sparse.m):
-%   • same loading + filtering (imm2_mob2_pc4, contact threshold, truncation)
+%   • same loading + filtering (imm3_mob3_pc4, contact threshold, truncation)
 %   • same lag grid (kernel_past_s of causal history, sampled at fps)
 %   • same person-period sampling (entry_fr left truncation, every dt_frames)
 %   • same global z-scoring of sm
@@ -32,7 +32,7 @@ dur_lo = 123; dur_hi = 156; % pick bouts in this duration range (keeps the image
 save_out        = true;
 
 % ── load + filter (identical to the real pipeline) ───────────────────────────
-threshold_imm = 2; threshold_mob = 2; threshold_pc = 4;
+threshold_imm = 3; threshold_mob = 3; threshold_pc = 4;
 id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
 paths        = path_generator('folder','social_motion/hazard_kernel/visual_aid','bouts_id',id_code,'imfirst',false);
 bouts        = importdata(fullfile(paths.dataset,  'bouts.mat'));

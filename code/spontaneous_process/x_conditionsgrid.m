@@ -1,4 +1,4 @@
-id_code = 'imm2_mob2_pc4';
+id_code = 'imm3_mob3_pc4';
 col = cmapper();
 paths_out = path_generator('folder', 'spontaneous_process', 'bouts_id', id_code, 'imfirst', false);
 bouts = importdata(fullfile(paths_out.dataset, 'bouts.mat'));

@@ -1,6 +1,6 @@
 %% aggregated
 
-id_code = 'imm2_mob2_pc4';
+id_code = 'imm3_mob3_pc4';
 paths_out = path_generator('folder', 'descriptive/distributions_across_conditions', 'bouts_id', id_code, 'imfirst', false);
 bouts = importdata(fullfile(paths_out.dataset, 'bouts.mat'));
 

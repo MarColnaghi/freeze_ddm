@@ -36,7 +36,7 @@ fs_cache = importdata(fullfile(paths.cache_path, 'speed_cache.mat'));
 loom_cache = importdata(fullfile(paths.cache_path, 'loom_cache.mat'));
 
 % Load the bouts file to extract 
-threshold_imm = 2; threshold_mob = 2; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
+threshold_imm = 3; threshold_mob = 3; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
 thresholds = define_thresholds;
 bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
 bouts = bouts_formatting(bouts, thresholds);
@@ -321,7 +321,7 @@ fs_cache = importdata(fullfile(paths.cache_path, 'speed_cache.mat'));
 loom_cache = importdata(fullfile(paths.cache_path, 'loom_cache.mat'));
 
 % Load the bouts file to extract 
-threshold_imm = 2; threshold_mob = 2; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
+threshold_imm = 3; threshold_mob = 3; threshold_pc = 4; id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc);
 thresholds = define_thresholds;
 bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
 bouts = bouts_formatting(bouts, thresholds);
