@@ -10,7 +10,7 @@ speed_cache = importdata(fullfile(paths.cache_path, 'speed_cache.mat'));
 pixel_cache = importdata(fullfile(paths.cache_path, 'pixel_cache.mat'));
 
 % Here you can change the window of loom-evoked
-thresholds = define_thresholds('le_window', struct('le_window_sl', [0 55], 'le_window_fl', [0 55]));
+thresholds = define_thresholds;
 % thresholds = define_thresholds;
 
 bouts = bouts_formatting(bouts, thresholds);

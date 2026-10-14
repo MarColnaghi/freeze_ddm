@@ -7,7 +7,8 @@ function out = load_prefreeze_sm(varargin)
 %   out = load_prefreeze_sm('name', value)   overrides individual options
 %
 % Options (defaults match clustering_sm_timeseries.m):
-%   le_window         [0 55]   loom-evoked window (sl & fl)
+%   le_window         []       loom-evoked window as one [first last] for both speeds;
+%                              empty takes the windows of define_thresholds
 %   nloom             2:20
 %   min_dur           30       minimum freeze duration (frames)
 %   contact_threshold 0        ili contact-distance threshold (px)
@@ -21,7 +22,7 @@ function out = load_prefreeze_sm(varargin)
 %   inizio, fine        window bounds (frames) used for sm_freeze_full
 
 opt = inputParser;
-addParameter(opt, 'le_window', [0 55]);
+addParameter(opt, 'le_window', []);
 addParameter(opt, 'nloom', 2:20);
 addParameter(opt, 'min_dur', 30);
 addParameter(opt, 'contact_threshold', 0);
@@ -35,8 +36,12 @@ id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc
 paths = path_generator('folder', 'social_motion/clustering', 'bouts_id', id_code, 'imfirst', false);
 bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
 
-w = opt.Results.le_window;
-thresholds = define_thresholds('le_window', struct('le_window_sl', w, 'le_window_fl', w));
+if isempty(opt.Results.le_window)
+    thresholds = define_thresholds;
+else
+    w = opt.Results.le_window;
+    thresholds = define_thresholds('le_window', struct('le_window_sl', w, 'le_window_fl', w));
+end
 bouts = bouts_formatting(bouts, thresholds);
 
 % Loom-evoked freezes only, drop collision-contaminated bouts

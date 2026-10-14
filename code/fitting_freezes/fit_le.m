@@ -10,7 +10,7 @@ bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
 motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 
 % Here you can change the window of loom-evoked
-thresholds = define_thresholds('le_window', struct('le_window_sl', [5 55], 'le_window_fl', [5 55]));
+thresholds = define_thresholds;
 bouts = bouts_formatting(bouts, thresholds);
 
 % Process the data: set thresholds for sm, fs and ln. Set minimum duration.

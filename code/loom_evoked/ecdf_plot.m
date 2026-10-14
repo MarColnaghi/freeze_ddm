@@ -7,6 +7,6 @@
 [bouts, thresholds] = loom_evoked_data;
 
 % Frames of onset latency pooled into one curve, 1 is a curve per latency
-bin_size = 1;
+bin_size = 3;
 
 ecdf_condt_onset(bouts, thresholds, 'bin_size', bin_size)

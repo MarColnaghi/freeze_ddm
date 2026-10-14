@@ -38,8 +38,7 @@ paths = path_generator('folder', 'social_motion', 'bouts_id', id_code, 'imfirst'
 bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
 
 % Loom-evoked window (mirrors signals_aligned_2_offset.m)
-thresholds = define_thresholds('le_window', ...
-    struct('le_window_sl', [15 50], 'le_window_fl', [5 40]));
+thresholds = define_thresholds;
 bouts = bouts_formatting(bouts, thresholds);
 
 % Loom-evoked freezes, exclude loom 1, min duration 0.5 s

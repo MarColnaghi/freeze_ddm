@@ -11,8 +11,8 @@
 % Freeze duration ranges in frames, both ends included. They sort the bouts by
 % how long the freeze really was (duration_raw), not by the time it was observed
 % for before a contact. Together they cover every bout loom_evoked_bouts keeps,
-% which is more than 10 frames
-duration_ranges = [11 29; 30 59; 60 119; 120 299; 300 Inf];
+% which is at least thresholds.min_dur frames
+duration_ranges = [0 29; 30 59; 60 119; 120 299; 300 Inf];
 
 export = false;
 

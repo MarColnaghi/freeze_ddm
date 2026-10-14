@@ -75,7 +75,7 @@ paths        = path_generator('folder', 'social_motion/hazard_kernel', 'bouts_id
 bouts        = importdata(fullfile(paths.dataset, 'bouts.mat'));
 motion_cache = importdata(fullfile(paths.cache_path, 'motion_cache.mat'));
 
-thresholds = define_thresholds('le_window', struct('le_window_sl', [5 55], 'le_window_fl', [5 55]));
+thresholds = define_thresholds;
 bouts      = bouts_formatting(bouts, thresholds);
 
 trunc_point  = 30;

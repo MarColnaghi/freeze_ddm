@@ -41,7 +41,7 @@ id_code = sprintf('imm%d_mob%d_pc%d', threshold_imm, threshold_mob, threshold_pc
 paths        = path_generator('folder','social_motion/hazard_kernel/visual_aid','bouts_id',id_code,'imfirst',false);
 bouts        = importdata(fullfile(paths.dataset,  'bouts.mat'));
 motion_cache = importdata(fullfile(paths.cache_path,'motion_cache.mat'));
-thresholds = define_thresholds('le_window', struct('le_window_sl',[5 55],'le_window_fl',[5 55]));
+thresholds = define_thresholds;
 bouts = bouts_formatting(bouts, thresholds);
 
 bl = data_parser_new(bouts, 'type','immobility','period','loom','window','le','nloom',2:20,'min_dur',trunc_point);

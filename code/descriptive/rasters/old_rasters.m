@@ -93,8 +93,6 @@ points.censoring = 10.5;
 points.truncation = 0.5;
 
 thresholds = define_thresholds;
-thresholds.le_window_fl = [5 55];
-thresholds.le_window_sl = [5 55];
 
 bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
 bouts = bouts_formatting(bouts, thresholds);

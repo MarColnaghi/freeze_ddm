@@ -4,15 +4,17 @@ function bouts_proc = loom_evoked_bouts(bouts, varargin)
 %
 %   bouts_proc = loom_evoked_bouts(bouts)                       % real looms
 %   bouts_proc = loom_evoked_bouts(bouts, 'period', 'bsl')      % baseline mock looms
+%   bouts_proc = loom_evoked_bouts(bouts, 'min_dur', 30)        % another minimum
 %
-% Immobility bouts of more than 10 frames, every loom number, flies that
+% Immobility bouts of at least min_dur frames (thresholds.min_dur of
+% define_thresholds, 12, unless given), every loom number, flies that
 % freeze a lot at baseline excluded. Bouts of flies that were already frozen
 % when the loom arrived (frozen_start) are kept, which is why the period is
 % picked here and not through data_parser_new, whose 'loom' option drops them.
 %
 % Contact censoring is applied with impose_contact_threshold (its default
 % threshold, 70), and then the length rule once more on the observed time, so only
-% bouts seen for more than 10 frames before any contact stay, as in a landmark
+% bouts seen for at least min_dur frames before any contact stay, as in a landmark
 % analysis. That adds is_censored, censored_contacts, censored_loom and
 % ending_time, and durations / ends now hold the observed time. The duration the
 % freeze really had is kept in duration_raw, for plots that sort bouts by it.
@@ -24,9 +26,15 @@ function bouts_proc = loom_evoked_bouts(bouts, varargin)
 
 opt = inputParser;
 addParameter(opt, 'period', 'loom', @(x) any(strcmp(x, {'loom', 'bsl'})));
+addParameter(opt, 'min_dur', [], @(x) isempty(x) || (isnumeric(x) && isscalar(x) && x >= 0));
 parse(opt, varargin{:});
 
-min_dur = 11;      % frames, data_parser_new keeps durations >= min_dur
+% Frames, data_parser_new keeps durations >= min_dur
+min_dur = opt.Results.min_dur;
+if isempty(min_dur)
+    thresholds = define_thresholds;
+    min_dur = thresholds.min_dur;
+end
 
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'min_dur', min_dur, 'exclude_flies', true);
 

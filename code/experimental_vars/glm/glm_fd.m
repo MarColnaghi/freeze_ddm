@@ -3,8 +3,6 @@ id_code = 'imm3_mob3_pc4';
 paths_out = path_generator('folder', 'experimental_vars/glm', 'bouts_id', id_code, 'imfirst', false);
 
 thresholds = define_thresholds;
-thresholds.le_window_fl = [5 40];
-thresholds.le_window_sl = [15 50];
 
 Tmax = 10.5;
 Ttrunc = 0.5;

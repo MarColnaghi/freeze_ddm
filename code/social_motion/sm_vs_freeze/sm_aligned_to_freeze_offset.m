@@ -38,7 +38,7 @@ paths = path_generator('folder', 'social_motion/proximity', 'bouts_id', id_code,
 bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
 
 % Here you can change the window of loom-evoked
-thresholds = define_thresholds('le_window', struct('le_window_sl', [5 55], 'le_window_fl', [5 55]));
+thresholds = define_thresholds;
 %thresholds = define_thresholds;
 
 bouts = bouts_formatting(bouts, thresholds);

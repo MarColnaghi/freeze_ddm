@@ -13,12 +13,18 @@ fine = 631;
 
 switch type
     case 'onlyfreeze'
-        distance_freeze = extract_sm_from_bouts(bouts_proc, 'type', 'onlyfreeze', 'output_type', 'mat', 'cache', 'mindist_cache', 'align', 'onset');
+        % Only the first `fine` frames of a freeze are looked at, so the bouts are
+        % cut there before the table is built. Its width is that of the longest
+        % bout in it, a freeze of 16,000 frames and 7 GB for the whole table
+        bouts_capped = bouts_proc;
+        bouts_capped.ends = min(bouts_capped.ends, bouts_capped.onsets + fine);
+        distance_freeze = extract_sm_from_bouts(bouts_capped, 'type', 'onlyfreeze', 'output_type', 'mat', 'cache', 'mindist_cache', 'align', 'onset');
     case 'ili'
         distance_freeze = extract_sm_from_bouts(bouts_proc, 'type', 'onsets', 'output_type', 'mat', 'cache', 'mindist_cache', 'window', [0 fine]);
 end
 
-distance_freeze_cropped = distance_freeze(:, inizio:fine);
+% Fewer than `fine` columns when no bout in the table lasts that long
+distance_freeze_cropped = distance_freeze(:, inizio:min(fine, size(distance_freeze, 2)));
 
 is_below_threshold = distance_freeze_cropped < threshold;
 contact_mask = any(is_below_threshold, 2);

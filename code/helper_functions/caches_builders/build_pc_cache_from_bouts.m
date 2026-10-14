@@ -7,8 +7,6 @@ parse(opt, varargin{:});
 
 % Data Processing Setup
 thresholds = define_thresholds;
-thresholds.le_window_fl = [5 55];
-thresholds.le_window_sl = [5 55];
 
 % Process bouts with thresholds
 bouts = bouts_formatting(bouts, thresholds);
