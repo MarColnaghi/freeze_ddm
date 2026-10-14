@@ -54,8 +54,12 @@ bouts_proc.ends = bouts_proc.onsets + bouts_proc.ending_time;
 bouts_proc.durations_s = bouts_proc.ending_time ./ 60;
 bouts_proc.durations = bouts_proc.ending_time;
 
+% sm is the social motion over the freeze as observed (cut at a contact or at the
+% cap). sm_1s and sm_2s are the mean social motion in the first 1 s and 2 s after
+% the onset, whatever happens to the freeze: they are deliberately not cut at the
+% end of the freeze or at a contact.
 window_dur = 630;
-sm_freeze_ili = extract_sm_from_bouts(bouts_proc, 'type', 'onsets', 'output_type', 'mat','norm_factor', 10, 'cache', 'motion_cache', 'window', [0 window_dur]);
+sm_freeze_ili =extract_sm_from_bouts(bouts_proc, 'type', 'onsets', 'output_type', 'mat','norm_factor', 10, 'cache', 'motion_cache', 'window', [0 window_dur]);
 sm_freeze_full = extract_sm_from_bouts(bouts_proc, 'type', 'onlyfreeze', 'output_type', 'mat','norm_factor', 10, 'cache', 'motion_cache');
 
 bouts_proc.sm = mean(sm_freeze_full, 2, 'omitnan');

@@ -63,10 +63,10 @@ if opt.Results.exclude_flies
     bsl = bouts(bouts.type == 1 & bouts.period == 0, :);
     [G, fly_ids] = findgroups(bsl.fly);
     total_bsl_freeze = splitapply(@sum, bsl.durations, G);  % in frames
-    thr = 150 * 60;  % e.g. 10 seconds in frames
+    thr = 150 * 60;  % 150 seconds in frames
     bad_flies = fly_ids(total_bsl_freeze > thr);
     temp = temp(~ismember(temp.fly, bad_flies), :);
-    fprintf('Excluded %d flies due to high baseline freezing\n', bad_flies);
+    fprintf('Excluded %d flies due to high baseline freezing\n', numel(bad_flies));
 end
 
 % Select period: bsl or loom

@@ -67,11 +67,11 @@ for idx_param = params
     if n_sloom == 1 || is_sloom_param
         fig_width = 380;
     else
-        fig_width = 500;
+        fig_width = 600;
     end
 
     fh = figure('Color','w','Position',[100 100 fig_width 500]);
-    tiledlayout(10,2,'TileSpacing','tight','Padding','compact');
+    tl = tiledlayout(10,2,'TileSpacing','tight','Padding','compact');
 
     %% ===================== Control distribution =====================
     nexttile(1,[3 2]); hold on
@@ -84,17 +84,11 @@ for idx_param = params
 
     mid_q = ceil(num_quantiles/2) + 1;
 
-    if strcmp(param,'avg_sm_freeze_norm')
-        xlabel('Avg. Social Motion','Interpreter','none','Color',cmap(mid_q,:))
-    elseif strcmp(param,'avg_fs_1s_norm')
-        xlabel('Focal Speed before Loom','Interpreter','none','Color',cmap(mid_q,:))
-    elseif strcmp(param, 'ls')
-        xlabel('Loom Speed','Interpreter','none','Color',cmap(mid_q,:))
-    end
+    xlabel(control_label(param),'Interpreter','none','Color',cmap(mid_q,:))
 
     colormap(cmap(2:end,:));
     clim([0 num_quantiles])
-    add_quantile_colorbar(ax,param,num_quantiles)
+    add_quantile_colorbar(ax,param,num_quantiles,bouts_proc)
 
     ax.XAxis.Exponent = 0;
 
@@ -149,15 +143,17 @@ for idx_param = params
                 txt = 'Fast Loom';
             end
 
-            text(gca,1.015,0.015,txt, ...
-                'Units','normalized', ...
+            % Data coordinates, which render the same everywhere, unlike normalized
+            % text in a tiled layout
+            xl = xlim(gca); yl = ylim(gca);
+            text(gca, xl(2) - 0.02*diff(xl), yl(1) + 0.03*diff(yl), txt, ...
                 'FontSize',16, ...
                 'HorizontalAlignment','right', ...
                 'VerticalAlignment','bottom');
 
             ax_bottom(end+1) = gca; %#ok<AGROW>
         end
-        xlabel('Freeze Duration (s)');
+        xlabel(tl,'Freeze Duration (s)','FontSize',26);
 
     end
 
@@ -181,7 +177,8 @@ end
 function [nq, thresholds] = param_settings(param,T)
 switch param
     case 'nloom'
-        nq = 4; thresholds = 0:5:21;
+        % Edges between the loom numbers, so that 1-5, 6-10, 11-15 and 16-20 are the bins
+        nq = 4; thresholds = 0.5:5:20.5;
     case {'ls','jump_start'}
         % binary: quantile() edges collapse to [0 0 0 0 1] and discretize
         % puts every bout in the top bin
@@ -191,6 +188,25 @@ switch param
     otherwise
         nq = 4;
         thresholds = quantile(T.(param),linspace(0,1,nq+1));
+end
+end
+
+% ---------------------------------------------------------------------
+
+function s = control_label(param)
+% What the control variable is called on the figure; the column name if it has no entry
+switch param
+    case 'avg_sm_freeze_norm', s = 'Avg. Social Motion';
+    case 'avg_fs_1s_norm',     s = 'Focal Speed before Loom';
+    case 'ls',                 s = 'Loom Speed';
+    case 'moving_flies',       s = 'Moving Flies';
+    case 'nloom',              s = 'Loom Number';
+    case 'sm_1s',              s = 'Social Motion (1st second)';
+    case 'sm_2s',              s = 'Social Motion (1st 2 s)';
+    case 'sm',                 s = 'Social Motion (freeze)';
+    case 'avg_fs_1s',          s = 'Focal Speed (1 s before freeze)';
+    case 'avg_fs_loom',        s = 'Focal Speed (before previous loom)';
+    otherwise,                 s = strrep(param, '_', ' ');
 end
 end
 
@@ -240,8 +256,6 @@ switch type
             d = durations(qmask==q);
             c = censored(qmask==q);
             if isempty(d), continue, end
-            sum(c)
-            length(c)
             [f,x] = ecdf(d, 'Censoring', c);
             plot(x, f,'LineWidth', 4 ,'Color',cmap(1+q,:) )
         end
@@ -294,12 +308,15 @@ end
 
 % ---------------------------------------------------------------------
 
-function add_quantile_colorbar(ax,param,nq)
+function add_quantile_colorbar(ax,param,nq,T)
 switch param
     case 'nloom'
-        labels = {'1–5','6–10','11–15','16–20'};
-    case 'sloom'
+        % The first bin starts at the first loom in the data, 2 when loom 1 is left out
+        labels = {sprintf('%d–5',max(1,min(T.nloom))),'6–10','11–15','16–20'};
+    case {'sloom','ls'}
         labels = {'Slow','Fast'};
+    case 'moving_flies'
+        labels = arrayfun(@num2str,0:nq-1,'uni',0);
     otherwise
         labels = arrayfun(@(x)['Q' num2str(x)],1:nq,'uni',0);
 end

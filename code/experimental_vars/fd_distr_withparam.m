@@ -1,45 +1,54 @@
+% Loom-evoked freeze duration against the control variables: one curve of how long
+% the freezes last for each level of each variable, with contact and the end of the
+% loom cycle as censoring, and the same in numbers (fd_summary_by_control).
+%
+% The freezes are those of loom_evoked_freezes: immobility bouts of at least
+% thresholds.min_dur frames whose onset falls in the loom-evoked window of
+% define_thresholds, contact-censored. The curves are conditional on the freeze
+% having lasted the minimum duration.
+
 id_code = 'imm3_mob3_pc4';
 paths_out = path_generator('folder', 'experimental_vars/freeze_durations', 'bouts_id', id_code, 'imfirst', false);
 
 col = cmapper();
-thresholds = define_thresholds;
+thresholds = define_thresholds('min_dur', 30);
 
 bouts = importdata(fullfile(paths_out.dataset, 'bouts.mat'));
 bouts = bouts_formatting(bouts, thresholds);
 
-bouts_spontaneous = data_parser_new(bouts, 'period', 'bsl', 'window', 'le', 'type', 'immobility', 'nloom', 10:20);
-bouts_le = data_parser_new(bouts, 'period', 'loom', 'window', 'le', 'type', 'immobility', 'nloom', 2:20, 'min_dur', 30, 'exclude_flies', false);
-bouts_all = data_parser_new(bouts, 'min_dur', 30, 'exclude_flies', true);
+% By default the first loom and the bouts of looms that found the fly already
+% frozen are left out, as in the analyses before the new definition. 'nloom', 1:20
+% and 'already_frozen', true keep them, as the loom-evoked diagnostics do.
+%
+% The collisions are applied in this call (loom_evoked_freezes > loom_evoked_bouts >
+% impose_contact_threshold): a freeze is cut at the first frame the nearest fly is
+% closer than contact_threshold, and is_censored says which freezes were cut, by a
+% contact or by the end of the loom cycle. The length rule is then applied to the
+% time observed before the contact, so a freeze that is touched within min_dur
+% frames is not in the analysis. fd_distr_withparam_new and fd_summary_by_control
+% take is_censored as the censoring of the curves
+contact_threshold = 70;
+bouts_proc = loom_evoked_freezes(bouts, 'already_frozen', false, 'min_dur', thresholds.min_dur, 'contact_threshold', contact_threshold);
 
-% Process the data: set thresholds for sm, fs and ln. Set minimum duration.
-trunc_point = 30;
-
-bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', 'nloom', 2:20, 'min_dur', trunc_point);
-threshold = 70;
-[bouts_proc, contact_mask] = impose_contact_threshold(bouts_proc, 'threshold', threshold);
-bouts_proc.ends = bouts_proc.onsets + bouts_proc.ending_time;
-bouts_proc.durations_s = bouts_proc.ending_time ./ 60;
-bouts_proc.durations = bouts_proc.ending_time;
-
-window_dur = 630;
-sm_freeze_full = extract_sm_from_bouts(bouts_proc, 'type', 'onlyfreeze', 'output_type', 'mat','norm_factor', 10, 'cache', 'motion_cache');
-sm_freeze_ili = extract_sm_from_bouts(bouts_proc, 'type', 'onsets', 'output_type', 'mat','norm_factor', 10, 'cache', 'motion_cache', 'window', [0 window_dur]);
-
-bouts_proc.sm = mean(sm_freeze_full, 2, 'omitnan');
-bouts_proc.sm_1s = mean(sm_freeze_ili(:,1:60), 2, 'omitnan');
-bouts_proc.sm_2s = mean(sm_freeze_ili(:,1:120), 2, 'omitnan');
-
-bouts_proc = bouts_proc(bouts_proc.durations > trunc_point, :);
+n_freezes = height(bouts_proc);
+n_end_of_record = sum(bouts_proc.is_censored & ~bouts_proc.censored_contacts & ~bouts_proc.censored_loom);
+fprintf(['%d loom-evoked freezes, at least %d frames, contact threshold %g: %.1f%% cut by a contact, ' ...
+    '%.1f%% by the end of the loom cycle, %.1f%% by the end of the recording\n'], n_freezes, thresholds.min_dur, ...
+    contact_threshold, 100 * mean(bouts_proc.censored_contacts), 100 * mean(bouts_proc.censored_loom), 100 * n_end_of_record / n_freezes);
 
 % bouts_proc = bouts_proc(bouts_proc.sm < 1.5,:);
 % bouts_proc = bouts_proc(bouts_proc.sm_1s < 1.5,:);
 %bouts_proc = bouts_proc(bouts_proc.jump_start == 0, :);
 type = 'cumulative';
-param = {'sm_1s'};
-ls = 'fast';
-% bouts_proc.ls = 0* ones(height(bouts_proc), 1);
-% bouts_proc.sloom = 25 * ones(height(bouts_proc), 1);
-fh = fd_distr_withparam_new('bouts', bouts_proc, 'type', type, 'param', param, 'check_quantiles', true,  'export', false, 'paths', paths_out);%;, 'sloom_to_plot', 'fast'); %, 'avg_ss', 'cum_freeze_time', 'avg_fs_1s_norm', 'n_generated_freezes'})
+
+% Control variables: loom speed, number of moving flies and loom number. Measured
+% covariates can be added, 'sm_1s' for the social motion in the first second of the
+% freeze and 'fs' for the focal speed before it
+params = {'avg_sm', 'sm_1s', 'avg_fs_1s', 'avg_fs_loom', 'moving_flies', 'ls'};
+% ls = 'fast';
+fh = fd_distr_withparam_new('bouts', bouts_proc, 'type', type, 'params', params, 'export', false, 'paths', paths_out);%;, 'sloom_to_plot', 'fast'); %, 'avg_ss', 'cum_freeze_time', 'avg_fs_1s_norm', 'n_generated_freezes'})
+
+summary = fd_summary_by_control(bouts_proc, params);
 
 %% save
 %exporter(fh, paths_out, sprintf('%s-%s-%s-ls%s.pdf', type, param{1}, period, ls));

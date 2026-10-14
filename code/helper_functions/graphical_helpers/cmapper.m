@@ -76,41 +76,51 @@ col.extremadetection = '#DF2CC7';
 %% =====================================================================
 %% Variable → palette mapping
 %% =====================================================================
-% RULE:
-%   - If a variable is listed here → use its palette
-%   - Otherwise → use col.vars.default (purple)
+% One hue per kind of variable:
+%   loom number     purple
+%   loom speed      blue
+%   social motion   red
+%   focal speed     green
+%   moving flies    colorcet I2
+%   any other       greys
+% A variable listed here uses its palette, any other uses col.vars.default. A new
+% variable of one of the kinds above has to be added to its list, or it comes out grey.
 
-col.vars.default = pal.purple;   % <---- NEW GENERIC FALLBACK 🔥
+col.vars.default = pal.grey;
 
-% Explicit mappings
+% Loom number, purple
 col.vars.ln   = pal.purple;
 col.vars.nloom = pal.purple;
 col.vars.nloom1 = pal.purple;
 
+% Loom speed, blue
 col.vars.ls   = pal.blue;
 col.vars.sloom = pal.blue;
 col.vars.sloom1 = pal.blue;
 
+% Social motion, red
 col.vars.sm   = pal.red;
 col.vars.avg_sm = pal.red;
 col.vars.avg_sm_freeze_norm = pal.red;
 col.vars.am_post = pal.red;
 col.vars.sm_post = pal.red;
+col.vars.sm_pre  = pal.red;
+col.vars.smp     = pal.red;
+col.vars.sm_1s   = pal.red;
+col.vars.sm_2s   = pal.red;
 
-col.vars.sm_pre  = pal.orange;
-col.vars.smp     = pal.orange;
-col.vars.avg_ss  = pal.orange;
-col.vars.time_since_last = pal.orange;
-col.vars.onsets_loomaligned = pal.orange;
-col.vars.onsets_loomaligned_norm = pal.orange;
-
+% Focal speed, green
 col.vars.fs   = pal.green;
 col.vars.sf   = pal.green;
 col.vars.sf1  = pal.green;
+col.vars.fs_loom = pal.green;
+col.vars.avg_fs = pal.green;
+col.vars.avg_fs_1s = pal.green;
+col.vars.avg_fs_loom = pal.green;
 col.vars.avg_fs_freeze_norm = pal.green;
 col.vars.avg_fs_1s_norm = pal.green;
 
-col.vars.moving_flies   = pal.grey;
+% Moving flies
 col.vars.n_mov_flies1  = pal.grey;
 col.vars.moving_flies = colorcet('I2','N', 6);
 
