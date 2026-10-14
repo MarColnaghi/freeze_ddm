@@ -54,6 +54,17 @@ bouts_proc.ends = bouts_proc.onsets + bouts_proc.ending_time;
 bouts_proc.durations_s = bouts_proc.ending_time ./ 60;
 bouts_proc.durations = bouts_proc.ending_time;
 
+% Say what was done, so that a later step does not do it again. It cannot be repeated:
+% a second pass sees the durations already cut at the cap and loses the censoring of the
+% freezes that were cut there. build_freeze_survival reads this to skip the step
+ud = bouts_proc.Properties.UserData;
+if ~isstruct(ud)
+    ud = struct();
+end
+ud.contact_threshold = threshold;
+ud.contact_type = type;
+bouts_proc.Properties.UserData = ud;
+
 % sm is the social motion over the freeze as observed (cut at a contact or at the
 % cap). sm_1s and sm_2s are the mean social motion in the first 1 s and 2 s after
 % the onset, whatever happens to the freeze: they are deliberately not cut at the

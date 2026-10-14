@@ -1,5 +1,6 @@
 % Freeze-exit curves stratified by social motion (Kaplan-Meier, contact right-censored).
 %
+% The freezes are those of loom_evoked_freezes, already cut at the first contact.
 % Every bout is still frozen and contact-free at `landmark` frames, and the
 % social-motion exposure is the mean over [0, landmark), so the covariate is
 % fixed before the first frame at risk. See build_freeze_survival and
@@ -14,12 +15,13 @@ bouts = importdata(fullfile(paths_out.dataset, 'bouts.mat'));
 bouts = bouts_formatting(bouts, thresholds);
 
 trunc_point = 30;
-bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', ...
-    'nloom', 2:20, 'min_dur', trunc_point);
+contact_threshold = 70;
+freezes = loom_evoked_freezes(bouts, 'min_dur', trunc_point, 'contact_threshold', contact_threshold);
 
-%% Contact censoring, entry rule and social-motion exposure in one call
+%% Entry rule and social-motion exposure. The contact censoring is already in the table,
+% and build_freeze_survival sees that and does not apply it again
 landmark = 60;      % frames: 30 keeps the most bouts, 60 and 120 give a longer exposure window
-bouts_surv = build_freeze_survival(bouts_proc, 'contact_threshold', 70, 'trunc_point', trunc_point, ...
+bouts_surv = build_freeze_survival(freezes, 'contact_threshold', contact_threshold, 'trunc_point', trunc_point, ...
     'landmark', landmark, 'sm_max', 1.5);
 
 %% Figure

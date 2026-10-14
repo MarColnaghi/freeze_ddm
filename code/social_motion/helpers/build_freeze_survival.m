@@ -48,11 +48,12 @@ function bouts_proc = build_freeze_survival(bouts_proc, varargin)
 %   event      true if the freeze ended on its own while observed cleanly,
 %              false if right-censored by contact or by the loom cycle
 %   sm_<name>  one per window, as described above
-% The original columns (durations, ends, ...) are left untouched, unlike the
-% older scripts that overwrote them with the censored values. bouts_proc.
-% Properties.UserData records the settings, and the contact step is skipped
-% when the table already carries the same threshold, so calling this again on
-% its own output is cheap.
+% durations, ends and durations_s hold the observed time, as
+% impose_contact_threshold leaves them. bouts_proc.Properties.UserData records
+% the settings, and the contact step is skipped when the table already carries
+% the same threshold, which impose_contact_threshold records too: a table that
+% comes out of loom_evoked_freezes is not censored a second time, and calling
+% this again on its own output is cheap.
 %
 % Why a landmark. A social-motion mean over a window that runs into the
 % bout's own risk period conditions on how long the bout lasted: a bout that
@@ -100,7 +101,8 @@ guard   = opt.Results.guard;
 %% Right-censoring at first contact (slow, so skipped when already done)
 ud = bouts_proc.Properties.UserData;
 done = ismember('ending_time', bouts_proc.Properties.VariableNames) ...
-    && isstruct(ud) && isfield(ud, 'contact_threshold') && ud.contact_threshold == thr;
+    && isstruct(ud) && isfield(ud, 'contact_threshold') && ud.contact_threshold == thr ...
+    && (~isfield(ud, 'contact_type') || strcmp(ud.contact_type, 'onlyfreeze'));
 n_in = height(bouts_proc);
 if ~done
     bouts_proc = impose_contact_threshold(bouts_proc, 'threshold', thr);
