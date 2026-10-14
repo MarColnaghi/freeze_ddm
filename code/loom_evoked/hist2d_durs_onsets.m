@@ -96,7 +96,7 @@ end
 
 % Load Paths & Files
 if isempty(paths) && (export || isempty(bouts))
-    paths = path_generator('folder', 'validation_scoring/durs_onsets');
+    paths = path_generator('folder', 'loom_evoked');
 end
 
 if isempty(bouts)

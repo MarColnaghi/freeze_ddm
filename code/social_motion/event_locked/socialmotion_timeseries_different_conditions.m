@@ -15,7 +15,7 @@ bouts = bouts_formatting(bouts, thresholds);
 
 % Process the data: set thresholds for sm, fs and ln. Set minimum duration.
 bouts_proc = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', 'nloom', 2:20, 'min_dur', 30);
-threshold = 80;
+threshold = 70;
 [bouts_proc, contact_mask, is_below_threshold] = impose_contact_threshold(bouts_proc, 'threshold', threshold);
 censoring = bouts_proc.durations < 630;
 bouts_no_contacts = bouts_proc(~contact_mask & censoring, :);

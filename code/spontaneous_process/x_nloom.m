@@ -4,7 +4,7 @@
 id_code = 'imm3_mob3_pc4';
 paths_out = path_generator('folder', 'spontaneous_process', 'bouts_id', id_code, 'imfirst', false);
 bouts = importdata(fullfile(paths_out.dataset, 'bouts.mat'));
-contact_threshold = 80;
+contact_threshold = 70;
 
 col = cmapper('', 30);
 fh = figure('Position', [100 100 500 600], 'Color', 'w');

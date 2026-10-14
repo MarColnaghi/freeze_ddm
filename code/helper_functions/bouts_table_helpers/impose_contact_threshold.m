@@ -1,7 +1,7 @@
 function [bouts_proc, contact_mask, is_below_threshold] = impose_contact_threshold(bouts_proc, varargin)
 
 opt = inputParser;
-addParameter(opt, 'threshold', 80);
+addParameter(opt, 'threshold', 70);
 addParameter(opt, 'type', 'onlyfreeze');
 parse(opt, varargin{:});
 

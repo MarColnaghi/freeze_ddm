@@ -7,7 +7,7 @@ bouts = importdata(fullfile(paths_out.dataset, 'bouts.mat'));
 bouts_spontaneous = data_parser_new(bouts, 'period', 'bsl', 'window', 'all', 'type', 'immobility', 'nloom', 2:20);
 bouts_le = data_parser_new(bouts, 'period', 'loom', 'window', 'le', 'type', 'immobility', 'nloom', 2:20);
 
-contact_threshold = 80;
+contact_threshold = 70;
 bouts_spontaneous = impose_contact_threshold(bouts_spontaneous, 'threshold', contact_threshold);
 bouts_le = impose_contact_threshold(bouts_le, 'threshold', contact_threshold);
 

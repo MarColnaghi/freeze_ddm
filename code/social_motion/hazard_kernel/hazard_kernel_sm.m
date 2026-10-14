@@ -82,7 +82,7 @@ trunc_point  = 30;
 bl = data_parser_new(bouts, 'type', 'immobility', 'period', 'loom', 'window', 'le', ...
         'nloom', 2:20, 'min_dur', trunc_point);
 
-contact_threshold = 75;   % px — conservative, above the empirical contamination distance
+contact_threshold = 70;   % px — from pc_as_function_of_distance empirical estimate
 bl = impose_contact_threshold(bl, 'threshold', contact_threshold, 'type', 'onlyfreeze');
 
 % ending_time = observed (possibly censored) freeze length, in frames
