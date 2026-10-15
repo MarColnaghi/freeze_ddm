@@ -1,18 +1,34 @@
-function caches = build_caches(var_name)
+function caches = build_caches(var_name, varargin)
 % BUILD_CACHES - Builds caches for signal data from fly CSVs
-%   - folder: folder with CSVs
 %   - var_name: column name (or 'sur_speed'/'sur_angle'/'sur_distance'/'fly_xy' for multi-column)
+%   - 'dataset': 'CS' (default) reads 004 dataset_resolved and saves to datasets/caches.
+%     'LC11' reads 006--lc11/dataset_3 and saves to datasets/LC11/caches, so the two sets of
+%     caches, whose fly numbers overlap, never replace each other. LC11 has no dist_* columns,
+%     the distances are rebuilt from the angles (distance_from_angle)
 %
 % Returns:
 %   caches: containers.Map where key = fly number, value = numeric vector or matrix
 
-folder = '/Users/marcocolnaghi/experimental_data/004--social_ddm/dataset_resolved';
+opt = inputParser;
+addParameter(opt, 'dataset', 'CS', @(x) any(strcmp(x, {'CS', 'LC11'})));
+parse(opt, varargin{:});
+
+switch opt.Results.dataset
+    case 'CS'
+        folder = '/Users/marcocolnaghi/experimental_data/004--social_ddm/dataset_resolved';
+        dataset_folder = '';
+    case 'LC11'
+        folder = '/Users/marcocolnaghi/experimental_data/006--lc11/dataset_3';
+        dataset_folder = 'LC11';
+end
 files = dir(fullfile(folder, "*.csv"));
 
 % All files share the same header, read it once to name the readmatrix columns
 fid = fopen(fullfile(folder, files(1).name));
 header = strsplit(strtrim(fgetl(fid)), ',');
 fclose(fid);
+
+angle_cols = {'angle_sur_fly_1', 'angle_sur_fly_2', 'angle_sur_fly_3', 'angle_sur_fly_4'};
 
 % Initialize the map
 caches = containers.Map('KeyType','double','ValueType','any');
@@ -47,6 +63,8 @@ for i = idx'
         % Check if all specified columns exist in table T
         if all(ismember(col_names, T.Properties.VariableNames))
             x = T{:, col_names};
+        elseif all(ismember(angle_cols, T.Properties.VariableNames))
+            x = distance_from_angle(T);
         else
             % If they are missing, create an array of NaNs matching T's height
             x = nan(height(T), numel(col_names));
@@ -65,6 +83,8 @@ for i = idx'
         % Check if all specified columns exist in table T
         if all(ismember(var_name, T.Properties.VariableNames))
             x = T{:, var_name};
+        elseif strcmp(var_name, 'dist_min') && all(ismember(angle_cols, T.Properties.VariableNames))
+            x = min(distance_from_angle(T), [], 2);
         else
             % If they are missing, create an array of NaNs matching T's height
             x = nan(height(T), numel(var_name));
@@ -88,7 +108,10 @@ for i = idx'
 end
 
 % --- Save Logic ---
-base_path = '/Users/marcocolnaghi/PhD/freeze_ddm/datasets/caches/';
+base_path = path_generator('dataset', dataset_folder).cache_path;
+if ~isfolder(base_path)
+    mkdir(base_path);
+end
 switch var_name
     case 'sum_motion'
         save(fullfile(base_path, 'motion_cache.mat'), 'caches')
@@ -120,4 +143,11 @@ switch var_name
         save(fullfile(base_path, 'flyxy_cache.mat'), 'caches')
 end
 
+end
+
+function d = distance_from_angle(T)
+% Distance to each surrounding fly, in the dataset_resolved units (mm x 50/3), for a
+% dataset that only has the angle columns. The same formula as resolve_experiment, which
+% reproduces dist_min of dataset_resolved to its 7 digit rounding (relative diff < 1e-6)
+d = 25 ./ tan(T{:, {'angle_sur_fly_1', 'angle_sur_fly_2', 'angle_sur_fly_3', 'angle_sur_fly_4'}} / 2);
 end

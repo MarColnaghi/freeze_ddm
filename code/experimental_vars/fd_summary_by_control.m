@@ -77,6 +77,7 @@ for b = 1:n_boot
     counts = zeros(n_fly, 1);
     for s = [0 1]
         members = find(fly_speed == s);
+        if isempty(members), continue, end % a loom speed that was not run, LC11 has only the fast one
         counts = counts + accumarray(members(randi(numel(members), numel(members), 1)), 1, [n_fly 1]);
     end
     for i = 1:n_cell

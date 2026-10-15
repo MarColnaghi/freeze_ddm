@@ -137,7 +137,9 @@ for idx_param = params
             apply_generic(gca,'tick_length',0.025,'font_size',26, ...
                 'yticks',[0 1],'xticks',[0 10])
 
-            if idx_sloom == min(all_sloom) && strcmp(sloom_to_plot, 'all')
+            % ls is 0 for the slow loom and 1 for the fast one. Going by the smallest
+            % value in the data called the only speed of a 50 cm dataset slow
+            if idx_sloom == 0
                 txt = 'Slow Loom';
             else
                 txt = 'Fast Loom';

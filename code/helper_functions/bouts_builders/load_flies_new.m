@@ -5,6 +5,7 @@ opt = inputParser;
 addParameter(opt, 'save', 'both');
 addParameter(opt, 'paths', '');
 addParameter(opt, 'imfirst', false);
+addParameter(opt, 'dataset', 'CS', @(x) any(strcmp(x, {'CS', 'LC11'})));
 
 parse(opt, varargin{:});
 
@@ -41,8 +42,7 @@ parse(opt, varargin{:});
 %                       loom, NaN when that loom lands before frame 61
 %   avg_fs              mean focal velocity over the whole bout, uncapped
 %   avg_pc              mean pixelchange over the whole bout, uncapped
-%   genotype            1 CS. 2 LC11TNT and 3 EmptyTNT come from the dataset 2
-%                       branch, which is unreachable under `for dataset = 0`
+%   genotype            1 for the CS dataset. 2 LC11TNT and 3 EmptyTNT for the LC11 one
 %   moving_flies        number of moving flies around the focal fly, 0-4
 %   onsets              bout onset in frames
 %   ends                one past the bout's last frame, so a bout spans
@@ -58,7 +58,8 @@ parse(opt, varargin{:});
 %   jump                true when the focal fly jumps within the bout. Fast
 %                       frames are never immobile, so only mobility bouts can
 %                       have it
-%   x_onset, y_onset    focal fly position at bout onset, in mm
+%   x_onset, y_onset    focal fly position at bout onset, in mm. NaN for LC11,
+%                       whose files have no position columns
 %   jump_start          true for an immobility bout whose preceding bout has
 %                       `jump`. Per-bout, unlike frozen_start, so it is not
 %                       broadcast to the other bouts sharing its nloom
@@ -105,216 +106,220 @@ bouts = table();
 
 fly_id = 0;
 
-for dataset = 0
+% Every dir and readtable call below prefixes `directory`, so there is no
+% need to cd in here and leave the session somewhere else on the way out
+n_moving = 0:4;
 
-    % Every dir and readtable call below prefixes `directory`, so there is no
-    % need to cd in here and leave the session somewhere else on the way out
-    n_moving = 0:4;
-
-    if dataset == 0
+% The table is built the same way for every dataset, only the source differs.
+% token is filled with token_args, which puts the number of moving (NorpA)
+% flies and the number of freezing ones in the order the file names have them
+switch opt.Results.dataset
+    case 'CS'
         % dataset_0 rebuilt from the raw files, see generate_dataset_resolved
         directory = '/Users/marcocolnaghi/experimental_data/004--social_ddm/dataset_resolved/';
         token = '1CS%dNorpA%dLC6ChR_5F-%dcm*';
+        token_args = @(n_mov, speed) [n_mov, 4 - n_mov, speed];
         speeds = [25,50];
         genotype = 1;
 
-    elseif dataset == 2
-        directory = sprintf('/Users/marcocolnaghi/experimental_data/004--social_ddm/dataset_%d/', dataset);
+    case 'LC11'
+        % Same experiments as dataset_2 there, renamed to .flyN.csv with a
+        % frame column. No position columns. The genotype is read per file
+        directory = '/Users/marcocolnaghi/experimental_data/006--lc11/dataset_3/';
         token = '*%dTrh_%dNorpA-%dcm*';
+        token_args = @(n_mov, speed) [4 - n_mov, n_mov, speed];
         speeds = 50;
+end
 
-    end
+n_files = numel(dir(fullfile(directory, '*.csv')));
 
-    for idx_sloom = 1:length(speeds)
+for idx_sloom = 1:length(speeds)
 
-        for moving_flies = 1:length(n_moving)
+    for moving_flies = 1:length(n_moving)
 
-            if dataset == 0
-                listing = dir([directory, sprintf(token, n_moving(moving_flies), 4-n_moving(moving_flies), speeds(idx_sloom))]);
+        listing = dir([directory, sprintf(token, token_args(n_moving(moving_flies), speeds(idx_sloom)))]);
 
-            elseif dataset == 2
-                listing = dir([directory, sprintf(token, 4-n_moving(moving_flies), n_moving(moving_flies), speeds(idx_sloom))]);
+        loom_speed = speeds(idx_sloom);
 
+        for kf = 1:length(listing)
+
+            Fly1 = readtable([directory, listing(kf).name]);
+            Fly1.Properties.VariableNames{1} = 'frame';
+            fly_id = fly_id + 1;
+            tokens = regexp(listing(kf).name, '\.fly(\d+)\.csv', 'tokens');
+            fly_number = str2double(tokens{1}{1});
+
+            if strcmp(opt.Results.dataset, 'LC11')
+                geno_name = regexp(listing(kf).name, '-(\w+TNT)_', 'tokens', 'once');
+                assert(~isempty(geno_name) && ismember(geno_name{1}, {'LC11TNT', 'EmptyTNT'}), 'load_flies_new:genotype', ...
+                    'Cannot read the genotype (LC11TNT or EmptyTNT) from %s.', listing(kf).name);
+                genotype = 2 + strcmp(geno_name{1}, 'EmptyTNT');
             end
 
-            loom_speed = speeds(idx_sloom);
+            loom_frames = Fly1.frame(Fly1.looming_bout==1);
+            loom_starts = loom_frames([true; diff(loom_frames)>1])+1;
+            loom_ends = loom_frames([diff(loom_frames)>1;true])+1;
 
-            for kf = 1:length(listing)
+            % The two masks used to disagree, >2 against >1, so a single
+            % dropped frame mid-loom surfaced as a dimension mismatch on
+            % the subtraction below. Check the structure directly instead
+            assert(numel(loom_starts) == 20 && numel(loom_ends) == 20, ...
+                'load_flies_new:loomCount', ...
+                'Expected 20 looms in %s, found %d starts and %d ends.', ...
+                listing(kf).name, numel(loom_starts), numel(loom_ends));
 
-                Fly1 = readtable([directory, listing(kf).name]);
-                Fly1.Properties.VariableNames{1} = 'frame';
-                fly_id = fly_id + 1;
-                tokens = regexp(listing(kf).name, '\.fly(\d+)\.csv', 'tokens');
-                fly_number = str2double(tokens{1}{1});
+            loom_durs = repmat(loom_ends - loom_starts, 2, 1);
 
-                if dataset == 2
-                    match = regexp(listing(kf).name, '-(\w+TNT)_', 'tokens');
-                    if strcmp( match{1}{1}, 'LC11TNT')
-                        genotype = 2;
-                    elseif strcmp( match{1}{1}, 'EmptyTNT')
-                        genotype = 3;
-                    end
-                end
+            event_indices = repmat(loom_starts, 2, 1);
+            event_indices(1:20,:) = event_indices(1:20,:) - 18001;
 
-                loom_frames = Fly1.frame(Fly1.looming_bout==1);
-                loom_starts = loom_frames([true; diff(loom_frames)>1])+1;
-                loom_ends = loom_frames([diff(loom_frames)>1;true])+1;
+            % interp1 needs a monotonic grid. The -18001 shift on the first
+            % block only keeps it monotonic while the baseline is longer
+            % than the span of the loom block
+            assert(all(diff(event_indices) > 0), 'load_flies_new:eventOrder', ...
+                'Loom event grid is not strictly increasing in %s.', listing(kf).name);
 
-                % The two masks used to disagree, >2 against >1, so a single
-                % dropped frame mid-loom surfaced as a dimension mismatch on
-                % the subtraction below. Check the structure directly instead
-                assert(numel(loom_starts) == 20 && numel(loom_ends) == 20, ...
-                    'load_flies_new:loomCount', ...
-                    'Expected 20 looms in %s, found %d starts and %d ends.', ...
-                    listing(kf).name, numel(loom_starts), numel(loom_ends));
+            imm_frames = Fly1.pixelchange < thresholds.pc;
 
-                loom_durs = repmat(loom_ends - loom_starts, 2, 1);
+            % pixelchange often drops to 0 while the fly is mid-jump, so
+            % fast frames count as moving whatever pixelchange says. They
+            % are removed after the moving gaps are filled, so a fill never
+            % bridges them, as for freeze and freeze_bout in dataset_resolved
+            fast = Fly1.velocity >= thresholds.still_vel;
 
-                event_indices = repmat(loom_starts, 2, 1);
-                event_indices(1:20,:) = event_indices(1:20,:) - 18001;
+            % Filling in is done here - might make sense potentially to
+            % switch around the filling in process. used to be small
+            % imm first
 
-                % interp1 needs a monotonic grid. The -18001 shift on the first
-                % block only keeps it monotonic while the baseline is longer
-                % than the span of the loom block
-                assert(all(diff(event_indices) > 0), 'load_flies_new:eventOrder', ...
-                    'Loom event grid is not strictly increasing in %s.', listing(kf).name);
+            if opt.Results.imfirst
+                imm_frames = bwareaopen(imm_frames & ~fast, thresholds.fill_in_imm); % Remove small immobile bouts
+                imm_frames = ~bwareaopen(~imm_frames, thresholds.fill_in_mob) & ~fast; % Remove small moving bouts
+            else
+                imm_frames = ~bwareaopen(~imm_frames, thresholds.fill_in_mob) & ~fast; % Remove small moving bouts
+                imm_frames = bwareaopen(imm_frames, thresholds.fill_in_imm); % Remove small immobile bouts
+            end
 
-                imm_frames = Fly1.pixelchange < thresholds.pc;
+            diff_ts = [0; diff(imm_frames)]; % Detect changes
+            run_ends = [find(diff_ts ~= 0); length(imm_frames)]; % Indices of run ends
+            run_lengths = diff([1; run_ends]); % Calculate run lengths
+            run_values = imm_frames(run_ends - 1); % Values of the runs (0 or 1)
 
-                % pixelchange often drops to 0 while the fly is mid-jump, so
-                % fast frames count as moving whatever pixelchange says. They
-                % are removed after the moving gaps are filled, so a fill never
-                % bridges them, as for freeze and freeze_bout in dataset_resolved
-                fast = Fly1.velocity >= thresholds.still_vel;
+            z = table();
+            l = table();
 
-                % Filling in is done here - might make sense potentially to
-                % switch around the filling in process. used to be small
-                % imm first
+            z.fly = fly_number .* ones(length(run_lengths), 1);
+            z.type = run_values;
+            z.le = zeros(length(run_lengths), 1);
 
-                if opt.Results.imfirst
-                    imm_frames = bwareaopen(imm_frames & ~fast, thresholds.fill_in_imm); % Remove small immobile bouts
-                    imm_frames = ~bwareaopen(~imm_frames, thresholds.fill_in_mob) & ~fast; % Remove small moving bouts
-                else
-                    imm_frames = ~bwareaopen(~imm_frames, thresholds.fill_in_mob) & ~fast; % Remove small moving bouts
-                    imm_frames = bwareaopen(imm_frames, thresholds.fill_in_imm); % Remove small immobile bouts
-                end
+            onsets = run_ends - run_lengths;
 
-                diff_ts = [0; diff(imm_frames)]; % Detect changes
-                run_ends = [find(diff_ts ~= 0); length(imm_frames)]; % Indices of run ends
-                run_lengths = diff([1; run_ends]); % Calculate run lengths
-                run_values = imm_frames(run_ends - 1); % Values of the runs (0 or 1)
+            loom_ts_previous = interp1(event_indices, event_indices, onsets, 'previous', 'extrap');
+            loom_ts_next = interp1(event_indices, event_indices, onsets, 'next', 'extrap');
+            [~, nloom] = ismember(loom_ts_previous, event_indices);
 
-                z = table();
-                l = table();
+            % A bout with no previous loom lands here as nloom == 0. That
+            % is then dropped by the histcounts edges further down and only
+            % surfaces as a height mismatch on the loom_durs assignment, a
+            % long way from the cause
+            assert(all(nloom > 0), 'load_flies_new:onsetBeforeGrid', ...
+                '%d bouts in %s have no preceding loom event (earliest onset %d, first event %d).', ...
+                sum(nloom == 0), listing(kf).name, min(onsets), event_indices(1));
 
-                z.fly = fly_number .* ones(length(run_lengths), 1);
-                z.type = run_values;
-                z.le = zeros(length(run_lengths), 1);
+            z.period = nloom > 20;
 
-                onsets = run_ends - run_lengths;
+            z.onsets_loomaligned =  onsets - loom_ts_previous;
+            z.durations = run_lengths;
 
-                loom_ts_previous = interp1(event_indices, event_indices, onsets, 'previous', 'extrap');
-                loom_ts_next = interp1(event_indices, event_indices, onsets, 'next', 'extrap');
-                [~, nloom] = ismember(loom_ts_previous, event_indices);
+            z.nloom = nloom;
+            z.sloom = loom_speed .* ones(length(run_lengths), 1);
 
-                % A bout with no previous loom lands here as nloom == 0. That
-                % is then dropped by the histcounts edges further down and only
-                % surfaces as a height mismatch on the loom_durs assignment, a
-                % long way from the cause
-                assert(all(nloom > 0), 'load_flies_new:onsetBeforeGrid', ...
-                    '%d bouts in %s have no preceding loom event (earliest onset %d, first event %d).', ...
-                    sum(nloom == 0), listing(kf).name, min(onsets), event_indices(1));
+            % Bounds match the bout's actual span, onsets : run_ends - 1.
+            % The old form paired a strict > against onsets with a strict <
+            % against run_ends, so a loom landing on the bout's first frame
+            % was dropped while one on its last frame was kept
+            z.bout_with_loom = sum((event_indices >= onsets') & (event_indices <= (run_ends - 1)'), 1)';
 
-                z.period = nloom > 20;
+            if any(z.bout_with_loom > 0 & z.type == 1 & z.durations >= 30)
+                frozen_starts = unique(z.nloom(z.bout_with_loom > 0 & z.type == 1 & z.durations >= 30) + z.bout_with_loom(z.bout_with_loom > 0 & z.type == 1 & z.durations >= 30));
+                % long_freezes = z.bout_with_loom == 1 & z.type == 1 & z.durations >= 30;
+                z.frozen_start = ismember(z.nloom, frozen_starts);
+            else
+                z.frozen_start = false(size(z.nloom)); % Ensure correct output format
+            end
 
-                z.onsets_loomaligned =  onsets - loom_ts_previous;
-                z.durations = run_lengths;
+            capped_lengths = min(run_lengths, 630);
+            z.avg_sm = compute_means(Fly1.sum_motion(1:end), onsets , onsets + capped_lengths - 1);
+            z.avg_ss = compute_means(Fly1.sum_speed(1:end), onsets, onsets + capped_lengths - 1);
+            z.avg_sa = compute_means(Fly1.sum_angle(1:end), onsets, onsets + capped_lengths - 1);
 
-                z.nloom = nloom;
-                z.sloom = loom_speed .* ones(length(run_lengths), 1);
+            l.ts_sm = arrayfun(@(start_idx, end_idx) ...
+                Fly1.sum_motion(start_idx:end_idx), ...
+                run_ends - run_lengths, run_ends - 1, ...
+                'UniformOutput', false);
 
-                % Bounds match the bout's actual span, onsets : run_ends - 1.
-                % The old form paired a strict > against onsets with a strict <
-                % against run_ends, so a loom landing on the bout's first frame
-                % was dropped while one on its last frame was kept
-                z.bout_with_loom = sum((event_indices >= onsets') & (event_indices <= (run_ends - 1)'), 1)';
+            z.avg_fs_1s = nan(length(run_lengths), 1);
+            z.avg_fs_1s(onsets >= 61, :) = compute_means(Fly1.velocity(1:end), onsets(onsets >= 61, :) - 60, onsets(onsets >= 61, :) - 1);
 
-                if any(z.bout_with_loom > 0 & z.type == 1 & z.durations >= 30)
-                    frozen_starts = unique(z.nloom(z.bout_with_loom > 0 & z.type == 1 & z.durations >= 30) + z.bout_with_loom(z.bout_with_loom > 0 & z.type == 1 & z.durations >= 30));
-                    % long_freezes = z.bout_with_loom == 1 & z.type == 1 & z.durations >= 30;
-                    z.frozen_start = ismember(z.nloom, frozen_starts);
-                else
-                    z.frozen_start = false(size(z.nloom)); % Ensure correct output format
-                end
+            % Needs a full second of history before the loom, so the guard
+            % is >= 61 to match avg_fs_1s above. The old > 0 admitted looms
+            % at frames 1-60, where the window start goes non-positive and
+            % the indexing throws
+            z.avg_fs_loom = nan(length(run_lengths), 1);
+            has_pre_loom = loom_ts_previous >= 61;
+            z.avg_fs_loom(has_pre_loom) = compute_means(Fly1.velocity(1:end), loom_ts_previous(has_pre_loom) - 60, loom_ts_previous(has_pre_loom) - 1);
 
-                capped_lengths = min(run_lengths, 630);
-                z.avg_sm = compute_means(Fly1.sum_motion(1:end), onsets , onsets + capped_lengths - 1);
-                z.avg_ss = compute_means(Fly1.sum_speed(1:end), onsets, onsets + capped_lengths - 1);
-                z.avg_sa = compute_means(Fly1.sum_angle(1:end), onsets, onsets + capped_lengths - 1);
+            z.avg_fs = compute_means(Fly1.velocity(1:end), run_ends - run_lengths, run_ends - 1);
+            z.avg_pc = compute_means(Fly1.pixelchange(1:end), run_ends - run_lengths, run_ends - 1);
 
-                l.ts_sm = arrayfun(@(start_idx, end_idx) ...
-                    Fly1.sum_motion(start_idx:end_idx), ...
-                    run_ends - run_lengths, run_ends - 1, ...
-                    'UniformOutput', false);
+            z.genotype = genotype .* ones(length(run_lengths), 1);
+            z.moving_flies = n_moving(moving_flies) .* ones(length(run_lengths), 1);
 
-                z.avg_fs_1s = nan(length(run_lengths), 1);
-                z.avg_fs_1s(onsets >= 61, :) = compute_means(Fly1.velocity(1:end), onsets(onsets >= 61, :) - 60, onsets(onsets >= 61, :) - 1);
+            z.onsets = onsets;
+            z.ends = run_ends;
 
-                % Needs a full second of history before the loom, so the guard
-                % is >= 61 to match avg_fs_1s above. The old > 0 admitted looms
-                % at frames 1-60, where the window start goes non-positive and
-                % the indexing throws
-                z.avg_fs_loom = nan(length(run_lengths), 1);
-                has_pre_loom = loom_ts_previous >= 61;
-                z.avg_fs_loom(has_pre_loom) = compute_means(Fly1.velocity(1:end), loom_ts_previous(has_pre_loom) - 60, loom_ts_previous(has_pre_loom) - 1);
+            z.onsets_loomwin =  onsets - loom_ts_next;
+            z.nloom_loomwin = z.nloom;
 
-                z.avg_fs = compute_means(Fly1.velocity(1:end), run_ends - run_lengths, run_ends - 1);
-                z.avg_pc = compute_means(Fly1.pixelchange(1:end), run_ends - run_lengths, run_ends - 1);
+            z.loom_ts = loom_ts_previous;
+            z.loom_ts_n = loom_ts_next;
+            z.loom_durs = repelem(loom_durs, histcounts(nloom, 0.5:1:40.5));
 
-                z.genotype = genotype .* ones(length(run_lengths), 1);
-                z.moving_flies = n_moving(moving_flies) .* ones(length(run_lengths), 1);
+            jumps = nan(4, height(Fly1));
 
-                z.onsets = onsets;
-                z.ends = run_ends;
+            for idx_surr_fly = 1:4
+                jumps(idx_surr_fly, :) = movmean(Fly1.(sprintf('speed_sur_fly_%d',idx_surr_fly)), 10) > 20;
+            end
 
-                z.onsets_loomwin =  onsets - loom_ts_next;
-                z.nloom_loomwin = z.nloom;
+            z.jump_flies = interp1(1:height(Fly1), sum(jumps), onsets);
 
-                z.loom_ts = loom_ts_previous;
-                z.loom_ts_n = loom_ts_next;
-                z.loom_durs = repelem(loom_durs, histcounts(nloom, 0.5:1:40.5));
+            % Focal fly jumps at least once within the bout (upstream label,
+            % a velocity >= 75 mm/s event)
+            z.jump = compute_means(Fly1.jumps(1:end), onsets, run_ends - 1) > 0;
 
-                jumps = nan(4, height(Fly1));
-
-                for idx_surr_fly = 1:4
-                    jumps(idx_surr_fly, :) = movmean(Fly1.(sprintf('speed_sur_fly_%d',idx_surr_fly)), 10) > 20;
-                end
-
-                z.jump_flies = interp1(1:height(Fly1), sum(jumps), onsets);
-
-                % Focal fly jumps at least once within the bout (upstream label,
-                % a velocity >= 75 mm/s event)
-                z.jump = compute_means(Fly1.jumps(1:end), onsets, run_ends - 1) > 0;
-
-                % Focal fly position at bout onset, in mm
+            % Focal fly position at bout onset, in mm. A dataset without position
+            % columns (006--lc11) gets NaN
+            if all(ismember({'fly_x_mm', 'fly_y_mm'}, Fly1.Properties.VariableNames))
                 z.x_onset = Fly1.fly_x_mm(onsets);
                 z.y_onset = Fly1.fly_y_mm(onsets);
-
-                % Immobility bout directly after a bout with a focal jump. z is
-                % one fly in time order, so the previous row is the previous
-                % bout, and the first bout of a fly has no predecessor
-                z.jump_start = [false; z.jump(1:end-1)] & z.type == 1;
-
-                % The last bout of the fly runs to the last frame, so when it
-                % ended is not known: right-censored, whatever its type
-                z.censored_end = false(height(z), 1);
-                z.censored_end(end) = true;
-
-                soc_mot = [soc_mot; l];
-                bouts = [bouts; z];
-
-                fprintf('i%d-m%d-pc%d. Fly %d out of 983. \n', thresholds.fill_in_imm - 1, thresholds.fill_in_mob - 1, thresholds.pc, fly_id)
+            else
+                z.x_onset = nan(height(z), 1);
+                z.y_onset = nan(height(z), 1);
             end
+
+            % Immobility bout directly after a bout with a focal jump. z is
+            % one fly in time order, so the previous row is the previous
+            % bout, and the first bout of a fly has no predecessor
+            z.jump_start = [false; z.jump(1:end-1)] & z.type == 1;
+
+            % The last bout of the fly runs to the last frame, so when it
+            % ended is not known: right-censored, whatever its type
+            z.censored_end = false(height(z), 1);
+            z.censored_end(end) = true;
+
+            soc_mot = [soc_mot; l];
+            bouts = [bouts; z];
+
+            fprintf('i%d-m%d-pc%d. Fly %d out of %d. \n', thresholds.fill_in_imm - 1, thresholds.fill_in_mob - 1, thresholds.pc, fly_id, n_files)
         end
     end
 end
@@ -324,6 +329,12 @@ bouts.nloom(bouts.nloom > 20) = bouts.nloom(bouts.nloom > 20) - 20;
 bouts.nloom_loomwin(bouts.nloom_loomwin > 20) = bouts.nloom_loomwin(bouts.nloom_loomwin > 20) - 20;
 
 [bouts, soc_mot] = bouts_formatting(bouts, thresholds, soc_mot);
+
+% Mark the table with its dataset, extract_sm_from_bouts finds the caches by it. The
+% default dataset is not marked, so its tables stay as they were
+if ~strcmp(opt.Results.dataset, 'CS')
+    bouts.Properties.UserData = struct('dataset', opt.Results.dataset);
+end
 
 % Guarding on nargin was wrong: with varargin it counts every name-value
 % element, so passing any option at all sent this block into a field reference

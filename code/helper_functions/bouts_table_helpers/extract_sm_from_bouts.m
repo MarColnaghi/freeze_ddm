@@ -18,7 +18,14 @@ delay_after = opt.Results.delay_after;
 cache = opt.Results.cache;
 window = opt.Results.window;
 
-paths = path_generator('folder', 'social_motion');
+% The caches of the dataset the table was built from, which load_flies_new marks on it
+% (CS, the default, is not marked)
+dataset = '';
+table_info = bouts_le.Properties.UserData;
+if isstruct(table_info) && isfield(table_info, 'dataset')
+    dataset = table_info.dataset;
+end
+paths = path_generator('folder', 'social_motion', 'dataset', dataset);
 cache = importdata(fullfile(paths.cache_path, strcat(cache, '.mat')));
 loom_cache = importdata(fullfile(paths.cache_path, 'loom_cache.mat'));
 
