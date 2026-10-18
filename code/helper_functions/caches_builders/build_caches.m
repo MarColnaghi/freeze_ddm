@@ -1,10 +1,10 @@
 function caches = build_caches(var_name, varargin)
 % BUILD_CACHES - Builds caches for signal data from fly CSVs
 %   - var_name: column name (or 'sur_speed'/'sur_angle'/'sur_distance'/'fly_xy' for multi-column)
-%   - 'dataset': 'CS' (default) reads 004 dataset_resolved and saves to datasets/caches.
-%     'LC11' reads 006--lc11/dataset_3 and saves to datasets/LC11/caches, so the two sets of
-%     caches, whose fly numbers overlap, never replace each other. LC11 has no dist_* columns,
-%     the distances are rebuilt from the angles (distance_from_angle)
+%   - 'dataset': 'CS' (default) reads 004 dataset_resolved and saves to datasets/CS/caches.
+%     'LC11' reads 006--lc11/dataset_resolved and saves to datasets/LC11/caches, so the two sets of
+%     caches, whose fly numbers overlap, never replace each other. Files without dist_* columns
+%     get the distances rebuilt from the angles (distance_from_angle)
 %
 % Returns:
 %   caches: containers.Map where key = fly number, value = numeric vector or matrix
@@ -16,10 +16,8 @@ parse(opt, varargin{:});
 switch opt.Results.dataset
     case 'CS'
         folder = '/Users/marcocolnaghi/experimental_data/004--social_ddm/dataset_resolved';
-        dataset_folder = '';
     case 'LC11'
-        folder = '/Users/marcocolnaghi/experimental_data/006--lc11/dataset_3';
-        dataset_folder = 'LC11';
+        folder = '/Users/marcocolnaghi/experimental_data/006--lc11/dataset_resolved';
 end
 files = dir(fullfile(folder, "*.csv"));
 
@@ -108,7 +106,7 @@ for i = idx'
 end
 
 % --- Save Logic ---
-base_path = path_generator('dataset', dataset_folder).cache_path;
+base_path = path_generator('dataset', opt.Results.dataset).cache_path;
 if ~isfolder(base_path)
     mkdir(base_path);
 end

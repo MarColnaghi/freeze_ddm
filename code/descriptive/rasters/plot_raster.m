@@ -13,7 +13,9 @@ function [fh, ts, ax] = plot_raster(cache_name, varargin)
 %
 %   Options (all optional; empty = the preset of the cache, see raster_defaults)
 %   loom_speed   loom speed to select the flies [50]
-%   sort_by      cache used to sort the flies within a group ['freeze']
+%   genotype     genotype code to select the flies, bouts.genotype (LC11 dataset:
+%                2 LC11TNT, 3 EmptyTNT) [all]
+%   sort_by     cache used to sort the flies within a group ['freeze']
 %   paths        output of path_generator [path_generator]
 %   smooth       moving-average window (frames) for the top panel [0]
 %   dilate       moving-max window (frames) applied to the raster only, so
@@ -25,6 +27,7 @@ function [fh, ts, ax] = plot_raster(cache_name, varargin)
 opt = inputParser;
 addRequired(opt, 'cache_name', @(x) ischar(x) || isstring(x));
 addParameter(opt, 'loom_speed', 50);
+addParameter(opt, 'genotype', []);
 addParameter(opt, 'sort_by', 'freeze');
 addParameter(opt, 'paths', []);
 addParameter(opt, 'smooth', []);
@@ -65,7 +68,11 @@ bouts = importdata(fullfile(paths.dataset, 'bouts.mat'));
 bouts = bouts_formatting(bouts, thresholds);
 
 %  Select loom speed
-selected_flies = unique(bouts.fly(bouts.sloom == p.loom_speed, :));
+in_selection = bouts.sloom == p.loom_speed;
+if ~isempty(p.genotype)
+    in_selection = in_selection & bouts.genotype == p.genotype;
+end
+selected_flies = unique(bouts.fly(in_selection, :));
 n_moving_flies = accumarray(bouts.fly, bouts.moving_flies, [], @unique);
 n_moving_flies = n_moving_flies(selected_flies);
 
@@ -128,7 +135,7 @@ ax(1).Color = 'none';
 apply_generic(ax(1), 'no_x', false, 'xticks', [0, 18000, n_t], 'ytick', p.yticks, 'ylim', p.ylim, 'xlim', p.xlim, 'font_size', 32, 'xpos', 'top')
 ylabel(p.ylabel, 'FontSize', 28)
 xlabel('Time (min)')
-xticklabels([0, 18000, n_t] / (60 * fps))
+xticklabels(round([0, 18000, n_t] / (60 * fps), 2))
 
 % loom lines span the y ticks
 yt = ax(1).YTick;

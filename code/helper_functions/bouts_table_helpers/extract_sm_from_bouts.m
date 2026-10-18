@@ -20,7 +20,7 @@ window = opt.Results.window;
 
 % The caches of the dataset the table was built from, which load_flies_new marks on it
 % (CS, the default, is not marked)
-dataset = '';
+dataset = 'CS';
 table_info = bouts_le.Properties.UserData;
 if isstruct(table_info) && isfield(table_info, 'dataset')
     dataset = table_info.dataset;

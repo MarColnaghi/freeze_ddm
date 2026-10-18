@@ -26,9 +26,9 @@ function bouts = generate_bouts_table(gap_imm, varargin)
 %   out_dir   ''         save here instead of the folder from path_generator,
 %                        to try a setting without touching datasets/
 %   dataset   'CS'       which experiment to read, see load_flies_new: 'CS'
-%                        (004--social_ddm) or 'LC11' (006--lc11). LC11 saves
-%                        under datasets/LC11/, so its tables do not collide
-%                        with the CS ones of the same id
+%                        (004--social_ddm) or 'LC11' (006--lc11). Each saves
+%                        under datasets/<dataset>/, so their tables of the
+%                        same id do not collide
 %
 % A folder this call created is removed again if the build fails before
 % anything was written to it, so a failed run leaves no empty setting behind.
@@ -36,7 +36,8 @@ function bouts = generate_bouts_table(gap_imm, varargin)
 % The freeze_bout label in dataset_resolved, and so freeze_cache.mat, is built
 % at gap 3 (params.freeze_gap in generate_dataset_resolved) to match imm3. For
 % any other setting it will not match this table unless freeze_gap follows.
-% That is CS only, LC11 has no dataset_resolved or caches built yet.
+% That is CS only, LC11 has no freeze_cache.mat. Its dataset_resolved comes from
+% generate_dataset_resolved_lc11, and its caches from build_caches(var, 'dataset', 'LC11').
 
 opt = inputParser;
 addRequired(opt, 'gap_imm', @(x) validateattributes(x, {'numeric'}, {'scalar', 'integer', 'nonnegative'}));
@@ -60,11 +61,7 @@ thresholds.fill_in_mob = gap_mob + 1;
 thresholds.pc = opt.Results.pc;
 
 id_code = sprintf('imm%d_mob%d_pc%d', gap_imm, gap_mob, opt.Results.pc);
-dataset_folder = opt.Results.dataset;
-if strcmp(dataset_folder, 'CS')
-    dataset_folder = '';
-end
-paths = path_generator('bouts_id', id_code, 'imfirst', opt.Results.imfirst, 'dataset', dataset_folder);
+paths = path_generator('bouts_id', id_code, 'imfirst', opt.Results.imfirst, 'dataset', opt.Results.dataset);
 if strlength(opt.Results.out_dir) > 0
     paths.dataset = char(opt.Results.out_dir);
 end

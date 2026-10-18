@@ -10,6 +10,8 @@ addParameter(opt,'params',{'avg_sm_freeze_norm','avg_fs_1s_norm','sloom','nloom'
 addParameter(opt,'type','ecdf');
 addParameter(opt,'check_quantiles',false);
 addParameter(opt,'sloom_to_plot','all');
+addParameter(opt,'scale','linear');
+addParameter(opt,'control_var',true);
 
 parse(opt,varargin{:});
 
@@ -21,7 +23,8 @@ params          = opt.Results.params;
 type            = opt.Results.type;
 check_quantiles = opt.Results.check_quantiles;
 sloom_to_plot   = opt.Results.sloom_to_plot;
-
+scale           = opt.Results.scale;
+control_var     = opt.Results.control_var;
 %% ===================== Infer period =====================
 if isempty(period)
     u = unique(bouts_proc.period);
@@ -74,24 +77,26 @@ for idx_param = params
     tl = tiledlayout(10,2,'TileSpacing','tight','Padding','compact');
 
     %% ===================== Control distribution =====================
-    nexttile(1,[3 2]); hold on
-   plot_control_distribution( ...
-       bouts_proc.(param), quantiles, thresholds, cmap, param)
+    if control_var
+        nexttile(1,[3 2]); hold on
+        plot_control_distribution( ...
+            bouts_proc.(param), quantiles, thresholds, cmap, param)
 
-    ax = gca;
-    pad_ylim(ax,0.075)
-    apply_generic(ax,'no_y',true,'no_x',false,'font_size',20)
+        ax = gca;
+        pad_ylim(ax,0.075)
+        apply_generic(ax,'no_y',true,'no_x',false,'font_size',20)
 
-    mid_q = ceil(num_quantiles/2) + 1;
+        mid_q = ceil(num_quantiles/2) + 1;
 
-    xlabel(control_label(param),'Interpreter','none','Color',cmap(mid_q,:))
+        xlabel(control_label(param),'Interpreter','none','Color',cmap(mid_q,:))
 
-    colormap(cmap(2:end,:));
-    clim([0 num_quantiles])
-    add_quantile_colorbar(ax,param,num_quantiles,bouts_proc)
+        colormap(cmap(2:end,:));
+        clim([0 num_quantiles])
+        add_quantile_colorbar(ax,param,num_quantiles,bouts_proc)
 
-    ax.XAxis.Exponent = 0;
+        ax.XAxis.Exponent = 0;
 
+    end
     %% ===================== Duration distributions =====================
     ax_bottom = [];
 
@@ -163,14 +168,35 @@ for idx_param = params
         linkaxes(ax_bottom,'y')
     end
 
-    %% ===================== Export =====================
-    if export
-        exporter(fh, paths, sprintf('fd_%s_%s.pdf', param, period))
-                exporter(fh, paths, sprintf('fd_%s_%s.png', param, period))
+    if strcmp(scale, 'log')
+        ax = gca;
+        ax.XScale = 'log';
+    end
 
+    if strcmp(type, 'cumulative')
+
+        xline([0.2, 0.5, 1], 'k-', {'0.2s', '0.5s', '1s'}, ...
+            'LabelHorizontalAlignment', 'right', ... % Centra il testo sulla linea ('left', 'center', 'right')
+            'LabelVerticalAlignment', 'top', 'FontSize', 16, 'LineWidth',2);
+    else
+        xline([0.2, 0.5, 1], 'k-', 'LineWidth',2);
+    end
+
+end
+    xlim([0 10])
+
+    %% ===================== Export =====================
+    if export 
+        if strcmp(scale, 'log')
+        exporter(fh, paths, sprintf('fd_%s_%s_log.pdf', param, period))
+                exporter(fh, paths, sprintf('fd_%s_%s.png', param, period))
+        else
+            exporter(fh, paths, sprintf('fd_%s_%s.pdf', param, period))
+                exporter(fh, paths, sprintf('fd_%s_%s.png', param, period))
+        end
     end
 end
-end
+
 
 %% =====================================================================
 %% ============================ HELPERS ================================
@@ -259,24 +285,33 @@ switch type
             c = censored(qmask==q);
             if isempty(d), continue, end
             [f,x] = ecdf(d, 'Censoring', c);
-            plot(x, f,'LineWidth', 4 ,'Color',cmap(1+q,:) )
+            stairs(x, f,'LineWidth', 4 ,'Color',cmap(1+q,:) )
         end
         ylim([0 1])
         pad_ylim(gca,0.025)
 
     case 'kde'
-        edges = min(durations):20/60:max(durations);
+        % The Kaplan-Meier mass of every bin, so a freeze that was cut counts where it
+        % was seen to last and not as if it ended there. A bin that reaches past the
+        % longest observation, when that one was cut, is left blank, and a curve adds
+        % up to the F(t) of the cumulative plot, not to 1
+                bin_w = 20 / 60;
+        n_bin = max(1, ceil((max(durations) - min(durations)) / bin_w));
+        edges = min(durations) + (0:n_bin) * bin_w;
         for q = 1:nq
-            d = durations(qmask==q);
-            if isempty(d), continue, end
-            histogram(d,edges,'Normalization','pdf', ...
-                'DisplayStyle','stairs', ...
-                'LineWidth',1.5, ...
-                'EdgeColor',cmap(1+q,:));
+            d = durations(qmask == q);
+            c = censored(qmask == q);
+            if isempty(d) || all(c), continue, end
+            [mass, covered] = km_bin_mass(d, c, edges);
+            h = mass / bin_w;
+            h(~covered) = NaN;
+            stairs(edges, [h h(end)], 'LineWidth', 1.25, 'Color', cmap(1 + q, :))
         end
-        pad_ylim(gca,0.005)
+        pad_ylim(gca, 0.005)
+        ylim([-0.05 1.05])
 
     case 'whisk'
+        % Does not take the censoring into account
         for q = 1:nq
             d = durations(qmask==q);
             if isempty(d), continue, end
@@ -295,6 +330,23 @@ end
 switch period
     case 'loom', xlim([0 10])
     case 'bsl',  xlim([-0.05 1.05])
+end
+end
+
+% ---------------------------------------------------------------------
+
+function [mass,covered] = km_bin_mass(d,c,edges)
+% Kaplan-Meier mass of every bin: the steps of the curve that fall in it. covered is
+% false for the bins that reach past the longest observation when that one was cut,
+% their mass is not known
+covered = true(1,numel(edges)-1);
+[f,x] = ecdf(d,'Censoring',c);
+step = diff(f);
+b = discretize(x(2:end),edges);
+ok = ~isnan(b);
+mass = accumarray(b(ok),step(ok),[numel(edges)-1,1])';
+if f(end) < 1-1e-9
+    covered = edges(2:end) <= max(d)+1e-9;
 end
 end
 

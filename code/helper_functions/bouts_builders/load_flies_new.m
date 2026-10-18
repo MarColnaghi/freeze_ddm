@@ -58,8 +58,7 @@ parse(opt, varargin{:});
 %   jump                true when the focal fly jumps within the bout. Fast
 %                       frames are never immobile, so only mobility bouts can
 %                       have it
-%   x_onset, y_onset    focal fly position at bout onset, in mm. NaN for LC11,
-%                       whose files have no position columns
+%   x_onset, y_onset    focal fly position at bout onset, in mm
 %   jump_start          true for an immobility bout whose preceding bout has
 %                       `jump`. Per-bout, unlike frozen_start, so it is not
 %                       broadcast to the other bouts sharing its nloom
@@ -123,11 +122,11 @@ switch opt.Results.dataset
         genotype = 1;
 
     case 'LC11'
-        % Same experiments as dataset_2 there, renamed to .flyN.csv with a
-        % frame column. No position columns. The genotype is read per file
-        directory = '/Users/marcocolnaghi/experimental_data/006--lc11/dataset_3/';
-        token = '*%dTrh_%dNorpA-%dcm*';
-        token_args = @(n_mov, speed) [4 - n_mov, n_mov, speed];
+        % The raw per-fly files rebuilt like CS, see generate_dataset_resolved_lc11.
+        % The names carry no loom speed, it is 50 cm for all. The genotype is read per file
+        directory = '/Users/marcocolnaghi/experimental_data/006--lc11/dataset_resolved/';
+        token = '*_%dTrh%dNorpA-*';
+        token_args = @(n_mov, speed) [4 - n_mov, n_mov];
         speeds = 50;
 end
 
@@ -297,7 +296,7 @@ for idx_sloom = 1:length(speeds)
             z.jump = compute_means(Fly1.jumps(1:end), onsets, run_ends - 1) > 0;
 
             % Focal fly position at bout onset, in mm. A dataset without position
-            % columns (006--lc11) gets NaN
+            % columns gets NaN
             if all(ismember({'fly_x_mm', 'fly_y_mm'}, Fly1.Properties.VariableNames))
                 z.x_onset = Fly1.fly_x_mm(onsets);
                 z.y_onset = Fly1.fly_y_mm(onsets);

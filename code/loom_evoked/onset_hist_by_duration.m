@@ -1,5 +1,6 @@
 % Histogram of immobility onsets around the loom, one figure per range of freeze
-% duration, one tile per loom speed. A real response shows up as a peak that
+% duration, one tile per loom speed, and one figure with all the ranges side by
+% side, a column per range. A real response shows up as a peak that
 % sticks out of the flat background of spontaneous onsets, so the figures are
 % for judging where the loom-evoked window should sit and how wide it can be
 % before it fills with background. The lines are the window under test, set in
@@ -14,17 +15,39 @@
 % which is at least thresholds.min_dur frames
 duration_ranges = [0 29; 30 59; 60 119; 120 299; 300 Inf];
 
-export = false;
+export = true;
+separate_figures = true;
+combined_figure = true;
 
 % The same bouts as the other plots in this folder, contact-censored, for the
 % real looms and for the baseline mock looms
 bouts_proc = loom_evoked_bouts(bouts);
 bouts_baseline = loom_evoked_bouts(bouts, 'period', 'bsl');
 
-for idx_range = 1:size(duration_ranges, 1)
-    le_threshold_plot(bouts_proc, thresholds, duration_ranges(idx_range, :), bouts_baseline, 'duration_raw');
+if separate_figures
+    for idx_range = 1:size(duration_ranges, 1)
+        le_threshold_plot(bouts_proc, thresholds, duration_ranges(idx_range, :), bouts_baseline, 'duration_raw');
+
+        if export
+            exporter(gcf, paths, sprintf('onset_hist_duration_%d_%g.png', duration_ranges(idx_range, 1), duration_ranges(idx_range, 2)))
+        end
+    end
+end
+
+if combined_figure
+    % A column per range, each holding the two loom speeds. The legend and the
+    % y tick labels are only drawn on the first column, the y axis is shared
+    fh = figure('color','w','Position',[100, 100, 1800, 500]);
+    tl_all = tiledlayout(fh, 1, size(duration_ranges, 1), 'TileSpacing', 'compact', 'Padding', 'compact');
+
+    for idx_range = 1:size(duration_ranges, 1)
+        tl = le_threshold_plot(bouts_proc, thresholds, duration_ranges(idx_range, :), bouts_baseline, 'duration_raw', ...
+            'parent', tl_all, 'font_size', 16, 'legend', idx_range == 1, 'yaxis', idx_range == 1 );
+        tl.Layout.Tile = idx_range;
+    end
+    xlabel(tl_all, 'Immobility Onsets (frames)', 'FontSize', 18)
 
     if export
-        exporter(gcf, paths, sprintf('onset_hist_duration_%d_%g.png', duration_ranges(idx_range, 1), duration_ranges(idx_range, 2)))
+        exporter(fh, paths, 'onset_hist_duration_all.pdf')
     end
 end

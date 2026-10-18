@@ -248,7 +248,7 @@ x_edges_cens = x_edges(1:k_cens:end);
 y_edges_cens = y_edges(1:k_cens:end);
 
 % Create Figure
-fh = figure('color','w','Position',[100, 100, 350 * n_cond, 400 * n_rows + 350]);
+fh = figure('color','w','Position',[100, 100, 750 * n_cond, 400 * n_rows + 350]);
 tl = tiledlayout(fh, n_rows, n_cond, 'TileSpacing', 'compact', 'Padding', 'compact');
 
 ax = gobjects(n_rows, n_cond);
@@ -279,20 +279,14 @@ for r = 1:n_hist_rows
         ylabel('Bout Latency (frames)');
         zlabel('Count');
 
-        if isempty(row_name{r})
-            title(sprintf('%s = %g', strrep(split_by, '_', ' '), idx_cond));
-        else
-            title(sprintf('%s = %g, %s (n = %d)', strrep(split_by, '_', ' '), idx_cond, row_name{r}, sum(mask)));
-        end
-
         % Set Axis Limits
         xlim(xl);
         ylim(yl);
-        zlim([-0.2, max_count(r) + 10]);
+        zlim([-0.2, 80.2]);
 
         % Set Colormap
         colorcet('L08');
-        clim([0 max_count(r)])
+        clim([0 80])
 
         % Apply Generic Changes
         apply_generic(ax(r, i), 'font_size', 20)
@@ -320,7 +314,7 @@ for r = 1:n_hist_rows
                 end
                 % Set Colormap
                 colorcet('L08');
-                clim([0 max_count(r)])
+                clim([0 80])
 
             case 'tile'
                 bin_size = 2;
@@ -433,13 +427,12 @@ if ~isempty(censoring) && strcmp(cens_style, 'fraction')
 
         xlabel('Bout Duration (frames)');
         ylabel('Bout Latency (frames)');
-        title(sprintf('censored fraction (n \\geq %d)', min_count));
 
         xlim(xl);
         ylim(yl);
 
         colorcet('L03');
-        clim([0 1])
+        clim([0 80])
 
         % Loom onset and offset, the only reference the counts row shares
         yline(0, 'k-', 'LineWidth', 1);

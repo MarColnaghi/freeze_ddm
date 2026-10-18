@@ -11,7 +11,7 @@ id_code = 'imm3_mob3_pc4';
 paths_out = path_generator('folder', 'experimental_vars/freeze_durations', 'bouts_id', id_code, 'imfirst', false);
 
 col = cmapper();
-thresholds = define_thresholds('min_dur', 30, 'le_window', struct('le_window_sl', [5 55], 'le_window_fl', [5 55]));
+thresholds = define_thresholds('min_dur', 30);
 
 bouts = importdata(fullfile(paths_out.dataset, 'bouts.mat'));
 bouts = bouts_formatting(bouts, thresholds);
@@ -40,16 +40,18 @@ fprintf(['%d loom-evoked freezes, at least %d frames, contact threshold %g: %.1f
 % bouts_proc = bouts_proc(bouts_proc.sm < 1.5,:);
 % bouts_proc = bouts_proc(bouts_proc.sm_1s < 1.5,:);
 %bouts_proc = bouts_proc(bouts_proc.jump_start == 0, :);
-type = 'cumulative';
+type = 'kde';
 
 % Control variables: loom speed, number of moving flies and loom number. Measured
 % covariates can be added, 'sm_1s' for the social motion in the first second of the
 % freeze and 'fs' for the focal speed before it
 
-params = {'sm_1s', 'moving_flies', 'ls', 'jump_start'};
+params = {'ls'};
 
-fh = fd_distr_withparam_new('bouts', bouts_proc, 'type', type, 'params', params, 'export', false, 'paths', paths_out);
-fh = fd_distr_withparam_by_moving_flies('bouts', bouts_proc,'type', type, 'params', params, 'export', false, 'paths', paths_out);
+fh = fd_distr_withparam_new('bouts', bouts_proc, 'type', type, 'params', params, 'export', true, 'paths', paths_out, 'scale', 'log', 'control_var', false);
+fh = fd_distr_withparam_new('bouts', bouts_proc, 'type', type, 'params', params, 'export', true, 'paths', paths_out, 'scale', 'linear', 'control_var', false);
+
+fh = fd_distr_withparam_by_moving_flies('bouts', bouts_proc,'type', type, 'params', params, 'export', true, 'paths', paths_out);
 
 summary = fd_summary_by_control(bouts_proc, params);
 

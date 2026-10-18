@@ -11,6 +11,6 @@ str = 'immobility';
 plot_style = 'bar3';
 zoom_flag =  false;
 export = false;
-bouts_proc = loom_evoked_bouts(bouts, 'period', type);
+bouts_proc = loom_evoked_bouts(bouts, 'period', type, 'min_dur', 30);
 hist2d_durs_onsets('bouts', bouts_proc, 'thresholds', thresholds, 'type', type, 'str', str, ...
-    'plot_style', plot_style, 'zoom', zoom_flag, 'export', export, 'split_by', 'sloom')
+    'plot_style', plot_style, 'zoom', zoom_flag, 'export', true, 'split_by', 'sloom')

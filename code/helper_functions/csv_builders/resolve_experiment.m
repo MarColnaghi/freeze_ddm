@@ -56,10 +56,47 @@ freeze_bout = bwareaopen(freeze, params.bout_min);
 low_vel_bout = focal.low_vel_bout;
 low_vel_bout(freeze_bout) = 0;
 
-M = [focal.Unnamed_0, focal.looming_bout, focal.velocity, focal.pixelchange, focal.walk_bout, ...
+% Only the LC11 raw files need it, which set loom_first_row
+looming_bout = focal.looming_bout;
+if isfield(params, 'loom_first_row')
+    looming_bout = clean_loom_channel(looming_bout, params, experiment);
+end
+
+M = [focal.row_index, looming_bout, focal.velocity, focal.pixelchange, focal.walk_bout, ...
     freeze_bout, focal.jumps, low_vel_bout, focal.fly_x_mm, focal.fly_y_mm, sur_block, ...
     sum(speed_sur, 2, 'omitnan'), sum(angle_sur, 2, 'omitnan'), sum(sur_block(:, 3:3:12), 2, 'omitnan'), ...
     freeze, dist, min(dist, [], 2)];
+
+end
+
+
+function loom = clean_loom_channel(loom, params, experiment)
+% The loom channel of the LC11 raw files carries stray pulses: blips of 1-10
+% frames, one before the first loom, two long ones of 57 and 105 frames, and in
+% one recording a dropped frame splits a loom in two. Gaps of up to loom_bridge
+% frames are closed first. Then only the runs of a loom are kept: starting at or
+% after loom_first_row (a row index of the file, so 1 more in MATLAB), the first
+% loom of the window, and lasting loom_min to loom_max frames (real looms are
+% 23-31). What is left must be the n_looms looms.
+
+d = diff([0; double(loom(:) > 0); 0]);
+starts = find(d == 1);
+ends = find(d == -1) - 1;
+
+join = (starts(2:end) - ends(1:end-1) - 1) <= params.loom_bridge;
+starts([false; join]) = [];
+ends(join) = [];
+
+len = ends - starts + 1;
+is_loom = starts > params.loom_first_row & len >= params.loom_min & len <= params.loom_max;
+
+assert(nnz(is_loom) == params.n_looms, 'resolve_experiment:loomCount', ...
+    '%s has %d looms after cleaning the loom channel, expected %d.', experiment, nnz(is_loom), params.n_looms);
+
+loom = zeros(size(loom));
+for idx_loom = find(is_loom)'
+    loom(starts(idx_loom) : ends(idx_loom)) = 1;
+end
 
 end
 
@@ -79,5 +116,8 @@ fclose(fid);
 for idx_col = 1:numel(col_names)
     fly.(matlab.lang.makeValidName(col_names{idx_col})) = data{1}(:, idx_col);
 end
+
+% The first column is the row index, 'Unnamed: 0' in the CS files and unnamed in the LC11 ones
+fly.row_index = data{1}(:, 1);
 
 end

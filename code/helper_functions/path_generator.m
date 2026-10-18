@@ -4,7 +4,7 @@ function [path] = path_generator(varargin)
     addParameter(opt, 'folder', []);
     addParameter(opt, 'model', []);
     addParameter(opt, 'imfirst', false);
-    addParameter(opt, 'dataset', '');
+    addParameter(opt, 'dataset', 'CS');
     parse(opt, varargin{:});
 
     %% 1. Dynamic Root Discovery
@@ -50,13 +50,9 @@ function [path] = path_generator(varargin)
         sub_folder = 'fill_in_combinations_imfirst';
     end
 
-    % The default dataset keeps its tables and caches straight under datasets/. Any
-    % other one (LC11) gets a folder of its own: its immX_mobX_pcX ids would collide,
-    % and its fly numbers overlap those of the caches
-    dataset_base = dat_base;
-    if ~isempty(opt.Results.dataset)
-        dataset_base = fullfile(dat_base, opt.Results.dataset);
-    end
+    % Every dataset (CS, LC11) has a folder of its own under datasets/, with its tables
+    % and its caches: the immX_mobX_pcX ids and the fly numbers of the caches overlap
+    dataset_base = fullfile(dat_base, opt.Results.dataset);
 
     path.exp_data = fullfile('/Users', 'marcocolnaghi', 'experimental_data', '004--social_ddm', 'dataset_1');
     path.dataset = fullfile(dataset_base, sub_folder, opt.Results.bouts_id);
