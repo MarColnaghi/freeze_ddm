@@ -9,25 +9,26 @@ fh = figure('Position', [100 100 1400 900], 'Color', 'w');
 t = tiledlayout(3, 4, 'TileSpacing', 'compact', 'Padding', 'loose');
 i = 0;
 for idx_sm = 1:3
-    for idx_ls = 1:2
+    % The values of ls in the table: 0 for the slow loom and 1 for the fast one
+    for idx_ls = unique(bouts_le.ls)'
         for idx_fs = 1:2
 
             i = i + 1;
             nexttile(t)
             hold on
 
-            exp_generated = exprnd(1/9, 5000000, 1); % + exprnd(1/9, 500000, 1);
+            exp_generated = exprnd(1/9, 50000, 1); % + exprnd(1/9, 500000, 1);
             exp_generated = exp_generated(exp_generated >= min(bouts_spontaneous.durations_s));
-            histogram(exp_generated * 60, 1:1:630, 'Normalization', 'probability', 'EdgeColor', 'k', 'FaceAlpha', 0.3, 'DisplayStyle', 'stairs')
+            histogram(exp_generated * 60, 0:3:630, 'Normalization', 'probability', 'EdgeColor', 'k', 'FaceAlpha', 0.3, 'DisplayStyle', 'stairs')
 
 
-            [quant_spon, mask] = quantilizer(bouts_spontaneous, 'idx_quanti', struct('sm', idx_sm, 'ls', idx_ls, 'fs', idx_fs));
-            histogram(quant_spon.durations, 1:1:630, 'Normalization', 'probability', 'EdgeColor','none', 'FaceColor', col.period.bsl)
+            [quant_spon, mask] = quantilizer_v2(bouts_spontaneous, 'indexed_quantile', struct('sm', idx_sm, 'ls', idx_ls, 'fs', idx_fs));
+            histogram(quant_spon.durations, 0:3:630, 'Normalization', 'probability', 'EdgeColor','none', 'FaceColor', col.period.bsl)
 
-            %             [quant_le, mask] = quantilizer(bouts_le, 'idx_quanti', struct('sm', idx_sm, 'ls', idx_ls, 'fs', idx_fs));
-            %             histogram(quant_le.durations, 1:1:630, 'Normalization', 'probability', 'EdgeColor','none', 'FaceColor', col.period.loom)
+            [quant_le, mask] = quantilizer_v2(bouts_le, 'indexed_quantile', struct('sm', idx_sm, 'ls', idx_ls, 'fs', idx_fs));
+            histogram(quant_le.durations, 0:3:630, 'Normalization', 'probability', 'EdgeColor','none', 'FaceColor', col.period.loom)
 
-            xlims = [-10 160];
+            xlims = [-10 640];
             ylims = [-0.005 1.025];
             apply_generic(gca, 'xlim', xlims, 'ylim', ylims)
             ax = gca;

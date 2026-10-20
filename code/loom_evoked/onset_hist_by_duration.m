@@ -13,7 +13,7 @@
 % how long the freeze really was (duration_raw), not by the time it was observed
 % for before a contact. Together they cover every bout loom_evoked_bouts keeps,
 % which is at least thresholds.min_dur frames
-duration_ranges = [0 29; 30 59; 60 119; 120 299; 300 Inf];
+duration_ranges = [0 11; 12 29; 30 59; 60 239; 240 Inf];
 
 export = true;
 separate_figures = true;
@@ -21,12 +21,14 @@ combined_figure = true;
 
 % The same bouts as the other plots in this folder, contact-censored, for the
 % real looms and for the baseline mock looms
-bouts_proc = loom_evoked_bouts(bouts);
-bouts_baseline = loom_evoked_bouts(bouts, 'period', 'bsl');
+bouts_proc = loom_evoked_bouts(bouts, 'min_dur', 3);
+bouts_baseline = loom_evoked_bouts(bouts, 'period', 'bsl', 'min_dur', 3);
+
+paths = path_generator('folder', fullfile('loom_evoked','onset_hist', 'CS'));
 
 if separate_figures
     for idx_range = 1:size(duration_ranges, 1)
-        le_threshold_plot(bouts_proc, thresholds, duration_ranges(idx_range, :), bouts_baseline, 'duration_raw');
+        le_threshold_plot(bouts_proc, thresholds, duration_ranges(idx_range, :), bouts_baseline, 'durations');
 
         if export
             exporter(gcf, paths, sprintf('onset_hist_duration_%d_%g.png', duration_ranges(idx_range, 1), duration_ranges(idx_range, 2)))
@@ -41,11 +43,11 @@ if combined_figure
     tl_all = tiledlayout(fh, 1, size(duration_ranges, 1), 'TileSpacing', 'compact', 'Padding', 'compact');
 
     for idx_range = 1:size(duration_ranges, 1)
-        tl = le_threshold_plot(bouts_proc, thresholds, duration_ranges(idx_range, :), bouts_baseline, 'duration_raw', ...
-            'parent', tl_all, 'font_size', 16, 'legend', idx_range == 1, 'yaxis', idx_range == 1 );
+        tl = le_threshold_plot(bouts_proc, thresholds, duration_ranges(idx_range, :), bouts_baseline, 'durations', ...
+            'parent', tl_all, 'font_size', 20, 'legend', idx_range == 1, 'yaxis', idx_range == 1 );
         tl.Layout.Tile = idx_range;
     end
-    xlabel(tl_all, 'Immobility Onsets (frames)', 'FontSize', 18)
+    xlabel(tl_all, 'Immobility Onsets (frames)', 'FontSize', 18, 'FontName', 'Helvetica-Light')
 
     if export
         exporter(fh, paths, 'onset_hist_duration_all.pdf')

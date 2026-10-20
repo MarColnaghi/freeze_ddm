@@ -2,6 +2,7 @@ function apply_generic(ax, varargin)
 
 opt = inputParser;
 addParameter(opt, 'font_size', 24);
+addParameter(opt, 'font_name', 'Helvetica-Light');
 addParameter(opt, 'tick_length', 0.015);
 addParameter(opt, 'line_width', 3);
 addParameter(opt, 'no_xticks', false); 
@@ -22,6 +23,7 @@ addParameter(opt, 'xpos', []);
 parse(opt, varargin{:});
 
 fontsize = opt.Results.font_size;
+fontname = opt.Results.font_name;
 tick_length = opt.Results.tick_length;
 line_width = opt.Results.line_width;
 no_xticks = opt.Results.no_xticks;
@@ -39,6 +41,7 @@ ypos = opt.Results.ypos;
 xpos = opt.Results.xpos;
 
 % ax.YAxis is a 1x2 ruler array when yyaxis is active; set() handles both
+set(ax, 'FontName', fontname);
 ax.XAxis.FontSize = fontsize;
 ax.ZAxis.FontSize = fontsize;
 set(ax.YAxis, 'FontSize', fontsize);
@@ -46,6 +49,7 @@ set(ax,'linewidth', line_width, 'TickDir','out');
 set(ax,'box', box)
 set(ax,'TickLength',[tick_length, tick_length])
 set(ax,'Color', 'none')
+set(ax,'Layer', 'top')  % draw axis lines and ticks above the plotted data
 
 if ~isempty(xlims)
     xlim(ax, xlims)

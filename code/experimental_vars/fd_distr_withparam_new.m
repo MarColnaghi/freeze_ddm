@@ -170,16 +170,16 @@ for idx_param = params
 
     if strcmp(scale, 'log')
         ax = gca;
-        ax.XScale = 'log';
+        ax.YScale = 'log';
     end
 
-    if strcmp(type, 'cumulative')
+    if strcmp(type, 'cumulative') && strcmp(scale, 'log')
 
         xline([0.2, 0.5, 1], 'k-', {'0.2s', '0.5s', '1s'}, ...
             'LabelHorizontalAlignment', 'right', ... % Centra il testo sulla linea ('left', 'center', 'right')
             'LabelVerticalAlignment', 'top', 'FontSize', 16, 'LineWidth',2);
-    else
-        xline([0.2, 0.5, 1], 'k-', 'LineWidth',2);
+%     elseif strcmp(scale, 'log')
+%         xline([0.2, 0.5, 1], 'k-', 'LineWidth',2);
     end
 
 end
@@ -295,7 +295,7 @@ switch type
         % was seen to last and not as if it ended there. A bin that reaches past the
         % longest observation, when that one was cut, is left blank, and a curve adds
         % up to the F(t) of the cumulative plot, not to 1
-                bin_w = 20 / 60;
+                bin_w = 5 / 60;
         n_bin = max(1, ceil((max(durations) - min(durations)) / bin_w));
         edges = min(durations) + (0:n_bin) * bin_w;
         for q = 1:nq
@@ -308,7 +308,7 @@ switch type
             stairs(edges, [h h(end)], 'LineWidth', 1.25, 'Color', cmap(1 + q, :))
         end
         pad_ylim(gca, 0.005)
-        ylim([-0.05 1.05])
+        ylim([-0.05 2.05])
 
     case 'whisk'
         % Does not take the censoring into account

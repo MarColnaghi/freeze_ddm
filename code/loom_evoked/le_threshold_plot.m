@@ -75,7 +75,7 @@ for idx_slooms = [unique(bouts.sloom)]'
         in_range_baseline = baseline.(dur_var) >= frame_range(1) & baseline.(dur_var) <= frame_range(2);
         h_baseline = histogram(baseline.onsets_loomwin(in_range_baseline & baseline.sloom == idx_slooms), -100.5:1:500.5, 'DisplayStyle', 'stairs', 'EdgeColor', 'k', 'LineWidth', 1.2);
         if i == 1 && opt.Results.legend
-            legend([h_handle h_baseline], {'loom', 'baseline'}, 'Location', 'northoutside', 'Box', 'off', 'FontSize', font_size - 4, 'AutoUpdate', 'off');
+            legend([h_handle h_baseline], {'loom', 'baseline'}, 'Location', 'northeast', 'Box', 'off', 'FontSize', font_size - 4, 'AutoUpdate', 'off');
         end
     end
 
@@ -83,10 +83,12 @@ for idx_slooms = [unique(bouts.sloom)]'
         xline(thresholds.le_window_sl,'k-.', 'LineWidth', 1.5)
         % ax(i).XAxis.Visible = 'off';
         xticks(sort([0 thresholds.le_window_sl -50 100]))
+        xline(mean(thresholds.le_window_sl) - 1.5, 'k--', 'LineWidth', 0.75 )
 
     elseif idx_slooms == 50
         xline(thresholds.le_window_fl, 'k-.', 'LineWidth', 1.5)
         xticks(sort([0 thresholds.le_window_fl -50 100]))
+        xline(mean(thresholds.le_window_fl) - 2.5, 'k--', 'LineWidth', 0.75 )
     end
 
 
@@ -97,10 +99,10 @@ end
 
 linkaxes(ax(:))
 %ylim([-2 round(max(values), -1) + 50])
-ylim([-5 205])
-xlim([-50 100])
+ylim([-5 155])
+xlim([-30 120])
 
 if isempty(parent)
-    xlabel('Immobility Onsets (frames)')
+    xlabel('Immobility Onsets (frames)', 'FontName', 'Helvetica-Light')
 end
 

@@ -21,6 +21,8 @@ function [fh, ts, ax] = plot_raster(cache_name, varargin)
 %   dilate       moving-max window (frames) applied to the raster only, so
 %                single-frame events (jumps) survive the downsampling [0]
 %   xlim         x limits in frames [16200, last frame]
+%   mask_by      cache used to mask the raster, e.g. 'freeze': bins where it is
+%                0 are transparent, so the raster is shown only during freezing []
 %   cmap, clim   colormap and colour limits of the raster
 %   ylabel, ylim, yticks   top panel y label, limits and ticks
 
@@ -39,6 +41,8 @@ addParameter(opt, 'ylabel', []);
 addParameter(opt, 'ylim', []);
 addParameter(opt, 'yticks', []);
 addParameter(opt, 'looms', true);
+addParameter(opt, 'mask_by', []);
+addParameter(opt, 'block_size', 'string');
 
 parse(opt, cache_name, varargin{:});
 
@@ -80,6 +84,10 @@ data_mat = cache2mat(importdata(fullfile(paths.cache_path, [cache_name '_cache.m
 sort_mat = cache2mat(importdata(fullfile(paths.cache_path, [p.sort_by '_cache.mat'])), 'selected_flies', selected_flies');
 loom_mat = cache2mat(importdata(fullfile(paths.cache_path, 'loom_cache.mat')), 'selected_flies', selected_flies');
 
+if ~isempty(p.mask_by)
+    mask_mat = cache2mat(importdata(fullfile(paths.cache_path, [char(p.mask_by) '_cache.mat'])), 'selected_flies', selected_flies');
+end
+
 if size(data_mat, 1) ~= numel(selected_flies)
     error('plot_raster:multiColumn', '%s_cache has more than one column per fly.', cache_name);
 end
@@ -106,6 +114,9 @@ ts = table();
 ts.sort_time = sum(sort_mat(:, 18000:end), 2, 'omitnan');
 ts.moving_flies = n_moving_flies;
 ts.data = data_mat;
+if ~isempty(p.mask_by)
+    ts.mask = logical(mask_mat);
+end
 ts.fly = selected_flies;
 ts = sortrows(ts, {'moving_flies', 'sort_time'}, 'ascend', 'ComparisonMethod','abs');
 
@@ -113,7 +124,7 @@ groups = unique(ts.moving_flies)';
 fps = 60;
 
 % Create figure
-fh = figure('color', 'w', 'Position', [100 200 750 800]);
+fh = figure('color', 'w', 'Position', [100 200 900 800]);
 tiledlayout(3, 1, 'TileSpacing', 'compact', 'Padding', 'loose');
 
 % plot
@@ -126,16 +137,15 @@ for idx_moving = groups
     if p.smooth > 1
         avg = movmean(avg, p.smooth);
     end
-    plot(1:n_t, avg, 'Color', col_mov(idx_moving + 1,:), 'LineWidth', 2)
+    plot(1:n_t, avg, 'Color', col_mov(idx_moving + 1,:), 'LineWidth', 1.5)
 
 end
 
 ax(1) = gca;
 ax(1).Color = 'none';
-apply_generic(ax(1), 'no_x', false, 'xticks', [0, 18000, n_t], 'ytick', p.yticks, 'ylim', p.ylim, 'xlim', p.xlim, 'font_size', 32, 'xpos', 'top')
+apply_generic(ax(1), 'no_x', true, 'xticks', [0, 18000, n_t], 'ytick', p.yticks, 'ylim', p.ylim, 'xlim', p.xlim, 'font_size', 28, 'xpos', 'top', 'line_width', 2.5)
 ylabel(p.ylabel, 'FontSize', 28)
-xlabel('Time (min)')
-xticklabels(round([0, 18000, n_t] / (60 * fps), 2))
+
 
 % loom lines span the y ticks
 yt = ax(1).YTick;
@@ -153,17 +163,20 @@ raster_data = ts.data;
 if p.dilate > 1
     raster_data = movmax(raster_data, p.dilate, 2);
 end
-imagesc(ax(2), raster_data);
+im = imagesc(ax(2), raster_data);
+if ~isempty(p.mask_by)
+    im.AlphaData = ts.mask;     % transparent outside the mask
+end
 colormap(ax(2), p.cmap);
 if ~isempty(p.clim)
     clim(ax(2), p.clim);
 end
-apply_generic(ax(2), 'xticks', [0, 18000, n_t], 'no_yticks', true, 'ylim', [- 10 n_flies + 10], 'xlim', p.xlim, 'font_size', 32)
+apply_generic(ax(2), 'xticks', [0, 18000, n_t], 'no_yticks', true, 'ylim', [- 10 n_flies + 10], 'xlim', p.xlim, 'font_size', 28, 'line_width', 2.5)
 xticklabels({});
 
-ylabel('Focal Flies')
-set(ax(2) ,'Layer', 'Top')
-ax(1).XLabel.Position(2) = ax(1).YLim(2) + 0.125 * diff(ax(1).YLim);
+xlabel('Time (min)')
+xticklabels(round([0, 18000, n_t] / (60 * fps), 2))
+ax(2).XLabel.Position(2) = ax(2).YLim(1) - 0.125 * diff(ax(2).YLim);
 ax(2).YLabel.Position(1) = ax(2).YLabel.Position(1) - 1000;
 
 % Add lines for median_loom_ts array
@@ -174,12 +187,52 @@ if p.looms
 end
 
 for idx_moving = groups
-    fill([ax(2).XLim(1)-200,ax(2).XLim(1)-200,ax(2).XLim(1)-1000,ax(2).XLim(1)-1000], [length(find(ts.moving_flies <= idx_moving)) length(find(ts.moving_flies <= idx_moving - 1)) length(find(ts.moving_flies <= idx_moving - 1))   length(find(ts.moving_flies <= idx_moving))], ...
-        col_mov(idx_moving + 1,:), 'EdgeColor','none', 'Clipping', 'off');
+
+    if strcmp(p.block_size, 'string')
+        fill([ax(2).XLim(1)-200,ax(2).XLim(1)-200,ax(2).XLim(1)-1000,ax(2).XLim(1)-1000], [length(find(ts.moving_flies <= idx_moving)) length(find(ts.moving_flies <= idx_moving - 1)) length(find(ts.moving_flies <= idx_moving - 1))   length(find(ts.moving_flies <= idx_moving))], ...
+            col_mov(idx_moving + 1,:), 'EdgeColor','none', 'Clipping', 'off');
+        ylabel('Focal Flies')
+
+    elseif strcmp(p.block_size, 'square')
+        fill([ax(2).XLim(1)-200,ax(2).XLim(1)-200,ax(2).XLim(1)-3000,ax(2).XLim(1)-3000], [length(find(ts.moving_flies <= idx_moving)) length(find(ts.moving_flies <= idx_moving - 1)) length(find(ts.moving_flies <= idx_moving - 1))   length(find(ts.moving_flies <= idx_moving))], ...
+            col_mov(idx_moving + 1,:), 'EdgeColor','none', 'Clipping', 'off');
+    else
+
+        ylabel('Focal Flies')
+
+    end
 end
 
 
+
 linkaxes([ax(1), ax(2)], 'x');
+
+% Fixed layout, identical for every cache, so rasters overlap 100% (e.g. for
+% animating freeze vs social motion). The axes leave the tiledlayout, whose
+% auto-sizing depends on labels and colorbar, and get fixed positions.
+tl = ax(1).Parent;
+pos_top = [0.16 0.6757 0.68 0.2478];
+pos_ras = [0.16 0.11 0.68 0.5307];
+ax(1).Parent = fh;
+ax(2).Parent = fh;
+delete(tl);
+ax(1).Position = pos_top;
+ax(2).Position = pos_ras;
+
+% The colorbar floats in the right margin; only shown for 'motion'
+ch = colorbar(ax(2), 'Location', 'manual');
+ax(2).Position = pos_ras;
+ch.Position = [pos_ras(1) + pos_ras(3) + 0.03, pos_ras(2), 0.025, pos_ras(4)];
+ch.LineWidth = 1.5;
+ch.FontSize = 24;
+switch cache_name
+    case {'motion'}
+        ch.Label.String = 'Social Motion';
+        % ch.Label.Position(1) = -1.5;   % move label to the left of the bar
+        ax(1).YLim = d.clim;
+    otherwise
+        ch.Visible = 'off';
+end
 
 end
 
