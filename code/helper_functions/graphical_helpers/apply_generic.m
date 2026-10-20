@@ -3,8 +3,8 @@ function apply_generic(ax, varargin)
 opt = inputParser;
 addParameter(opt, 'font_size', 24);
 addParameter(opt, 'font_name', 'Helvetica-Light');
-addParameter(opt, 'tick_length', 0.015);
-addParameter(opt, 'line_width', 3);
+addParameter(opt, 'tick_length', 0.02);
+addParameter(opt, 'line_width', 2.5);
 addParameter(opt, 'no_xticks', false); 
 addParameter(opt, 'no_yticks', false); 
 addParameter(opt, 'no_xlabels', false); 
@@ -42,6 +42,14 @@ xpos = opt.Results.xpos;
 
 % ax.YAxis is a 1x2 ruler array when yyaxis is active; set() handles both
 set(ax, 'FontName', fontname);
+
+% default font for text/annotations created from now on
+set(groot, 'defaultTextFontName', fontname, 'defaultAxesFontName', fontname, ...
+    'defaultLegendFontName', fontname, 'defaultColorbarFontName', fontname);
+
+% and for text, annotations, legends, colorbars already in the figure
+set(findall(ancestor(ax(1), 'figure'), '-property', 'FontName'), 'FontName', fontname);
+
 ax.XAxis.FontSize = fontsize;
 ax.ZAxis.FontSize = fontsize;
 set(ax.YAxis, 'FontSize', fontsize);

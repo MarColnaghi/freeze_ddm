@@ -17,20 +17,16 @@
 %
 
 disp('Generating bout-level predictor correlation heatmap...');
-paths_out = path_generator('folder', 'experimental_vars', 'bouts_id', id_code, 'imfirst', false);
 
 % =========================================================================
 % 1. CONFIGURATION
 % =========================================================================
 
 id_code = 'imm3_mob3_pc4';
+paths_out = path_generator('folder', 'experimental_vars/freeze_durations', 'bouts_id', id_code, 'imfirst', false);
 
-% Threshold definitions
-thresholds = define_thresholds;
-
-% Duration limits (seconds)
-Tmax   = 10.5;
-Ttrunc = 0.5;
+thresholds = define_thresholds('min_dur', 30);
+contact_threshold = 70;
 
 % =========================================================================
 % 2. LOAD AND PREPROCESS BOUT DATA
@@ -39,16 +35,17 @@ Ttrunc = 0.5;
 bouts = importdata(fullfile(paths_out.dataset, 'bouts.mat'));
 bouts = bouts_formatting(bouts, thresholds);
 
-% Select immobility bouts during loom period, late window
-bouts_le = data_parser_new( ...
-    bouts, ...
-    'period', 'loom', ...
-    'window', 'le', ...
-    'type', 'immobility', ...
-    'nloom', 2:20, ...
-    'min_dur', Ttrunc * 60);
+% The same freezes as the freeze duration analyses (fd_*): loom-evoked, first
+% loom and already-frozen starts left out, contact-censored
+bouts_proc = loom_evoked_freezes(bouts, 'already_frozen', false, 'min_dur', thresholds.min_dur, 'contact_threshold', contact_threshold);
 
-T = bouts_le;
+% late_onset is 1 for the freezes whose onset is after the split latency of
+% their loom speed, the dashed line in le_threshold_plot, in frames after the loom
+split_latency = [mean(thresholds.le_window_sl) - 1.5, mean(thresholds.le_window_fl) - 2.5];
+split_latency_row = reshape(split_latency(1 + (bouts_proc.sloom == 50)), [], 1); % column, indexing a row with a column gives a row
+bouts_proc.late_onset = double(bouts_proc.onsets_loomaligned > split_latency_row);
+
+T = bouts_proc;
 
 % =========================================================================
 % 3. EXTRACT BOUT-LEVEL PREDICTOR MATRIX
@@ -71,13 +68,15 @@ predictor_names = { 'avg_fs_loom',...
     'ln', ...
     'n_generated_freezes', ...
     'cum_freeze_time', ...
-    'avg_history_dur'};
+    'avg_history_dur', ...
+    'late_onset'};
 
 matrix = T{:, predictor_names};
 
-% Remove rows with any NaNs (pairwise deletion would obscure structure)
-[nan_rows, ~] = find(isnan(matrix));
-matrix(unique(nan_rows), :) = [];
+% Bouts with a NaN in any predictor are dropped, so every pair of predictors is
+% correlated over the same bouts
+matrix = matrix(~any(isnan(matrix), 2), :);
+fprintf('%d of %d bouts kept\n', size(matrix, 1), height(T));
 
 
 % =========================================================================
@@ -87,7 +86,7 @@ matrix(unique(nan_rows), :) = [];
 % Correlations are computed across bouts, not across flies.
 % This is intended for multicollinearity diagnostics only.
 
-[corr_matrix, P] = corr(matrix, 'Rows', 'Pairwise', 'Type', 'Pearson');
+corr_matrix = corr(matrix, 'Rows', 'complete', 'Type', 'Pearson');
 
 % Compute distance based on correlation
 dist_metric = 1 - abs(corr_matrix);
@@ -104,15 +103,6 @@ predictor_names = predictor_names(leaf_order);
 
 fh = figure('Position', [100 100 800 800], 'Color', 'w');
 t = tiledlayout(1, 1, 'TileSpacing', 'compact', 'Padding', 'loose');
-
-% Pretty labels (escape underscores for heatmap)
-labels = cellfun(@(x) strrep(x, '_', '\_'), ...
-                 predictor_names, ...
-                 'UniformOutput', false);
-
-labels = cellfun(@(x) strrep(x, '\_\_', '*'), ...
-                 labels, ...
-                 'UniformOutput', false);
 
 imagesc(corr_matrix, [-1 1])
 axis square

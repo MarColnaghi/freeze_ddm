@@ -246,7 +246,7 @@ for idx_param = params
         end
         ax_bottom(k) = ax;
     end
-    xlabel(tl, 'Freeze Duration (s)', 'FontSize', 26);
+    xlabel(tl, 'Freeze Duration (s)', 'FontSize', 26, 'FontName', 'Helvetica-Light');
 
     if numel(ax_bottom) > 1
         linkaxes(ax_bottom, 'y')
@@ -269,10 +269,12 @@ function [nq, thresholds, data_driven] = param_settings(param, T, n_quantiles)
 % of the data, false when they are fixed
 data_driven = false;
 switch param
-    case 'nloom'
-        % Edges between the loom numbers, so that 1-5, 6-10, 11-15 and 16-20 are the bins
+    case {'nloom', 'ln'}
+        % Edges between the loom numbers, so that 1-5, 6-10, 11-15 and 16-20 are the bins.
+        % ln is nloom / 10
         nq = 4; thresholds = 0.5:5:20.5;
-    case {'ls', 'jump_start'}
+        if strcmp(param, 'ln'), thresholds = thresholds / 10; end
+    case {'ls', 'jump_start', 'late_onset'}
         % binary: quantile() edges collapse to [0 0 0 0 1] and discretize
         % puts every bout in the top bin
         nq = 2; thresholds = -0.5:1:1.5;
@@ -305,7 +307,8 @@ switch param
     case 'avg_fs_1s_norm',     s = 'Focal Speed before Loom';
     case 'ls',                 s = 'Loom Speed';
     case 'moving_flies',       s = 'Moving Flies';
-    case 'nloom',              s = 'Loom Number';
+    case 'late_onset',         s = 'Onset after split';
+    case {'nloom', 'ln'},      s = 'Loom Number';
     case 'sm_1s',              s = 'Social Motion (1st second)';
     case 'sm_2s',              s = 'Social Motion (1st 2 s)';
     case 'sm',                 s = 'Social Motion (freeze)';
@@ -321,7 +324,8 @@ function [edges, x_lim] = control_bins(data, param)
 % Histogram bins and x limits of a continuous variable, from all the panels together
 edges = [];
 x_lim = [];
-if ismember(param, {'ln', 'ls', 'moving_flies', 'jump_start'})
+% Discrete variables: no bins, one bar per level
+if ismember(param, {'ln', 'ls', 'nloom', 'moving_flies', 'jump_start', 'late_onset'})
     return
 end
 data = data(~isnan(data));
@@ -378,7 +382,7 @@ switch type
             c = censored(qmask == q);
             if isempty(d) || all(c), continue, end
             [f, x] = ecdf(d, 'Censoring', c);
-            plot(x, f, 'LineWidth', 4, 'Color', cmap(1 + q, :))
+            stairs(x, f, 'LineWidth', 3, 'Color', cmap(1 + q, :))
         end
         ylim([0 1])
         pad_ylim(gca, 0.025)
@@ -458,11 +462,13 @@ end
 function labels = quantile_labels(param, nq, T)
 dash = char(8211);
 switch param
-    case 'nloom'
+    case {'nloom', 'ln'}
         % The first bin starts at the first loom in the data, 2 when loom 1 is left out
         labels = {sprintf('%d%c5', max(1, min(T.nloom)), dash), ['6' dash '10'], ['11' dash '15'], ['16' dash '20']};
     case {'sloom', 'ls'}
         labels = {'Slow', 'Fast'};
+    case 'late_onset'
+        labels = {'Early', 'Late'};
     case 'moving_flies'
         labels = arrayfun(@num2str, 0:nq - 1, 'uni', 0);
     otherwise

@@ -157,10 +157,13 @@ switch var
     case 'ls'
         level = T.ls + 1;
         names = {'slow', 'fast'};
+    case 'late_onset'
+        level = T.late_onset + 1;
+        names = {'early', 'late'};
     case 'moving_flies'
         level = T.moving_flies + 1;
         names = arrayfun(@num2str, 0:4, 'UniformOutput', false);
-    case 'nloom'
+    case {'nloom', 'ln'}
         level = discretize(T.nloom, 0.5:5:20.5);
         names = {sprintf('%d-5', max(1, min(T.nloom))), '6-10', '11-15', '16-20'};
     otherwise

@@ -152,13 +152,25 @@ for idx_param = params
 
             % Data coordinates, which render the same everywhere, unlike normalized
             % text in a tiled layout
-            xl = xlim(gca); yl = ylim(gca);
-            text(gca, xl(2) - 0.02*diff(xl), yl(1) + 0.03*diff(yl), txt, ...
-                'FontSize',16, ...
-                'HorizontalAlignment','right', ...
-                'VerticalAlignment','bottom');
+            if strcmp(type, 'cumulative')
 
-            ax_bottom(end+1) = gca; %#ok<AGROW>
+                xl = xlim(gca); yl = ylim(gca);
+                text(gca, xl(2) - 0.02*diff(xl), yl(1) + 0.03*diff(yl), txt, ...
+                    'FontSize',16, ...
+                    'HorizontalAlignment','right', ...
+                    'VerticalAlignment','bottom');
+
+                ax_bottom(end+1) = gca; %#ok<AGROW>
+
+            elseif strcmp(type, 'kde')
+                xl = xlim(gca); yl = ylim(gca);
+                text(gca, xl(2) - 0.02*diff(xl), yl(2) - 0.1*diff(yl), txt, ...
+                    'FontSize',16, ...
+                    'HorizontalAlignment','right', ...
+                    'VerticalAlignment','bottom');
+
+                ax_bottom(end+1) = gca; %#ok<AGROW>
+            end
         end
         xlabel(tl,'Freeze Duration (s)','FontSize',26);
 
@@ -168,22 +180,36 @@ for idx_param = params
         linkaxes(ax_bottom,'y')
     end
 
-    if strcmp(scale, 'log')
-        ax = gca;
-        ax.YScale = 'log';
+    % scale 'log': the cumulative has a log x axis and the kde a log y axis. The
+    % cumulative gets reference lines at 0.2, 0.5 and 1 s, labelled when the axis is
+    % log, bare when linear. The kde never has them
+    log_x = strcmp(scale, 'log') && strcmp(type, 'cumulative');
+    ax_duration = findobj(fh, 'Type', 'axes')';
+    if control_var
+        ax_duration = ax_duration(1:end-1); % findobj lists the newest first, the control tile is the first one made
     end
+    for idx_ax = 1:numel(ax_duration)
+        ax = ax_duration(idx_ax);
+        if strcmp(scale, 'log') && ~log_x
+            ax.YScale = 'log';
+        end
+        if log_x
+            ax.XScale = 'log';
+            xlim(ax, [0.1 10])
+        else
+            xlim(ax, [0 10])
+        end
 
-    if strcmp(type, 'cumulative') && strcmp(scale, 'log')
-
-        xline([0.2, 0.5, 1], 'k-', {'0.2s', '0.5s', '1s'}, ...
-            'LabelHorizontalAlignment', 'right', ... % Centra il testo sulla linea ('left', 'center', 'right')
-            'LabelVerticalAlignment', 'top', 'FontSize', 16, 'LineWidth',2);
-%     elseif strcmp(scale, 'log')
-%         xline([0.2, 0.5, 1], 'k-', 'LineWidth',2);
+        if strcmp(type, 'cumulative')
+            if strcmp(scale, 'log')
+                xline(ax, [0.2, 0.5, 1], 'k-', {'0.2s', '0.5s', '1s'}, ...
+                    'LabelHorizontalAlignment', 'right', ...
+                    'LabelVerticalAlignment', 'top', 'FontSize', 16, 'LineWidth',2);
+            else
+                xline(ax, [0.2, 0.5, 1], 'k-', 'LineWidth',2);
+            end
+        end
     end
-
-end
-    xlim([0 10])
 
     %% ===================== Export =====================
     if export 
@@ -196,6 +222,7 @@ end
         end
     end
 end
+end
 
 
 %% =====================================================================
@@ -204,10 +231,12 @@ end
 
 function [nq, thresholds] = param_settings(param,T)
 switch param
-    case 'nloom'
-        % Edges between the loom numbers, so that 1-5, 6-10, 11-15 and 16-20 are the bins
+    case {'nloom', 'ln'}
+        % Edges between the loom numbers, so that 1-5, 6-10, 11-15 and 16-20 are the bins.
+        % ln is nloom / 10
         nq = 4; thresholds = 0.5:5:20.5;
-    case {'ls','jump_start'}
+        if strcmp(param, 'ln'), thresholds = thresholds / 10; end
+    case {'ls','jump_start','late_onset'}
         % binary: quantile() edges collapse to [0 0 0 0 1] and discretize
         % puts every bout in the top bin
         nq = 2; thresholds = -0.5:1:1.5;
@@ -228,7 +257,8 @@ switch param
     case 'avg_fs_1s_norm',     s = 'Focal Speed before Loom';
     case 'ls',                 s = 'Loom Speed';
     case 'moving_flies',       s = 'Moving Flies';
-    case 'nloom',              s = 'Loom Number';
+    case 'late_onset',         s = 'Onset after split';
+    case {'nloom', 'ln'},      s = 'Loom Number';
     case 'sm_1s',              s = 'Social Motion (1st second)';
     case 'sm_2s',              s = 'Social Motion (1st 2 s)';
     case 'sm',                 s = 'Social Motion (freeze)';
@@ -242,8 +272,10 @@ end
 
 function plot_control_distribution(data,quantiles,thresholds,cmap,param)
 
-if ismember(param,{'ln','ls','moving_flies', 'jump_start'})
-    bh = bar(1:max(quantiles),histcounts(quantiles), ...
+% Discrete variables: one bar per level, the count of freezes, under the colorbar
+% labels. The others get the histogram of the variable with the quantiles coloured
+if ismember(param,{'ln','ls','nloom','moving_flies','jump_start','late_onset'})
+    bh = bar(1:max(quantiles),histcounts(quantiles,0.5:1:max(quantiles)+0.5), ...
         'FaceColor','flat','EdgeColor','none');
     bh.CData = cmap(2:end,:);
     xlim([.5 max(quantiles)+.5])
@@ -295,7 +327,7 @@ switch type
         % was seen to last and not as if it ended there. A bin that reaches past the
         % longest observation, when that one was cut, is left blank, and a curve adds
         % up to the F(t) of the cumulative plot, not to 1
-                bin_w = 5 / 60;
+                bin_w = 10 / 60;
         n_bin = max(1, ceil((max(durations) - min(durations)) / bin_w));
         edges = min(durations) + (0:n_bin) * bin_w;
         for q = 1:nq
@@ -364,11 +396,13 @@ end
 
 function add_quantile_colorbar(ax,param,nq,T)
 switch param
-    case 'nloom'
+    case {'nloom', 'ln'}
         % The first bin starts at the first loom in the data, 2 when loom 1 is left out
         labels = {sprintf('%d–5',max(1,min(T.nloom))),'6–10','11–15','16–20'};
     case {'sloom','ls'}
         labels = {'Slow','Fast'};
+    case 'late_onset'
+        labels = {'Early','Late'};
     case 'moving_flies'
         labels = arrayfun(@num2str,0:nq-1,'uni',0);
     otherwise

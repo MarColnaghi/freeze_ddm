@@ -22,7 +22,8 @@ function [tl, ax] = le_threshold_plot(bouts, thresholds, frame_range, baseline, 
 %
 % Name-value options: 'parent' (default [], a new figure), 'font_size' (24),
 % 'legend' (true, the loom / baseline legend on the first tile) and 'ylabels'
-% (true, the y tick labels). With a parent the x label is left to the caller.
+% (true, the y tick labels). 'frozen_start' (default [], no filter) keeps only the
+% bouts flagged frozen_start (true) or not flagged (false), in both periods. With a parent the x label is left to the caller.
 
 if nargin < 4
     baseline = [];
@@ -37,6 +38,8 @@ addParameter(opt, 'parent', [], @(x) isempty(x) || isa(x, 'matlab.graphics.layou
 addParameter(opt, 'font_size', 24);
 addParameter(opt, 'legend', true);
 addParameter(opt, 'yaxis', true);
+addParameter(opt, 'ylim', [-5 155]);
+addParameter(opt, 'frozen_start', [], @(x) isempty(x) || islogical(x) || isnumeric(x));
 parse(opt, varargin{:});
 
 parent = opt.Results.parent;
@@ -67,12 +70,18 @@ for idx_slooms = [unique(bouts.sloom)]'
     i = i + 1;
     nexttile(tl)
     in_range = bouts.(dur_var) >= frame_range(1) & bouts.(dur_var) <= frame_range(2);
+    if ~isempty(opt.Results.frozen_start)
+        in_range = in_range & logical(bouts.frozen_start) == logical(opt.Results.frozen_start);
+    end
     h_handle = histogram(bouts.onsets_loomwin(in_range & bouts.sloom == idx_slooms), -100.5:1:500.5, 'EdgeColor', 'none', 'FaceColor', col.vars.sloom(3*i, :));
     ax(i) = gca;
 
     if ~isempty(baseline)
         hold on
         in_range_baseline = baseline.(dur_var) >= frame_range(1) & baseline.(dur_var) <= frame_range(2);
+        if ~isempty(opt.Results.frozen_start)
+            in_range_baseline = in_range_baseline & logical(baseline.frozen_start) == logical(opt.Results.frozen_start);
+        end
         h_baseline = histogram(baseline.onsets_loomwin(in_range_baseline & baseline.sloom == idx_slooms), -100.5:1:500.5, 'DisplayStyle', 'stairs', 'EdgeColor', 'k', 'LineWidth', 1.2);
         if i == 1 && opt.Results.legend
             legend([h_handle h_baseline], {'loom', 'baseline'}, 'Location', 'northeast', 'Box', 'off', 'FontSize', font_size - 4, 'AutoUpdate', 'off');
@@ -92,14 +101,17 @@ for idx_slooms = [unique(bouts.sloom)]'
     end
 
 
-    
-    apply_generic(ax(i), 'font_size', font_size, 'no_y', ~opt.Results.yaxis, 'tick_length', 0.025, 'line_width', 2);
+    apply_generic(ax(i), 'font_size', font_size, 'no_y', ~opt.Results.yaxis, 'tick_length', 0.025, 'line_width', 2, 'xlim', [-30 120]);
+    if ~isempty(opt.Results.ylim)
+        ylim(opt.Results.ylim)
+    end
     values = [values; h_handle.Values(:)];
+    text(ax(i).XLim(1) + 2.5, ax(i).YLim(2) - 5, sprintf('[%d %d]',frame_range(1), frame_range(2)) , 'FontSize', font_size - 4, 'FontName', 'Helvetica-Light' )
+
 end
 
 linkaxes(ax(:))
 %ylim([-2 round(max(values), -1) + 50])
-ylim([-5 155])
 xlim([-30 120])
 
 if isempty(parent)

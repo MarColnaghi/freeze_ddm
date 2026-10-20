@@ -3,10 +3,13 @@ function exporter(fh, paths, filename, varargin)
 opt = inputParser;
 addParameter(opt, 'flag', true);
 addParameter(opt, 'padding', 'figure');
+addParameter(opt, 'font_name', 'Helvetica-Light');
 
 parse(opt, varargin{:});
 
 if opt.Results.flag
+
+    apply_font(fh, opt.Results.font_name);
 
     fl = fullfile(paths.fig, filename);
     if strcmp(opt.Results.padding, 'figure') && endsWith(fl, '.pdf')

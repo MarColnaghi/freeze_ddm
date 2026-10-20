@@ -13,7 +13,7 @@ plot_style = 'bar3';
 zoom_flag =  false;
 export = false;
 
-min_dur = 0;
+min_dur = 12;
 bouts_proc = loom_evoked_bouts(bouts, 'period', type, 'min_dur', min_dur);
 fh = hist2d_durs_onsets('bouts', bouts_proc, 'thresholds', thresholds, 'type', type, 'str', str, ...
     'plot_style', plot_style, 'zoom', zoom_flag, 'export', true, 'split_by', 'sloom');
