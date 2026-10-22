@@ -25,7 +25,7 @@ ls = 50;
 % Returns the figure, the sorted table (fly, moving_flies, data) and the axes.
 
 var = 'freeze';
-[fh, ts, ax] = plot_raster(var, 'loom_speed', ls, 'paths', paths);
+[fh, ts, ax] = plot_raster(var, 'loom_speed', ls, 'paths', paths, 'block_size', 'square');
 exporter(fh, paths, sprintf('raster_%s_ls%d.pdf', var, ls));
 
 var = 'motion';
@@ -38,9 +38,9 @@ mov_flies = 2;
 exporter(fh, paths, sprintf('raster_boutsle_ls%d_nmf%d.pdf', ls, mov_flies))
 
 %% THIRD PART: sorted loom-evoked freezes, coloured by SM up to the censoring point
-order = 'interleaved';
+order = 'grouped';
 fh = plot_sorted_freezes_sm('moving_flies', [0 2 4], 'loom_speed', ls, 'paths', paths, 'censoring', 10.5, 'truncation', 0.5, 'order', order, 'n_per_group', 200);
-exporter(fh, paths, sprintf('ordered_bouts_ls%d_%s.pdf', ls, order))
+exporter(fh, paths, sprintf('ordered_bouts_ls%d_%s.svg', ls, order))
 
 
 %%

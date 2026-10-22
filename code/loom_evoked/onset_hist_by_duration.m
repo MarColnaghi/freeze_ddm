@@ -17,7 +17,7 @@
 % how long the freeze really was (duration_raw), not by the time it was observed
 % for before a contact. Together they cover every bout loom_evoked_bouts keeps,
 % which is at least thresholds.min_dur frames
-duration_ranges = [0 11; 12 29; 30 59; 60 239; 240 Inf];
+duration_ranges = [0 11; 12 29; 30 59; 60 119; 120 179; 180 239; 240 Inf];
 
 frozen_start = [];
 
@@ -27,20 +27,20 @@ if ~isempty(frozen_start)
     ylims = [];
 end
 
-export = true;
+export = false;
 separate_figures = true;
 combined_figure = true;
 
 % The same bouts as the other plots in this folder, contact-censored, for the
 % real looms and for the baseline mock looms
-bouts_proc = loom_evoked_bouts(bouts, 'min_dur', 3);
-bouts_baseline = loom_evoked_bouts(bouts, 'period', 'bsl', 'min_dur', 3);
+bouts_proc = loom_evoked_bouts(bouts, 'min_dur', 0);
+bouts_baseline = loom_evoked_bouts(bouts, 'period', 'bsl', 'min_dur', 0);
 
 paths = path_generator('folder', fullfile('loom_evoked','onset_hist', 'CS'));
 
 tag = '';
 if ~isempty(frozen_start)
-    tag = {'_notfrozen', '_frozen'}{frozen_start + 1};
+    tag = {'_notfrozen', '_frozen'};
 end
 
 if separate_figures

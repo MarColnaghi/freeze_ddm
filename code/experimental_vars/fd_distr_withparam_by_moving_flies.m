@@ -198,7 +198,7 @@ for idx_param = params
     else
         fig_width = 150 + 190 * n_tiles;
     end
-    fh = figure('Color', 'w', 'Position', [100 100 fig_width 500]);
+    fh = figure('Color', 'w', 'Position', [100 100 fig_width 460]);
     tl = tiledlayout(12, n_tiles, 'TileSpacing', 'tight', 'Padding', 'compact');
 
     %% ===================== Control distribution, one per panel =====================
@@ -207,7 +207,7 @@ for idx_param = params
         plot_control_distribution(values(tile_rows{k}), q_all(tile_rows{k}), thr_tile{k}, cmap, param, bin_edges, x_lim);
         ylim([0 max(counts_max, 1)]);
         pad_ylim(ax, 0.075)
-        apply_generic(ax, 'no_y', true, 'no_x', false, 'font_size', 16, 'tick_length', 0.03)
+        apply_generic(ax, 'no_y', true, 'no_x', false, 'font_size', 20, 'tick_length', 0.03)
         xt = xticks(ax);
         if numel(xt) > 4
             xticks(ax, xt(1:2:end));
@@ -392,7 +392,7 @@ switch type
         % was seen to last and not as if it ended there. A bin that reaches past the
         % longest observation, when that one was cut, is left blank, and a curve adds
         % up to the F(t) of the cumulative plot, not to 1
-        bin_w = 20 / 60;
+        bin_w = 6 / 60;
         n_bin = max(1, ceil((max(durations) - min(durations)) / bin_w));
         edges = min(durations) + (0:n_bin) * bin_w;
         for q = 1:nq

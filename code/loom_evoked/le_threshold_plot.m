@@ -92,12 +92,12 @@ for idx_slooms = [unique(bouts.sloom)]'
         xline(thresholds.le_window_sl,'k-.', 'LineWidth', 1.5)
         % ax(i).XAxis.Visible = 'off';
         xticks(sort([0 thresholds.le_window_sl -50 100]))
-        xline(mean(thresholds.le_window_sl) - 1.5, 'k--', 'LineWidth', 0.75 )
+   %     xline(mean(thresholds.le_window_sl) - 1.5, 'k--', 'LineWidth', 0.75 )
 
     elseif idx_slooms == 50
         xline(thresholds.le_window_fl, 'k-.', 'LineWidth', 1.5)
         xticks(sort([0 thresholds.le_window_fl -50 100]))
-        xline(mean(thresholds.le_window_fl) - 2.5, 'k--', 'LineWidth', 0.75 )
+     %   xline(mean(thresholds.le_window_fl) - 2.5, 'k--', 'LineWidth', 0.75 )
     end
 
 

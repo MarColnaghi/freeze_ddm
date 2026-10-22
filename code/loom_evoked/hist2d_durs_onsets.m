@@ -412,8 +412,10 @@ for pass = 1:4
     for a = axs(:)'
         ap = getpixelposition(a, true);
         for L = [a.XLabel a.YLabel]
+            u = L.Units;
             L.Units = 'pixels';
             e = L.Extent;
+            L.Units = u;    % pixel units are fixed offsets, so a raster export at another scale would displace the label
             lo = min(lo, ap(1:2) + e(1:2));
             hi = max(hi, ap(1:2) + e(1:2) + e(3:4));
         end

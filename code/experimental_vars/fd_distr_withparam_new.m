@@ -327,7 +327,7 @@ switch type
         % was seen to last and not as if it ended there. A bin that reaches past the
         % longest observation, when that one was cut, is left blank, and a curve adds
         % up to the F(t) of the cumulative plot, not to 1
-                bin_w = 10 / 60;
+                bin_w = 1 / 60;
         n_bin = max(1, ceil((max(durations) - min(durations)) / bin_w));
         edges = min(durations) + (0:n_bin) * bin_w;
         for q = 1:nq
